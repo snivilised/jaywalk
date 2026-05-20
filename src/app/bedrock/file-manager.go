@@ -33,8 +33,9 @@ import (
 //
 //	Config file:  <configHome>/jay.yaml (also jay.yml, jay.json, jay.toml)
 //	Themes dir:   <configHome>/themes/
-//	Log file:     <stateHome>/logs/jay.log
-//	Resume state: <stateHome>/admin/resume/
+//	Admin dir:    <stateHome>/admin/
+//	Log file:     <adminHome>/logs/jay.log
+//	Resume state: <adminHome>/resume/
 //
 // Resolution priority for each directory is:
 //  1. Jay-specific env var override
@@ -136,14 +137,14 @@ func (fm *FileManager) ThemesDir() string {
 	return fm.themesDir
 }
 
-// AdminPath returns the path for admin/resume state files.
+// AdminPath returns the admin base directory path.
 func (fm *FileManager) AdminPath() string {
-	return filepath.Join(fm.stateHome, "admin", "resume")
+	return filepath.Join(fm.stateHome, "admin")
 }
 
-// LogPath returns the path for the log file.
+// LogPath returns the path for the log file, derived from the admin path.
 func (fm *FileManager) LogPath() string {
-	return filepath.Join(fm.stateHome, "logs", "jay.log")
+	return filepath.Join(fm.AdminPath(), "logs", "jay.log")
 }
 
 // ResolvePath expands ~ and environment variables in the given path.

@@ -66,14 +66,14 @@ var _ = Describe("FileManager", func() {
 			Expect(fm.ThemesDir()).To(Equal(filepath.Join(fm.ConfigHome(), "themes")))
 		})
 
-		It("AdminPath is StateHome + '/admin/resume'", func() {
+		It("AdminPath is StateHome + '/admin'", func() {
 			fm := bedrock.NewFileManager()
-			Expect(fm.AdminPath()).To(Equal(filepath.Join(fm.StateHome(), "admin", "resume")))
+			Expect(fm.AdminPath()).To(Equal(filepath.Join(fm.StateHome(), "admin")))
 		})
 
-		It("LogPath is StateHome + '/logs/jay.log'", func() {
+		It("LogPath is AdminPath + '/logs/jay.log'", func() {
 			fm := bedrock.NewFileManager()
-			Expect(fm.LogPath()).To(Equal(filepath.Join(fm.StateHome(), "logs", "jay.log")))
+			Expect(fm.LogPath()).To(Equal(filepath.Join(fm.AdminPath(), "logs", "jay.log")))
 		})
 	})
 
@@ -114,8 +114,8 @@ var _ = Describe("FileManager", func() {
 		It("AdminPath and LogPath are relative to the overridden StateHome", func() {
 			_ = os.Setenv("JAY_STATE_DIR", "/alt/state")
 			fm := bedrock.NewFileManager()
-			Expect(fm.AdminPath()).To(Equal(filepath.Join("/alt/state", "admin", "resume")))
-			Expect(fm.LogPath()).To(Equal(filepath.Join("/alt/state", "logs", "jay.log")))
+			Expect(fm.AdminPath()).To(Equal(filepath.Join("/alt/state", "admin")))
+			Expect(fm.LogPath()).To(Equal(filepath.Join("/alt/state", "admin", "logs", "jay.log")))
 		})
 	})
 

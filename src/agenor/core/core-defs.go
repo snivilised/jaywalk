@@ -5,7 +5,6 @@ package core
 import (
 	"io/fs"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/snivilised/jaywalk/src/agenor/enums"
@@ -228,5 +227,5 @@ func init() {
 		File: filePerm,
 		Dir:  dirPerm,
 	}
-	ResumeTail = filepath.Join(PackageName, "admin", "resume")
+	ResumeTail = "resume"
 }

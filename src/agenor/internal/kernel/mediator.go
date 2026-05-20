@@ -171,8 +171,15 @@ func (m *mediator) Navigate(ctx context.Context) (result *enclave.KernelResult, 
 		magnitude:    m.facade.Magnitude(),
 	})
 
-	if !stock.IsBenignError(err) && m.o != nil {
-		m.o.Monitor.Log.Error(err.Error())
+	if m.o != nil {
+		if !stock.IsBenignError(err) && err != nil {
+			m.o.Monitor.Log.Error(err.Error())
+		} else if result != nil {
+			m.o.Monitor.Log.Info("navigation completed",
+				"files", result.Metrics().Count(enums.MetricNoFilesInvoked),
+				"directories", result.Metrics().Count(enums.MetricNoDirectoriesInvoked),
+			)
+		}
 	}
 
 	return result, err
@@ -181,6 +188,10 @@ func (m *mediator) Navigate(ctx context.Context) (result *enclave.KernelResult, 
 // Ignite primes the navigator for traversal and announces
 func (m *mediator) Ignite(ignition *enclave.Ignition) {
 	m.impl.Ignite(ignition)
+	if m.o != nil {
+		m.o.Monitor.Log.Info("navigation started", "root", m.tree)
+	}
+
 	m.resources.Binder.Controls.Begin.Dispatch()(&life.BeginState{
 		Tree: m.tree,
 	})

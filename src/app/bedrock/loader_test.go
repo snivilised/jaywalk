@@ -69,9 +69,6 @@ var _ = Describe("Load", Ordered, func() {
 
 		// ── Mapped: Logging ──────────────────────────────────────────────
 		Describe("mapped logging section", func() {
-			It("decodes log-path", func() {
-				Expect(config.Mapped.Logging.LogPath).To(Equal("~/snivilised/jay/jay.log"))
-			})
 			It("decodes max-size-in-mb", func() {
 				Expect(config.Mapped.Logging.MaxSizeInMB).To(Equal(10))
 			})

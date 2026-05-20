@@ -83,8 +83,7 @@ advanced:
 # Logging
 # ==========================
 logging:
-  # Default: <XDG_STATE_HOME>/jay/logs/jay.log (~/.local/state/jay/logs/jay.log)
-  log-path: "~/snivilised/jay/jay.log"
+  # The log file path is managed by FileManager and JAY_STATE_DIR.
   max-size-in-mb: 10
   max-backups: 3
   max-age-in-days: 30

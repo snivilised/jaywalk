@@ -153,6 +153,10 @@ func (n *navigatorAgent) travel(ctx context.Context,
 	)
 
 	for _, entry := range vapour.Entries() {
+		if ctx.Err() != nil {
+			return n.handleInterrupt(ns, vapour, ctx.Err())
+		}
+
 		path := filepath.Join(parent.Path, entry.Name())
 		info, e := entry.Info()
 
@@ -184,6 +188,10 @@ func (n *navigatorAgent) travel(ctx context.Context,
 					return skipTraversal, err
 				}
 
+				if ctx.Err() != nil {
+					return n.handleInterrupt(ns, vapour, ctx.Err())
+				}
+
 				return continueTraversal, err
 			}
 		} else if err != nil {
@@ -196,12 +204,47 @@ func (n *navigatorAgent) travel(ctx context.Context,
 			case errors.Is(err, fs.SkipAll):
 				break
 			default:
+				if ctx.Err() != nil {
+					return n.handleInterrupt(ns, vapour, ctx.Err())
+				}
+
 				return continueTraversal, err
 			}
 		}
 	}
 
+	if ctx.Err() != nil {
+		return n.handleInterrupt(ns, vapour, ctx.Err())
+	}
+
 	return continueTraversal, nil
+}
+
+// handleInterrupt handles the case where the context is cancelled
+// (e.g. by Ctrl-C). It logs the warning and saves the resume state
+// via the configured panic handler, without raising a panic.
+func (n *navigatorAgent) handleInterrupt(ns *navigationStatic,
+	vapour inspection, cause error,
+) (skip bool, err error) { //nolint:unparam // always false is ok because of travel signature
+	if ns.mediator.o != nil && ns.mediator.o.Monitor.Log != nil {
+		ns.mediator.o.Monitor.Log.Warn("navigation terminated by user (ctrl-c)")
+	}
+
+	to, rescueErr := n.ao.defects.Panic.Rescue(n, &vex{
+		data:     cause,
+		anc:      ns.mediator.tree,
+		vap:      vapour,
+		catalyst: "interrupt",
+		mag:      n.magnitude,
+	})
+
+	if rescueErr != nil {
+		return skipTraversal, locale.NewTraversalNotSavedError(
+			errors.Join(cause, rescueErr), to,
+		)
+	}
+
+	return skipTraversal, locale.NewTraversalSavedError(cause, to)
 }
 
 func (n *navigatorAgent) Save(data pref.RescueData) (string, error) {
