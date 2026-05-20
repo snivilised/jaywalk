@@ -44,8 +44,8 @@ type AdvancedConfig struct {
 }
 
 // LoggingConfig controls the jay log file.
+// The log path is managed by FileManager and JAY_STATE_DIR, not via config.
 type LoggingConfig struct {
-	LogPath      string `mapstructure:"log-path"`
 	MaxSizeInMB  int    `mapstructure:"max-size-in-mb"`
 	MaxBackups   int    `mapstructure:"max-backups"`
 	MaxAgeInDays int    `mapstructure:"max-age-in-days"`

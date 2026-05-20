@@ -59,7 +59,6 @@ advanced:
       jpeg: jpg
 
 logging:
-  log-path: "~/snivilised/jay/jay.log"
   max-size-in-mb: 10
   max-backups: 3
   max-age-in-days: 30

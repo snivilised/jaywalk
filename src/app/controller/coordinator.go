@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"os"
 	"os/exec"
+	"os/signal"
 	"regexp"
 	"sync"
 
@@ -163,6 +165,16 @@ func (c *Coordinator) ExecutePrime(ctx context.Context, req *PrimeRequest) error
 			peerInfoMap,
 		)
 
+		// The preview captured builtOptions without the coordinator's
+		// logger and adminPath. Apply them now so they are not lost
+		// when buildOptions short-circuits on using.O != nil.
+		if c.logger != nil {
+			_ = pref.WithLogger(c.logger)(builtOptions)
+		}
+		if c.adminPath != "" {
+			_ = pref.WithAdminPath(c.adminPath)(builtOptions)
+		}
+
 		facade := &pref.Using{
 			Subscription: req.Subscription,
 			Head: pref.Head{
@@ -223,13 +235,28 @@ func (c *Coordinator) ExecuteResume(ctx context.Context, req *ResumeRequest) err
 // execute is the shared orchestration path for both prime and resume
 // traversals.
 func (c *Coordinator) execute(
-	ctx context.Context,
+	parentCtx context.Context,
 	req *Request,
 	facade pref.Facade,
 	traversal *report.Traversal,
 	isPrime bool,
 	resumeFrom string,
 ) error {
+	ctx, cancel := context.WithCancel(parentCtx)
+	defer cancel()
+
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt)
+	defer signal.Stop(sigCh)
+
+	go func() {
+		select {
+		case <-sigCh:
+			cancel()
+		case <-ctx.Done():
+		}
+	}()
+
 	if err := c.PreFlight(req); err != nil {
 		return err
 	}
@@ -240,7 +267,10 @@ func (c *Coordinator) execute(
 		req.Settings = append([]pref.Option{pref.WithAdminPath(c.adminPath)}, req.Settings...)
 	}
 	if c.logger != nil {
-		req.Settings = append([]pref.Option{pref.WithLogger(c.logger)}, req.Settings...)
+		req.Settings = append(
+			[]pref.Option{pref.WithLogger(c.logger)},
+			req.Settings...,
+		)
 	}
 
 	closeExec, err := c.useShellPoolExec(ctx, req)

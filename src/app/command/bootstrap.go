@@ -345,10 +345,6 @@ func handleLangSetting() {
 
 func (b *Bootstrap) createLogger() *slog.Logger {
 	logPath := b.fileManager.LogPath()
-	if b.AppConfig != nil && b.AppConfig.Mapped.Logging.LogPath != "" {
-		logPath = b.fileManager.ResolvePath(b.AppConfig.Mapped.Logging.LogPath)
-	}
-
 	logDir := filepath.Dir(logPath)
 	if err := os.MkdirAll(logDir, 0o750); err != nil { // originally 0o755
 		fmt.Fprintln(os.Stderr, "warning: could not create log directory:", err)

@@ -1,0 +1,69 @@
+{
+  "Active": {
+    "Tree": "RETRO-WAVE",
+    "TraverseDescription": {
+      "IsRelative": true
+    },
+    "ResumeDescription": {
+      "IsRelative": false
+    },
+    "Subscription": 2,
+    "Hibernation": 3,
+    "CurrentPath": "RETRO-WAVE/College",
+    "IsDir": true,
+    "Depth": 1,
+    "Metrics": {
+      "1": {
+        "T": 1,
+        "Counter": 0
+      },
+      "3": {
+        "T": 3,
+        "Counter": 6
+      },
+      "5": {
+        "T": 5,
+        "Counter": 0
+      }
+    }
+  },
+  "JO": {
+    "Behaviours": {
+      "SubPath": {
+        "KeepTrailingSep": true
+      },
+      "Sort": {
+        "IsCaseSensitive": false,
+        "SortFilesFirst": false
+      },
+      "Cascade": {
+        "Depth": 0,
+        "NoRecurse": false
+      }
+    },
+    "Sampling": {
+      "sample-type": 0,
+      "in-reverse": false,
+      "NoOf": {
+        "no-of-files": 0,
+        "no-of-directories": 0
+      }
+    },
+    "Filter": {
+      "Node": null,
+      "Child": null,
+      "Sample": null
+    },
+    "Hibernate": {
+      "WakeAt": null,
+      "SleepAt": null,
+      "Behaviour": {
+        "hibernate-inclusive-wake": true,
+        "hibernate-inclusive-sleep": false
+      }
+    },
+    "Concurrency": {
+      "no-of-workers": 10
+    }
+  }
+}
