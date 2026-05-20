@@ -48,5 +48,6 @@ ENV HOME=/home/opencode
 # The project code from the host is mounted here at runtime.
 WORKDIR /workspace
 
-# Every time the container starts it launches opencode's TUI.
-ENTRYPOINT ["opencode"]
+# Dev container stays alive so you can exec in.
+# Run `opencode` manually via `docker exec -it the-orville opencode`.
+CMD ["sleep", "infinity"]
