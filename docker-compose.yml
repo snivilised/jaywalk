@@ -1,5 +1,6 @@
 services:
   opencode:
+    container_name: the-orville
     build:
       context: .
       dockerfile: Dockerfile.dev
