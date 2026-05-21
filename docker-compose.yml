@@ -18,10 +18,13 @@ services:
       - ~/.ssh:/home/opencode/.ssh:ro
       - go-mod-cache:/go/pkg/mod
       - go-build-cache:/home/opencode/.cache/go-build
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       - TERM
       - HOME=/home/opencode
       - GIT_TERMINAL_PROMPT=0
+      - LMSTUDIO_BASE_URL=http://host.docker.internal:1234/v1
 
 volumes:
   go-mod-cache:
