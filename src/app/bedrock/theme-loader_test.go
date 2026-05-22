@@ -1,15 +1,16 @@
 package bedrock_test
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
+	"testing/fstest"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"github.com/snivilised/jaywalk/src/app/bedrock"
 	"github.com/snivilised/jaywalk/src/prism"
+	"github.com/snivilised/nefilim/test/luna"
 )
 
 // validThemeYAML is a minimal well-formed theme file covering a subset
@@ -61,9 +62,10 @@ var _ = Describe("ThemeLoader", Ordered, func() {
 	var themesDir string
 
 	BeforeAll(func() {
-		// Create a temporary themes directory for all tests in this suite.
+		// Create a temporary themes directory for env-var resolution tests
+		// that still use the real filesystem.
 		var err error
-		themesDir, err = os.MkdirTemp("", fmt.Sprintf("%v-themes-*", bedrock.AppName))
+		themesDir, err = os.MkdirTemp("", "jay-themes-*")
 		Expect(err).To(BeNil())
 	})
 
@@ -133,20 +135,17 @@ var _ = Describe("ThemeLoader", Ordered, func() {
 		})
 
 		// ------------------------------------------------------------------
-		// Load - file-based themes
+		// Load - file-based themes (MemFS)
 		// ------------------------------------------------------------------
 
 		Context("when loading from a valid theme file", func() {
 			It("decodes the palette correctly", func() {
-				writeThemeFile(themesDir, "my-theme", validThemeYAML)
+				fS := luna.NewMemFS()
+				fS.MapFS["themes/my-theme.yaml"] = &fstest.MapFile{
+					Data: []byte(validThemeYAML),
+				}
 
-				DeferCleanup(func() {
-					_ = os.Unsetenv(bedrock.ThemesDirEnvVar)
-				})
-
-				_ = os.Setenv(bedrock.ThemesDirEnvVar, themesDir)
-				loader := bedrock.NewThemeLoader()
-
+				loader := bedrock.NewThemeLoaderWithFS("themes", fS)
 				palette, err := loader.Load("my-theme")
 
 				Expect(err).To(BeNil())
@@ -162,12 +161,8 @@ var _ = Describe("ThemeLoader", Ordered, func() {
 
 		Context("when the theme file does not exist", func() {
 			It("returns an error mentioning the theme name and tried paths", func() {
-				DeferCleanup(func() {
-					_ = os.Unsetenv(bedrock.ThemesDirEnvVar)
-				})
-
-				_ = os.Setenv(bedrock.ThemesDirEnvVar, themesDir)
-				loader := bedrock.NewThemeLoader()
+				fS := luna.NewMemFS()
+				loader := bedrock.NewThemeLoaderWithFS("themes", fS)
 
 				_, err := loader.Load("nonexistent-theme")
 
@@ -179,18 +174,12 @@ var _ = Describe("ThemeLoader", Ordered, func() {
 
 		Context("when the theme file has a .yml extension", func() {
 			It("loads successfully", func() {
-				ymlPath := filepath.Join(themesDir, "dot-yml.yml")
-				err := os.WriteFile(ymlPath, []byte(validThemeYAML), 0600)
-				Expect(err).To(BeNil())
+				fS := luna.NewMemFS()
+				fS.MapFS["themes/dot-yml.yml"] = &fstest.MapFile{
+					Data: []byte(validThemeYAML),
+				}
 
-				DeferCleanup(func() {
-					_ = os.Unsetenv(bedrock.ThemesDirEnvVar)
-					_ = os.Remove(ymlPath)
-				})
-
-				_ = os.Setenv(bedrock.ThemesDirEnvVar, themesDir)
-				loader := bedrock.NewThemeLoader()
-
+				loader := bedrock.NewThemeLoaderWithFS("themes", fS)
 				palette, err := loader.Load("dot-yml")
 
 				Expect(err).To(BeNil())
@@ -200,15 +189,12 @@ var _ = Describe("ThemeLoader", Ordered, func() {
 
 		Context("when the theme file is missing the palette key", func() {
 			It("returns an error mentioning 'palette'", func() {
-				writeThemeFile(themesDir, "no-palette", missingPaletteYAML)
+				fS := luna.NewMemFS()
+				fS.MapFS["themes/no-palette.yaml"] = &fstest.MapFile{
+					Data: []byte(missingPaletteYAML),
+				}
 
-				DeferCleanup(func() {
-					_ = os.Unsetenv(bedrock.ThemesDirEnvVar)
-				})
-
-				_ = os.Setenv(bedrock.ThemesDirEnvVar, themesDir)
-				loader := bedrock.NewThemeLoader()
-
+				loader := bedrock.NewThemeLoaderWithFS("themes", fS)
 				_, err := loader.Load("no-palette")
 
 				Expect(err).To(HaveOccurred())
@@ -218,15 +204,12 @@ var _ = Describe("ThemeLoader", Ordered, func() {
 
 		Context("when a theme file has an unrecognised ansi16 name", func() {
 			It("loads successfully - colour validation is prism's responsibility", func() {
-				writeThemeFile(themesDir, "bad-colours", invalidANSI16YAML)
+				fS := luna.NewMemFS()
+				fS.MapFS["themes/bad-colours.yaml"] = &fstest.MapFile{
+					Data: []byte(invalidANSI16YAML),
+				}
 
-				DeferCleanup(func() {
-					_ = os.Unsetenv(bedrock.ThemesDirEnvVar)
-				})
-
-				_ = os.Setenv(bedrock.ThemesDirEnvVar, themesDir)
-				loader := bedrock.NewThemeLoader()
-
+				loader := bedrock.NewThemeLoaderWithFS("themes", fS)
 				palette, err := loader.Load("bad-colours")
 
 				// Loader does not validate colour names - it returns the raw
@@ -237,10 +220,3 @@ var _ = Describe("ThemeLoader", Ordered, func() {
 		})
 	})
 })
-
-// writeThemeFile writes content to <dir>/<name>.yaml.
-func writeThemeFile(dir, name, content string) {
-	path := filepath.Join(dir, name+".yaml")
-	err := os.WriteFile(path, []byte(content), 0600)
-	Expect(err).To(BeNil())
-}

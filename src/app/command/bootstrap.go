@@ -157,6 +157,10 @@ type Bootstrap struct {
 	// Constructed once in Root() and reused in PersistentPreRunE.
 	themeLoader *bedrock.ThemeLoader
 
+	// viewConfigLoader loads per-view configuration from jay.ui.yml
+	// on-demand when a view is selected (e.g. --tui highway).
+	viewConfigLoader *bedrock.ViewConfigLoader
+
 	// coord is the single Coordinator instance wired at startup and
 	// shared by all command handlers.
 	coord *jac.Coordinator
@@ -207,6 +211,7 @@ func (b *Bootstrap) Root(options ...ConfigureAppOptionFn) *cobra.Command {
 	}
 
 	b.themeLoader = bedrock.NewThemeLoaderWithDir(b.fileManager.ThemesDir())
+	b.viewConfigLoader = bedrock.NewViewConfigLoader(b.fileManager.ConfigHome())
 	b.logger = b.createLogger()
 	b.coord = jac.New(b.AppConfig,
 		jac.WithLocate(env.Locate),
@@ -224,10 +229,12 @@ func (b *Bootstrap) Root(options ...ConfigureAppOptionFn) *cobra.Command {
 			Long:    li18ngo.Text(locale.RootCmdLongDescTemplData{}),
 			Version: fmt.Sprintf("'%v'", Version),
 
-			PersistentPreRunE: func(_ *cobra.Command, _ []string) error {
+			PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 				mode := b.rootPs.Native.TUI
-				if mode == "" {
-					mode = ui.ModeDefault
+				if mode == ui.ModeDefault || mode == "" {
+					if cmd.Name() == "sprint" {
+						mode = ui.ModeHighway
+					}
 				}
 
 				// Register only the selected view factory; avoid registering
@@ -235,6 +242,26 @@ func (b *Bootstrap) Root(options ...ConfigureAppOptionFn) *cobra.Command {
 				switch mode {
 				case ui.ModeLinear:
 					flow.Register()
+
+				case ui.ModeHighway:
+					var cfg bedrock.HighwayConfig
+					if err := b.viewConfigLoader.Load("highway", &cfg); err != nil {
+						return err
+					}
+					highwayPath := b.viewConfigLoader.ResolvePath()
+					if highwayPath == "" {
+						highwayPath = filepath.Join(b.fileManager.ConfigHome(), "jay.ui.yml")
+					}
+					fmt.Printf("[DEBUG] Highway view configuration loaded from %s\n",
+						highwayPath)
+					fmt.Printf("[DEBUG]  Emoji pool: %q\n", cfg.Pool)
+					if len(cfg.AnimationData.EnabledTypes) > 0 {
+						fmt.Printf("[DEBUG]  Animation types enabled: %v\n",
+							cfg.AnimationData.EnabledTypes)
+					} else {
+						fmt.Println("[DEBUG]  (No animation types specified, using defaults)")
+					}
+					// TODO: register highway view factory when view is implemented
 				}
 
 				palette, err := b.themeLoader.Load(b.rootPs.Native.Theme)

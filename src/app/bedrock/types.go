@@ -58,6 +58,7 @@ type MappedConfig struct {
 	Interaction InteractionConfig `mapstructure:"interaction"`
 	Advanced    AdvancedConfig    `mapstructure:"advanced"`
 	Logging     LoggingConfig     `mapstructure:"logging"`
+	Highway     HighwayConfig     `mapstructure:"highway"`
 }
 
 // ---------------------------------------------------------------------------
@@ -115,4 +116,56 @@ type RawConfig struct {
 type Config struct {
 	Mapped MappedConfig
 	Raw    RawConfig
+}
+
+// ---------------------------------------------------------------------------
+// View Configuration — loaded on-demand from jay.ui.yml
+// ---------------------------------------------------------------------------
+
+// HighwayConfig holds the emoji pool and animation data for Highway view.
+// This configuration is loaded from jay.ui.yml when Highway view is requested.
+type HighwayConfig struct {
+	// Pool is a space-separated list of emoji runes for decoration.
+	// Recommended: at least 10 emojis for variety across lanes/workers.
+	Pool string `mapstructure:"emoji-pool"`
+
+	// Separator between emoji and content info (default: " ").
+	Separator string `mapstructure:"separator"`
+
+	// AnimationData holds animation type configurations loaded from config.
+	// These are loaded on-demand when Highway view is activated.
+	AnimationData HighwayAnimationConfig `mapstructure:"animation,omitempty"`
+}
+
+// HighwayAnimationConfig holds animation data configuration for Highway view.
+// This includes enabled animation types and their parameters.
+type HighwayAnimationConfig struct {
+	// EnabledTypes lists which animation types should be loaded on demand.
+	// Valid values: 'film-strip', 'space-filled', 'spinner' (etc.)
+	// Only animations in this list will be loaded when Highway view starts.
+	EnabledTypes []string `mapstructure:"enabled-types"`
+
+	// FilmStrip configuration
+	FilmStrip *FilmStripConfig `mapstructure:"film-strip,omitempty"`
+
+	// SpaceFilled configuration
+	SpaceFilled *SpaceFilledConfig `mapstructure:"space-filled,omitempty"`
+
+	// Spinner configuration
+	Spinner *SpinnerConfig `mapstructure:"spinner,omitempty"`
+
+	// Additional animation types can be added here as needed
+}
+
+type FilmStripConfig struct {
+	Speed     int `mapstructure:"speed"`     // ms per frame
+	Amplitude int `mapstructure:"amplitude"` // intensity
+}
+
+type SpaceFilledConfig struct {
+	GradientSteps int `mapstructure:"gradient-steps"` // █░░░ progression steps
+}
+
+type SpinnerConfig struct {
+	RotationSpeed float64 `mapstructure:"rotation-speed"` // radians per tick
 }

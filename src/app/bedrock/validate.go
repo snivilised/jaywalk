@@ -77,6 +77,20 @@ func (c AdvancedConfig) Validate() error {
 	return nil
 }
 
+// Validate checks HighwayConfig.
+func (c HighwayConfig) Validate() error {
+	ve := &ValidationError{}
+
+	if c.Pool != "" {
+		emojis := strings.Fields(c.Pool)
+		if len(emojis) < 10 {
+			ve.addF("ui.highway.emoji-pool must have at least 10 emojis, got %d", len(emojis))
+		}
+	}
+
+	return ve.asError()
+}
+
 // Validate checks InteractionConfig.
 func (c InteractionConfig) Validate() error {
 	// PerItemDelay is a time.Duration; a negative value is suspicious.
@@ -148,6 +162,9 @@ func (c *Config) Validate() error {
 		errs = append(errs, err)
 	}
 	if err := c.Mapped.Advanced.Validate(); err != nil {
+		errs = append(errs, err)
+	}
+	if err := c.Mapped.Highway.Validate(); err != nil {
 		errs = append(errs, err)
 	}
 	if err := c.Raw.Flags.Validate(); err != nil {
