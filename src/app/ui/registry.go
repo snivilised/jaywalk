@@ -19,6 +19,11 @@ const (
 	// via prism's linear renderer with lipgloss formatting.
 	ModeLinear = "linear"
 
+	// ModeHighway is a bubbletea view showing parallel lanes of activity,
+	// suited to concurrent worker output. Config loaded on-demand from
+	// jay.ui.yml when this mode is selected.
+	ModeHighway = "highway"
+
 	// ModeDefault is the display used when --tui is not specified.
 	ModeDefault = ModeLinear
 )
@@ -61,6 +66,14 @@ func New(mode string, palette prism.Palette) (report.Presenter, error) {
 	switch mode {
 	case ModeLinear:
 		return newLinearPresenter(palette)
+
+	case ModeHighway:
+		// HACK: highway view not yet implemented. Fall back to linear
+		// so --tui highway and sprint's default-to-highway both work
+		// without error. Remove this case (let it fall through to default)
+		// once prism/highway view is ready.
+		return newLinearPresenter(palette)
+
 	default:
 		return nil, fmt.Errorf(
 			"unknown display mode %q (valid modes: %s)",
@@ -72,5 +85,5 @@ func New(mode string, palette prism.Palette) (report.Presenter, error) {
 
 // availableModes returns all known mode names, for error messages.
 func availableModes() []string {
-	return []string{ModeLinear}
+	return []string{ModeLinear, ModeHighway}
 }

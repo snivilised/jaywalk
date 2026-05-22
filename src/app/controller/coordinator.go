@@ -18,7 +18,6 @@ import (
 	"github.com/snivilised/jaywalk/src/app/bedrock"
 	"github.com/snivilised/jaywalk/src/app/report"
 	"github.com/snivilised/jaywalk/src/app/shell"
-	"github.com/snivilised/pants"
 )
 
 // Coordinator coordinates the layers between the command adapters and
@@ -310,6 +309,12 @@ func (c *Coordinator) useShellPoolExec(
 		return func() {}, nil
 	}
 
+	shell := c.rush
+	if shell == "" {
+		shell = "sh"
+	}
+
+	// Determine pool size from concurrency config.
 	options := pref.DefaultOptions()
 	for _, setting := range req.Settings {
 		if setting == nil {
@@ -320,6 +325,9 @@ func (c *Coordinator) useShellPoolExec(
 		}
 	}
 
+	if options.Concurrency.NoW < 1 {
+		options.Concurrency.NoW = 4
+	}
 	if options.Concurrency.Input.Size == 0 {
 		options.Concurrency.Input.Size = options.Concurrency.NoW
 	}
@@ -328,27 +336,27 @@ func (c *Coordinator) useShellPoolExec(
 	}
 
 	var wg sync.WaitGroup
-	pool, err := pants.NewShellPool(ctx, c.rush, &wg,
-		pants.WithSize(options.Concurrency.NoW),
-		pants.WithInput(options.Concurrency.Input.Size),
-		pants.WithOutput(
-			options.Concurrency.Output.Size,
-			options.Concurrency.Output.CheckCloseInterval,
-			options.Concurrency.Output.TimeoutOnSend,
-		),
+
+	manifold, err := newJayShellPool(
+		ctx, shell, &wg,
+		options.Concurrency.NoW,
+		options.Concurrency.Input.Size,
+		options.Concurrency.Output.Size,
+		options.Concurrency.Output.CheckCloseInterval,
+		options.Concurrency.Output.TimeoutOnSend,
 	)
 	if err != nil {
 		return nil, err
 	}
 
+	pool := newShellPoolExecutor(manifold)
+
 	previousExec := c.exec
-	c.exec = newShellPoolExecutor(pool).Execute
+	c.exec = pool.Execute
 
 	return func() {
 		c.exec = previousExec
-		pool.Conclude(ctx)
-		wg.Wait()
-		pool.Release(ctx)
+		pool.closeAll()
 	}, nil
 }
 

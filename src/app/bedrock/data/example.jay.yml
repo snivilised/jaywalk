@@ -57,7 +57,7 @@ flags:
   # defines default flag values on a component basis. So any command
   # uses the sampler, can use the sampler defaults here. Defaults
   # for other components can be defined here too, which cuts across
-  # all applicable commands. Can be overridden by invoke. 
+  # all applicable commands. Can be overridden by invoke.
   component:
     sampler:
       files: 2

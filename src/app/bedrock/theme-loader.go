@@ -1,6 +1,7 @@
 package bedrock
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -8,6 +9,8 @@ import (
 	"github.com/adrg/xdg"
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/spf13/viper"
+
+	nef "github.com/snivilised/nefilim"
 
 	"github.com/snivilised/jaywalk/src/agenor/core"
 	"github.com/snivilised/jaywalk/src/prism"
@@ -29,6 +32,7 @@ const (
 // Constructed once by Bootstrap and shared across the application lifetime.
 type ThemeLoader struct {
 	themesDir string
+	fS        nef.UniversalFS // non-nil when using a mocked FS (e.g. luna.MemFS in tests)
 }
 
 // NewThemeLoader constructs a ThemeLoader. The themes directory is
@@ -64,9 +68,34 @@ func NewThemeLoaderWithDir(dir string) *ThemeLoader {
 	}
 }
 
+// NewThemeLoaderWithFS constructs a ThemeLoader backed by the given
+// filesystem. Passing a luna.MemFS lets tests avoid touching the
+// real filesystem.
+func NewThemeLoaderWithFS(dir string, fS nef.UniversalFS) *ThemeLoader {
+	return &ThemeLoader{
+		themesDir: dir,
+		fS:        fS,
+	}
+}
+
 // themeExtensions lists the file extensions tried when loading a
 // theme file, in priority order.
 var themeExtensions = []string{".yaml", ".yml"}
+
+// readFile reads the theme file at the given path. When a mocked FS is
+// set (tl.fS != nil), it reads from that FS; otherwise it delegates to
+// Viper's file-based ReadInConfig.
+func (tl *ThemeLoader) readFile(v *viper.Viper, path string) error {
+	if tl.fS != nil {
+		data, err := tl.fS.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		return v.ReadConfig(bytes.NewReader(data))
+	}
+	v.SetConfigFile(path)
+	return v.ReadInConfig()
+}
 
 // Load returns the prism.Palette for the named theme. The name
 // "system" returns SystemPalette() without reading any file.
@@ -84,9 +113,8 @@ func (tl *ThemeLoader) Load(name string) (prism.Palette, error) {
 
 		v := viper.New()
 		v.SetConfigType("yaml")
-		v.SetConfigFile(path)
 
-		if err := v.ReadInConfig(); err != nil {
+		if err := tl.readFile(v, path); err != nil {
 			if os.IsNotExist(err) {
 				lastErr = err
 				continue

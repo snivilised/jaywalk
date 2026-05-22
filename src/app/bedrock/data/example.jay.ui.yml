@@ -1,0 +1,41 @@
+# jay.ui.yml — View Configuration
+# Location: ~/.config/jay/jay.ui.yml (optional, loaded on-demand per view)
+#
+# This file controls per-view settings such as emoji decoration and
+# animation data for views that support them.
+#
+# Each view has its own section under `ui:`. Only the section matching
+# the active view is loaded (e.g. ui.highway when --tui highway is used).
+#
+# Example usage:
+#   jay walk --tui highway ./src/mycode
+#   jay sprint --NoW=16 ./src/mycode
+#   jay sprint --tui highway --NoW=16 ./src/mycode
+
+ui:
+  highway:
+    # Emoji pool for decoration (space-separated, at least 10 recommended)
+    emoji-pool: '😎 😄 👽 🤖 🦊 🐯 👻 🧙 🦄 🦁 🦉 🐸'
+
+    # Character between emoji and content info (default: single space)
+    separator: ' '
+
+    # Animation data configuration for Highway view lanes
+    animation:
+      # List of animation types to load on demand
+      # Valid values: 'film-strip', 'space-filled', 'spinner'
+      # Empty or omitted loads all default animations
+      enabled-types: ['film-strip', 'space-filled']
+
+      # Film strip configuration
+      film-strip:
+        speed: 100          # ms per frame (lower = faster animation)
+        amplitude: 5        # intensity level
+
+      # Space filled bar configuration
+      space-filled:
+        gradient-steps: 8   # █░░░░ progression steps
+
+      # Spinner configuration
+      spinner:
+        rotation-speed: 0.1 # radians per tick
