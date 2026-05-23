@@ -22,7 +22,7 @@ require (
 
 require (
 	github.com/charmbracelet/colorprofile v0.4.3 // indirect
-	github.com/charmbracelet/ultraviolet v0.0.0-20260416155717-489999b90468 // indirect
+	github.com/charmbracelet/ultraviolet v0.0.0-20260511121909-c840852527f3 // indirect
 	github.com/charmbracelet/x/term v0.2.2 // indirect
 	github.com/charmbracelet/x/termios v0.1.1 // indirect
 	github.com/charmbracelet/x/windows v0.2.2 // indirect
@@ -63,9 +63,9 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/snivilised/li18ngo v0.1.14
 	github.com/snivilised/nefilim v0.1.13
-	github.com/snivilised/pants v0.1.6
-	golang.org/x/net v0.54.0 // indirect
-	golang.org/x/sys v0.44.0 // indirect
+	github.com/snivilised/pants v0.1.7
+	golang.org/x/net v0.55.0 // indirect
+	golang.org/x/sys v0.45.0 // indirect
 	golang.org/x/text v0.37.0
 	golang.org/x/tools v0.45.0 // indirect
 )

@@ -33,12 +33,12 @@ type (
 
 	// Message is data structure for any logs
 	Message struct {
-		ID         string      // identifier
-		TxID       string      // transaction identifier
-		Topic      string      // topic name
-		Source     string      // source of the message
-		OccurredAt time.Time   // inception time in nanoseconds
-		Data       interface{} // actual message data
+		ID         string    // identifier
+		TxID       string    // transaction identifier
+		Topic      string    // topic name
+		Source     string    // source of the message
+		OccurredAt time.Time // inception time in nanoseconds
+		Data       any       // actual message data
 	}
 
 	// Handler is a receiver for message
@@ -125,7 +125,7 @@ func WithOccurredAt(t time.Time) MessageOption {
 // Emit inits a new message and delivers to the interested in handlers with
 // sync safety
 func (b *Broker) Emit(ctx context.Context,
-	topic string, data interface{},
+	topic string, data any,
 ) error {
 	handlers, ok := b.topics[topic]
 
@@ -160,7 +160,7 @@ func (b *Broker) Emit(ctx context.Context,
 // EmitWithOpts inits a new message and delivers to the interested in handlers
 // with sync safety and options
 func (b *Broker) EmitWithOpts(ctx context.Context,
-	topic string, data interface{}, options ...MessageOption,
+	topic string, data any, options ...MessageOption,
 ) error {
 	handlers, ok := b.topics[topic]
 
