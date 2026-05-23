@@ -1,4 +1,4 @@
-package core
+package widget
 
 import (
 	"fmt"
@@ -8,7 +8,7 @@ import (
 const (
 	millisecondsDurationFormat   = "%dms"
 	secondsDurationFormat        = "%ds"
-	minutesSecondsDurationFormat = "%d:%02d"
+	minutesSecondsDurationFormat = "%dm%ds"
 )
 
 // FormatDuration returns a display string for the given duration based on

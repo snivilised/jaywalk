@@ -46,6 +46,7 @@ flags:
       folders: 1
 
 interaction:
+  date-format: "Mon, 02 Jan 2006 15:04:05 MST"
   tui:
     per-item-delay: "1s"
 

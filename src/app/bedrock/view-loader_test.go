@@ -35,7 +35,7 @@ ui:
     separator: ' '
     animation:
       spinners:
-        enabled: ['film-strip', 'space-filled']
+        enabled: ['film-strip', 'pulse']
         film-strip:
           interval: 200
 `),
@@ -47,7 +47,7 @@ ui:
 			Expect(err).NotTo(HaveOccurred())
 			Expect(cfg.Pool).To(Equal("😎 😄 👽 🤖 🦊 🐯 👻 🧙 🦄 🦁"))
 			Expect(cfg.Separator).To(Equal(" "))
-			Expect(cfg.AnimationData.Spinners.Enabled).To(ConsistOf("film-strip", "space-filled"))
+			Expect(cfg.AnimationData.Spinners.Enabled).To(ConsistOf("film-strip", "pulse"))
 			Expect(cfg.AnimationData.Spinners.FilmStrip).NotTo(BeNil())
 			Expect(cfg.AnimationData.Spinners.FilmStrip.Interval).To(Equal(200))
 		})

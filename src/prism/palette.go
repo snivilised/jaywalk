@@ -110,6 +110,7 @@ const (
 	TreeIconFile           = "file-icon"
 	TreeIconElapsed        = "elapsed-icon"
 	TreeIconSkipped        = "skipped-icon"
+	TreeIconError          = "error-icon"
 	TreeIconBranchVertical = "branch-vertical"
 	TreeIconBranchJoint    = "branch-joint"
 	TreeIconBranchLast     = "branch-last"
@@ -189,6 +190,23 @@ type Palette struct {
 
 	// LaneHeader is the colour of the per-worker lane identity header.
 	LaneHeader SemanticColour `mapstructure:"lane-header"`
+
+	// --- Highway view ---
+
+	// Header is the colour of the title text in the highway view.
+	Header SemanticColour `mapstructure:"header"`
+
+	// Frame is the colour of animation frames (spinners) in the highway view.
+	Frame SemanticColour `mapstructure:"frame"`
+
+	// Border is the colour of box-drawing characters in the highway view.
+	Border SemanticColour `mapstructure:"border"`
+
+	// BarFilled is the colour of filled square-bar glyphs in the highway view.
+	BarFilled SemanticColour `mapstructure:"bar-filled"`
+
+	// BarEmpty is the colour of empty square-bar glyphs in the highway view.
+	BarEmpty SemanticColour `mapstructure:"bar-empty"`
 }
 
 // SystemPalette returns the default ANSI-16-only palette. All TrueColor
@@ -214,11 +232,18 @@ func SystemPalette() Palette {
 		Worker:       SemanticColour{ANSI16: "cyan"},
 		WorkerIdle:   SemanticColour{ANSI16: "bright-black"},
 		LaneHeader:   SemanticColour{ANSI16: "magenta"},
+		Header:       SemanticColour{ANSI16: "bright-white"},
+		Frame:        SemanticColour{ANSI16: "blue"},
+		Border:       SemanticColour{ANSI16: "bright-black"},
+		BarFilled:    SemanticColour{ANSI16: "blue"},
+		BarEmpty:     SemanticColour{ANSI16: "bright-black"},
 		TreeIcons: TreeIcons{
 			TreeIconRoot:           "✻",
 			TreeIconDirectory:      "📁",
 			TreeIconFile:           "🔖",
 			TreeIconElapsed:        "⏰",
+			TreeIconSkipped:        "⛔️",
+			TreeIconError:          "🚫",
 			TreeIconBranchVertical: "│",
 			TreeIconBranchJoint:    "├── ",
 			TreeIconBranchLast:     "└── ",

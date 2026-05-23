@@ -175,6 +175,11 @@ var _ = Describe("Palette", func() {
 				palette.Worker,
 				palette.WorkerIdle,
 				palette.LaneHeader,
+				palette.Header,
+				palette.Frame,
+				palette.Border,
+				palette.BarFilled,
+				palette.BarEmpty,
 			}
 
 			for _, sc := range fields {
@@ -204,6 +209,11 @@ var _ = Describe("Palette", func() {
 				palette.Worker,
 				palette.WorkerIdle,
 				palette.LaneHeader,
+				palette.Header,
+				palette.Frame,
+				palette.Border,
+				palette.BarFilled,
+				palette.BarEmpty,
 			}
 
 			for _, sc := range fields {
@@ -237,6 +247,11 @@ var _ = Describe("Palette", func() {
 				"Worker":       palette.Worker.ANSI16,
 				"WorkerIdle":   palette.WorkerIdle.ANSI16,
 				"LaneHeader":   palette.LaneHeader.ANSI16,
+				"Header":       palette.Header.ANSI16,
+				"Frame":        palette.Frame.ANSI16,
+				"Border":       palette.Border.ANSI16,
+				"BarFilled":    palette.BarFilled.ANSI16,
+				"BarEmpty":     palette.BarEmpty.ANSI16,
 			}
 
 			for name, ansi16 := range fields {

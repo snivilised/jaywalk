@@ -126,6 +126,7 @@ tree-icons:
   file-icon: "🔖"
   elapsed-icon: "⏰"
   skipped-icon: "⛔️"
+  error-icon: "🚫"
   branch-vertical: "│"
   branch-joint: "├── "
   branch-last: "╰── "

@@ -237,6 +237,8 @@ func (b *Bootstrap) Root(options ...ConfigureAppOptionFn) *cobra.Command {
 					}
 				}
 
+				var highwayCfg bedrock.HighwayConfig
+
 				// Register only the selected view factory; avoid registering
 				// all known views when only one will be used.
 				switch mode {
@@ -244,24 +246,9 @@ func (b *Bootstrap) Root(options ...ConfigureAppOptionFn) *cobra.Command {
 					flow.Register()
 
 				case ui.ModeHighway:
-					var cfg bedrock.HighwayConfig
-					if err := b.viewConfigLoader.Load("highway", &cfg); err != nil {
+					if err := b.viewConfigLoader.Load("highway", &highwayCfg); err != nil {
 						return err
 					}
-					highwayPath := b.viewConfigLoader.ResolvePath()
-					if highwayPath == "" {
-						highwayPath = filepath.Join(b.fileManager.ConfigHome(), "jay.ui.yml")
-					}
-					fmt.Printf("[DEBUG] Highway view configuration loaded from %s\n",
-						highwayPath)
-					fmt.Printf("[DEBUG]  Emoji pool: %q\n", cfg.Pool)
-					if len(cfg.AnimationData.Spinners.Enabled) > 0 {
-						fmt.Printf("[DEBUG]  Animation types enabled: %v\n",
-							cfg.AnimationData.Spinners.Enabled)
-					} else {
-						fmt.Println("[DEBUG]  (No animation types specified, using defaults)")
-					}
-					// TODO: register highway view factory when view is implemented
 				}
 
 				palette, err := b.themeLoader.Load(b.rootPs.Native.Theme)
@@ -269,7 +256,11 @@ func (b *Bootstrap) Root(options ...ConfigureAppOptionFn) *cobra.Command {
 					return err
 				}
 
-				mgr, err := ui.New(mode, palette)
+				mgr, err := ui.New(mode, palette, ui.HighwayConfig{
+					Pool:         highwayCfg.Pool,
+					Separator:    highwayCfg.Separator,
+					SpinnerNames: highwayCfg.AnimationData.Spinners.Enabled,
+				})
 				if err != nil {
 					return err
 				}
@@ -290,7 +281,6 @@ func (b *Bootstrap) Root(options ...ConfigureAppOptionFn) *cobra.Command {
 	b.buildWalkCommand(b.container)
 	b.buildSprintCommand(b.container)
 	b.buildQueryCommand(b.container)
-	b.buildTeaCommand(b.container)
 
 	return b.container.Root()
 }
