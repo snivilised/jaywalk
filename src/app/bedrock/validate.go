@@ -88,6 +88,25 @@ func (c HighwayConfig) Validate() error {
 		}
 	}
 
+	spinners := &c.AnimationData.Spinners
+	for _, name := range spinners.Enabled {
+		var cfg *SpinnerItemConfig
+		switch name {
+		case "film-strip":
+			cfg = spinners.FilmStrip
+		case "space-filled":
+			cfg = spinners.SpaceFilled
+		case "spinner":
+			cfg = spinners.Spinner
+		default:
+			ve.addF("ui.highway.animation.spinners.enabled: unknown spinner type %q", name)
+			continue
+		}
+		if cfg != nil && cfg.Interval <= 0 {
+			ve.addF("ui.highway.animation.spinners.%s.interval must be > 0, got %d", name, cfg.Interval)
+		}
+	}
+
 	return ve.asError()
 }
 

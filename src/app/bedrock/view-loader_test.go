@@ -34,10 +34,10 @@ ui:
     emoji-pool: '😎 😄 👽 🤖 🦊 🐯 👻 🧙 🦄 🦁'
     separator: ' '
     animation:
-      enabled-types: ['film-strip', 'space-filled']
-      film-strip:
-        speed: 200
-        amplitude: 3
+      spinners:
+        enabled: ['film-strip', 'space-filled']
+        film-strip:
+          interval: 200
 `),
 			}
 
@@ -47,10 +47,9 @@ ui:
 			Expect(err).NotTo(HaveOccurred())
 			Expect(cfg.Pool).To(Equal("😎 😄 👽 🤖 🦊 🐯 👻 🧙 🦄 🦁"))
 			Expect(cfg.Separator).To(Equal(" "))
-			Expect(cfg.AnimationData.EnabledTypes).To(ConsistOf("film-strip", "space-filled"))
-			Expect(cfg.AnimationData.FilmStrip).NotTo(BeNil())
-			Expect(cfg.AnimationData.FilmStrip.Speed).To(Equal(200))
-			Expect(cfg.AnimationData.FilmStrip.Amplitude).To(Equal(3))
+			Expect(cfg.AnimationData.Spinners.Enabled).To(ConsistOf("film-strip", "space-filled"))
+			Expect(cfg.AnimationData.Spinners.FilmStrip).NotTo(BeNil())
+			Expect(cfg.AnimationData.Spinners.FilmStrip.Interval).To(Equal(200))
 		})
 
 		It("returns nil when config file does not exist", func() {
@@ -93,7 +92,7 @@ ui:
 			var cfg bedrock.HighwayConfig
 			err := loader.Load("highway", &cfg)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(len(cfg.AnimationData.EnabledTypes)).To(Equal(0))
+			Expect(len(cfg.AnimationData.Spinners.Enabled)).To(Equal(0))
 		})
 
 		It("loads from .yml extension as fallback", func() {
