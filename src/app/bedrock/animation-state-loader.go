@@ -9,63 +9,47 @@ import (
 // AnimationState holds loaded animation data from config.
 // This is loaded on-demand when Highway view is requested.
 type AnimationState struct {
-	FilmStrip   *FilmStripData   `json:"film-strip,omitempty"`
-	SpaceFilled *SpaceFilledData `json:"space-filled,omitempty"`
-	Spinner     *SpinnerData     `json:"spinner,omitempty"`
-}
-
-// FilmStripData holds loaded film strip animation data from config.
-type FilmStripData struct {
-	Speed     int `json:"speed"`     // ms per frame
-	Amplitude int `json:"amplitude"` // intensity
-}
-
-// SpaceFilledData holds loaded space-filled bar animation data from config.
-type SpaceFilledData struct {
-	GradientSteps int `json:"gradient-steps"`
-}
-
-// SpinnerData holds loaded spinner animation data from config.
-type SpinnerData struct {
-	RotationSpeed float64 `json:"rotation-speed"`
+	FilmStrip   *SpinnerItemConfig `json:"film-strip,omitempty"`
+	SpaceFilled *SpinnerItemConfig `json:"space-filled,omitempty"`
+	Spinner     *SpinnerItemConfig `json:"spinner,omitempty"`
 }
 
 // LoadAnimationData decodes animation data from the Highway configuration.
 // This is called ONLY when Highway view is requested.
 func LoadAnimationData(config *HighwayConfig) (*AnimationState, error) {
 	state := &AnimationState{}
+	spinners := &config.AnimationData.Spinners
 
-	if len(config.AnimationData.EnabledTypes) == 0 {
-		state.FilmStrip = &FilmStripData{Speed: 100, Amplitude: 5}
-		state.SpaceFilled = &SpaceFilledData{GradientSteps: 8}
-		state.Spinner = &SpinnerData{RotationSpeed: 0.1}
+	if len(spinners.Enabled) == 0 {
+		state.FilmStrip = &SpinnerItemConfig{Interval: 100}
+		state.SpaceFilled = &SpinnerItemConfig{Interval: 80}
+		state.Spinner = &SpinnerItemConfig{Interval: 100}
 	} else {
-		for _, typeName := range config.AnimationData.EnabledTypes {
+		for _, typeName := range spinners.Enabled {
 			switch typeName {
 			case "film-strip":
-				if config.AnimationData.FilmStrip != nil {
-					state.FilmStrip = &FilmStripData{
-						Speed:     config.AnimationData.FilmStrip.Speed,
-						Amplitude: config.AnimationData.FilmStrip.Amplitude,
+				if spinners.FilmStrip != nil {
+					state.FilmStrip = &SpinnerItemConfig{
+						Interval: spinners.FilmStrip.Interval,
 					}
 				} else {
-					state.FilmStrip = &FilmStripData{Speed: 100, Amplitude: 5}
+					state.FilmStrip = &SpinnerItemConfig{Interval: 100}
 				}
 			case "space-filled":
-				if config.AnimationData.SpaceFilled != nil {
-					state.SpaceFilled = &SpaceFilledData{
-						GradientSteps: config.AnimationData.SpaceFilled.GradientSteps,
+				if spinners.SpaceFilled != nil {
+					state.SpaceFilled = &SpinnerItemConfig{
+						Interval: spinners.SpaceFilled.Interval,
 					}
 				} else {
-					state.SpaceFilled = &SpaceFilledData{GradientSteps: 8}
+					state.SpaceFilled = &SpinnerItemConfig{Interval: 80}
 				}
 			case "spinner":
-				if config.AnimationData.Spinner != nil {
-					state.Spinner = &SpinnerData{
-						RotationSpeed: config.AnimationData.Spinner.RotationSpeed,
+				if spinners.Spinner != nil {
+					state.Spinner = &SpinnerItemConfig{
+						Interval: spinners.Spinner.Interval,
 					}
 				} else {
-					state.Spinner = &SpinnerData{RotationSpeed: 0.1}
+					state.Spinner = &SpinnerItemConfig{Interval: 100}
 				}
 			}
 		}

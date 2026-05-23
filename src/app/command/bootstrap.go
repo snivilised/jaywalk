@@ -255,9 +255,9 @@ func (b *Bootstrap) Root(options ...ConfigureAppOptionFn) *cobra.Command {
 					fmt.Printf("[DEBUG] Highway view configuration loaded from %s\n",
 						highwayPath)
 					fmt.Printf("[DEBUG]  Emoji pool: %q\n", cfg.Pool)
-					if len(cfg.AnimationData.EnabledTypes) > 0 {
+					if len(cfg.AnimationData.Spinners.Enabled) > 0 {
 						fmt.Printf("[DEBUG]  Animation types enabled: %v\n",
-							cfg.AnimationData.EnabledTypes)
+							cfg.AnimationData.Spinners.Enabled)
 					} else {
 						fmt.Println("[DEBUG]  (No animation types specified, using defaults)")
 					}
@@ -290,6 +290,7 @@ func (b *Bootstrap) Root(options ...ConfigureAppOptionFn) *cobra.Command {
 	b.buildWalkCommand(b.container)
 	b.buildSprintCommand(b.container)
 	b.buildQueryCommand(b.container)
+	b.buildTeaCommand(b.container)
 
 	return b.container.Root()
 }

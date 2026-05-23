@@ -138,34 +138,30 @@ type HighwayConfig struct {
 }
 
 // HighwayAnimationConfig holds animation data configuration for Highway view.
-// This includes enabled animation types and their parameters.
 type HighwayAnimationConfig struct {
-	// EnabledTypes lists which animation types should be loaded on demand.
+	// Spinners holds per-spinner configuration.
+	Spinners SpinnerAnimationConfig `mapstructure:"spinners,omitempty"`
+}
+
+// SpinnerAnimationConfig groups all spinner-type configurations.
+type SpinnerAnimationConfig struct {
+	// Enabled lists which spinner types should be loaded on demand.
 	// Valid values: 'film-strip', 'space-filled', 'spinner' (etc.)
-	// Only animations in this list will be loaded when Highway view starts.
-	EnabledTypes []string `mapstructure:"enabled-types"`
+	// Only spinners in this list will be loaded when Highway view starts.
+	Enabled []string `mapstructure:"enabled"`
 
-	// FilmStrip configuration
-	FilmStrip *FilmStripConfig `mapstructure:"film-strip,omitempty"`
+	// FilmStrip configuration.
+	FilmStrip *SpinnerItemConfig `mapstructure:"film-strip,omitempty"`
 
-	// SpaceFilled configuration
-	SpaceFilled *SpaceFilledConfig `mapstructure:"space-filled,omitempty"`
+	// SpaceFilled configuration.
+	SpaceFilled *SpinnerItemConfig `mapstructure:"space-filled,omitempty"`
 
-	// Spinner configuration
-	Spinner *SpinnerConfig `mapstructure:"spinner,omitempty"`
-
-	// Additional animation types can be added here as needed
+	// Spinner configuration.
+	Spinner *SpinnerItemConfig `mapstructure:"spinner,omitempty"`
 }
 
-type FilmStripConfig struct {
-	Speed     int `mapstructure:"speed"`     // ms per frame
-	Amplitude int `mapstructure:"amplitude"` // intensity
-}
-
-type SpaceFilledConfig struct {
-	GradientSteps int `mapstructure:"gradient-steps"` // █░░░ progression steps
-}
-
-type SpinnerConfig struct {
-	RotationSpeed float64 `mapstructure:"rotation-speed"` // radians per tick
+// SpinnerItemConfig holds per-spinner settings.
+type SpinnerItemConfig struct {
+	// Interval is the time between frames in milliseconds.
+	Interval int `mapstructure:"interval"`
 }
