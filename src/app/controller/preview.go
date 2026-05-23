@@ -114,23 +114,28 @@ func (b *previewBuffer) finalise() PeerInfoMap {
 // buildPeerInfoMap runs a preview traversal using SlowPrime with the
 // same settings as the live traversal. It returns a PeerInfoMap, the
 // constructed *pref.Options for reuse by the live pass via pref.Using.O,
-// and the TraverseResult from the preview pass for use by PeerAware
-// presenters.
+// the TraverseResult from the preview pass for use by PeerAware
+// presenters, and the maximum traversal depth encountered.
 func buildPeerInfoMap(
 	ctx context.Context,
 	req *PrimeRequest,
 	settings []pref.Option,
-) (PeerInfoMap, *pref.Options, core.TraverseResult, error) {
+) (PeerInfoMap, *pref.Options, core.TraverseResult, uint, error) {
 	fmt.Println("🦋 DEBUG: buildPeerInfoMap: building peer info map with preview traversal ... 🦋")
 	buf := newPreviewBuffer()
 
 	var options *pref.Options
+	var maxDepth uint
 
 	facade := &pref.Using{
 		Subscription: enums.SubscribeUniversal,
 		Head: pref.Head{
 			Handler: func(servant agenor.Servant) error {
 				buf.visit(servant.Node())
+				depth := uint(servant.Node().Extension.Depth)
+				if depth > maxDepth {
+					maxDepth = depth
+				}
 				return nil
 			},
 			GetForest: req.GetForest,
@@ -152,8 +157,8 @@ func buildPeerInfoMap(
 	).Navigate(ctx)
 
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, 0, err
 	}
 
-	return buf.finalise(), options, result, nil
+	return buf.finalise(), options, result, maxDepth, nil
 }

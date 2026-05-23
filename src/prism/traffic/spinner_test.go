@@ -18,9 +18,9 @@ var _ = Describe("SpinnerFrames", func() {
 		Entry("tick 14", 14, "┃▓░░░░░░┃"),
 	)
 
-	DescribeTable("space filled frames",
+	DescribeTable("pulse frames",
 		func(tick int, contains string) {
-			frame := spaceFilledFrame(tick)
+			frame := pulseFrame(tick)
 			Expect(frame).To(HavePrefix(contains))
 		},
 		Entry("tick 0 starts with 1 full", 0, "█"),

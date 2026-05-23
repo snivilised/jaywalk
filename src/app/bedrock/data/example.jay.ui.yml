@@ -23,17 +23,17 @@ ui:
     # Animation data configuration for Highway view lanes
     animation:
       # List of animation types to load on demand
-      # Valid values: 'film-strip', 'space-filled', 'spinner'
+      # Valid values: 'film-strip', 'pulse', 'spinner'
       # Empty or omitted loads all default animations
-      enabled-types: ['film-strip', 'space-filled']
+      enabled-types: ['film-strip', 'pulse']
 
       # Film strip configuration
       film-strip:
         speed: 100          # ms per frame (lower = faster animation)
         amplitude: 5        # intensity level
 
-      # Space filled bar configuration
-      space-filled:
+      # Pulse bar configuration
+      pulse:
         gradient-steps: 8   # █░░░░ progression steps
 
       # Spinner configuration

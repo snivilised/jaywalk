@@ -94,8 +94,8 @@ func (c HighwayConfig) Validate() error {
 		switch name {
 		case "film-strip":
 			cfg = spinners.FilmStrip
-		case "space-filled":
-			cfg = spinners.SpaceFilled
+		case "pulse":
+			cfg = spinners.Pulse
 		case "spinner":
 			cfg = spinners.Spinner
 		default:

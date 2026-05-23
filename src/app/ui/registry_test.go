@@ -24,7 +24,7 @@ var _ = Describe("Registry", func() {
 			func(mode string) {
 				palette := prism.SystemPalette()
 
-				presenter, err := ui.New(mode, palette)
+				presenter, err := ui.New(mode, palette, ui.HighwayConfig{})
 
 				Expect(err).To(BeNil())
 				Expect(presenter).NotTo(BeNil())
@@ -37,7 +37,7 @@ var _ = Describe("Registry", func() {
 			It("returns an error containing the unknown mode name", func() {
 				palette := prism.SystemPalette()
 
-				_, err := ui.New("nonexistent-mode", palette)
+				_, err := ui.New("nonexistent-mode", palette, ui.HighwayConfig{})
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("nonexistent-mode"))
@@ -49,7 +49,7 @@ var _ = Describe("Registry", func() {
 				palette := prism.SystemPalette()
 				palette.Directory = prism.SemanticColour{ANSI16: "notacolour"}
 
-				_, err := ui.New(ui.ModeLinear, palette)
+				_, err := ui.New(ui.ModeLinear, palette, ui.HighwayConfig{})
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("notacolour"))
@@ -76,7 +76,7 @@ var _ = Describe("Registry", func() {
 				Expect(err).To(BeNil())
 				os.Stdout = w
 
-				presenter, err := ui.New(ui.ModeLinear, palette)
+				presenter, err := ui.New(ui.ModeLinear, palette, ui.HighwayConfig{})
 				Expect(err).To(BeNil())
 				Expect(presenter).NotTo(BeNil())
 
