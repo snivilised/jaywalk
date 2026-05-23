@@ -152,7 +152,7 @@ func newJayShellPool(
 		return session.Execute(ctx, command)
 	}
 
-	initialiser := func(id pants.RoutineID) interface{} {
+	initialiser := func(id pants.RoutineID) any {
 		sess, err := newJayShellSession(shell)
 		if err != nil {
 			return nil
@@ -160,7 +160,7 @@ func newJayShellPool(
 		return sess
 	}
 
-	finaliser := func(state interface{}) {
+	finaliser := func(state any) {
 		if session, ok := state.(pants.ShellSession); ok {
 			_ = session.Close()
 		}
@@ -170,8 +170,8 @@ func newJayShellPool(
 		pants.WithSize(size),
 		pants.WithInput(inputSize),
 		pants.WithOutput(outputSize, interval, timeout),
-		pants.WithStateInitializer(initialiser),
-		pants.WithStateFinalizer(finaliser),
+		pants.WithStateInitialiser(initialiser),
+		pants.WithStateFinaliser(finaliser),
 	)
 }
 

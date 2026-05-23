@@ -448,7 +448,7 @@ func exprString(fset *token.FileSet, expr ast.Expr) string {
 		return sb.String()
 	case *ast.InterfaceType:
 		if e.Methods == nil || len(e.Methods.List) == 0 {
-			return "interface{}"
+			return "any"
 		}
 		return "interface{ ... }"
 	case *ast.StructType:

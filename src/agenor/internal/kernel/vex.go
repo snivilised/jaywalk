@@ -9,7 +9,7 @@ type (
 	}
 
 	vex struct {
-		data     interface{}
+		data     any
 		anc      string
 		vap      inspection
 		catalyst string
@@ -17,7 +17,7 @@ type (
 	}
 )
 
-func (v *vex) Data() interface{} {
+func (v *vex) Data() any {
 	return v.data
 }
 

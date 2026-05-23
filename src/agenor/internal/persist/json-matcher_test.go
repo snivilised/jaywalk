@@ -21,7 +21,7 @@ func HaveMarshaledEqual(o *pref.Options) types.GomegaMatcher {
 	}
 }
 
-func (m *MarshalJSONMatcher) Match(actual interface{}) (bool, error) {
+func (m *MarshalJSONMatcher) Match(actual any) (bool, error) {
 	jo, ok := actual.(*json.Options)
 
 	if !ok {
@@ -39,11 +39,11 @@ func (m *MarshalJSONMatcher) Match(actual interface{}) (bool, error) {
 	return true, nil
 }
 
-func (m *MarshalJSONMatcher) FailureMessage(_ interface{}) string {
+func (m *MarshalJSONMatcher) FailureMessage(_ any) string {
 	return fmt.Sprintf("🔥 Expected\n\t%v\nJSON Marshal conversion result in equal result", m.err)
 }
 
-func (m *MarshalJSONMatcher) NegatedFailureMessage(_ interface{}) string {
+func (m *MarshalJSONMatcher) NegatedFailureMessage(_ any) string {
 	return fmt.Sprintf("🔥 Expected\n\t%v\nJSON Marshal conversion result in NON equal result", m.err)
 }
 
@@ -58,7 +58,7 @@ func HaveUnMarshaledEqual(jo *json.Options) types.GomegaMatcher {
 	}
 }
 
-func (m *UnMarshalJSONMatcher) Match(actual interface{}) (bool, error) {
+func (m *UnMarshalJSONMatcher) Match(actual any) (bool, error) {
 	o, ok := actual.(*pref.Options)
 
 	if !ok {
@@ -76,10 +76,10 @@ func (m *UnMarshalJSONMatcher) Match(actual interface{}) (bool, error) {
 	return true, nil
 }
 
-func (m *UnMarshalJSONMatcher) FailureMessage(_ interface{}) string {
+func (m *UnMarshalJSONMatcher) FailureMessage(_ any) string {
 	return fmt.Sprintf("🔥 Expected\n\t%v\nJSON UnMarshal conversion result in equal result", m.err)
 }
 
-func (m *UnMarshalJSONMatcher) NegatedFailureMessage(_ interface{}) string {
+func (m *UnMarshalJSONMatcher) NegatedFailureMessage(_ any) string {
 	return fmt.Sprintf("🔥 Expected\n\t%v\nJSON UnMarshal conversion result in NON equal result", m.err)
 }

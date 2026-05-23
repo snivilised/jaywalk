@@ -12,16 +12,16 @@ import (
 //
 
 type IsCurrentRegexMatchMatcher struct {
-	rxFilter interface{}
+	rxFilter any
 }
 
-func MatchCurrentRegexFilter(expected interface{}) GomegaMatcher {
+func MatchCurrentRegexFilter(expected any) GomegaMatcher {
 	return &IsCurrentRegexMatchMatcher{
 		rxFilter: expected,
 	}
 }
 
-func (m *IsCurrentRegexMatchMatcher) Match(actual interface{}) (bool, error) {
+func (m *IsCurrentRegexMatchMatcher) Match(actual any) (bool, error) {
 	node, itemOk := actual.(*core.Node)
 	if !itemOk {
 		return false, fmt.Errorf("matcher expected a *TraverseItem (%T)", node)
@@ -35,7 +35,7 @@ func (m *IsCurrentRegexMatchMatcher) Match(actual interface{}) (bool, error) {
 	return rxFilter.IsMatch(node), nil
 }
 
-func (m *IsCurrentRegexMatchMatcher) FailureMessage(actual interface{}) string {
+func (m *IsCurrentRegexMatchMatcher) FailureMessage(actual any) string {
 	node, _ := actual.(*core.Node)
 	rxFilter, _ := m.rxFilter.(*filtering.RegExpr)
 
@@ -44,7 +44,7 @@ func (m *IsCurrentRegexMatchMatcher) FailureMessage(actual interface{}) string {
 	)
 }
 
-func (m *IsCurrentRegexMatchMatcher) NegatedFailureMessage(actual interface{}) string {
+func (m *IsCurrentRegexMatchMatcher) NegatedFailureMessage(actual any) string {
 	node, _ := actual.(*core.Node)
 	rxFilter, _ := m.rxFilter.(*filtering.RegExpr)
 
@@ -57,16 +57,16 @@ func (m *IsCurrentRegexMatchMatcher) NegatedFailureMessage(actual interface{}) s
 //
 
 type IsCurrentGlobMatchMatcher struct {
-	gbFilter interface{}
+	gbFilter any
 }
 
-func MatchCurrentGlobFilter(expected interface{}) GomegaMatcher {
+func MatchCurrentGlobFilter(expected any) GomegaMatcher {
 	return &IsCurrentGlobMatchMatcher{
 		gbFilter: expected,
 	}
 }
 
-func (m *IsCurrentGlobMatchMatcher) Match(actual interface{}) (bool, error) {
+func (m *IsCurrentGlobMatchMatcher) Match(actual any) (bool, error) {
 	node, itemOk := actual.(*core.Node)
 	if !itemOk {
 		return false, fmt.Errorf("matcher expected a *TraverseItem (%T)", node)
@@ -80,7 +80,7 @@ func (m *IsCurrentGlobMatchMatcher) Match(actual interface{}) (bool, error) {
 	return gbFilter.IsMatch(node), nil
 }
 
-func (m *IsCurrentGlobMatchMatcher) FailureMessage(actual interface{}) string {
+func (m *IsCurrentGlobMatchMatcher) FailureMessage(actual any) string {
 	node, _ := actual.(*core.Node)
 	gbFilter, _ := m.gbFilter.(*filtering.Glob)
 
@@ -89,7 +89,7 @@ func (m *IsCurrentGlobMatchMatcher) FailureMessage(actual interface{}) string {
 	)
 }
 
-func (m *IsCurrentGlobMatchMatcher) NegatedFailureMessage(actual interface{}) string {
+func (m *IsCurrentGlobMatchMatcher) NegatedFailureMessage(actual any) string {
 	node, _ := actual.(*core.Node)
 	gbFilter, _ := m.gbFilter.(*filtering.Glob)
 
@@ -102,16 +102,16 @@ func (m *IsCurrentGlobMatchMatcher) NegatedFailureMessage(actual interface{}) st
 //
 
 type IsCurrentGlobExMatchMatcher struct {
-	egbFilter interface{}
+	egbFilter any
 }
 
-func MatchCurrentGlobExFilter(expected interface{}) GomegaMatcher {
+func MatchCurrentGlobExFilter(expected any) GomegaMatcher {
 	return &IsCurrentGlobExMatchMatcher{
 		egbFilter: expected,
 	}
 }
 
-func (m *IsCurrentGlobExMatchMatcher) Match(actual interface{}) (bool, error) {
+func (m *IsCurrentGlobExMatchMatcher) Match(actual any) (bool, error) {
 	node, itemOk := actual.(*core.Node)
 	if !itemOk {
 		return false, fmt.Errorf("matcher expected a *TraverseItem (%T)", node)
@@ -125,7 +125,7 @@ func (m *IsCurrentGlobExMatchMatcher) Match(actual interface{}) (bool, error) {
 	return egbFilter.IsMatch(node), nil
 }
 
-func (m *IsCurrentGlobExMatchMatcher) FailureMessage(actual interface{}) string {
+func (m *IsCurrentGlobExMatchMatcher) FailureMessage(actual any) string {
 	node, _ := actual.(*core.Node)
 	egbFilter, _ := m.egbFilter.(*filtering.GlobEx)
 
@@ -134,7 +134,7 @@ func (m *IsCurrentGlobExMatchMatcher) FailureMessage(actual interface{}) string 
 	)
 }
 
-func (m *IsCurrentGlobExMatchMatcher) NegatedFailureMessage(actual interface{}) string {
+func (m *IsCurrentGlobExMatchMatcher) NegatedFailureMessage(actual any) string {
 	node, _ := actual.(*core.Node)
 	egbFilter, _ := m.egbFilter.(*filtering.GlobEx)
 
@@ -147,16 +147,16 @@ func (m *IsCurrentGlobExMatchMatcher) NegatedFailureMessage(actual interface{}) 
 //
 
 type IsCurrentCustomMatchMatcher struct {
-	tvFilter interface{}
+	tvFilter any
 }
 
-func MatchCurrentCustomFilter(expected interface{}) GomegaMatcher {
+func MatchCurrentCustomFilter(expected any) GomegaMatcher {
 	return &IsCurrentCustomMatchMatcher{
 		tvFilter: expected,
 	}
 }
 
-func (m *IsCurrentCustomMatchMatcher) Match(actual interface{}) (bool, error) {
+func (m *IsCurrentCustomMatchMatcher) Match(actual any) (bool, error) {
 	node, itemOk := actual.(*core.Node)
 	if !itemOk {
 		return false, fmt.Errorf("matcher expected a *TraverseItem (%T)", node)
@@ -170,7 +170,7 @@ func (m *IsCurrentCustomMatchMatcher) Match(actual interface{}) (bool, error) {
 	return tvFilter.IsMatch(node), nil
 }
 
-func (m *IsCurrentCustomMatchMatcher) FailureMessage(actual interface{}) string {
+func (m *IsCurrentCustomMatchMatcher) FailureMessage(actual any) string {
 	node, _ := actual.(*core.Node)
 	tvFilter, _ := m.tvFilter.(core.TraverseFilter)
 
@@ -179,7 +179,7 @@ func (m *IsCurrentCustomMatchMatcher) FailureMessage(actual interface{}) string 
 	)
 }
 
-func (m *IsCurrentCustomMatchMatcher) NegatedFailureMessage(actual interface{}) string {
+func (m *IsCurrentCustomMatchMatcher) NegatedFailureMessage(actual any) string {
 	node, _ := actual.(*core.Node)
 	tvFilter, _ := m.tvFilter.(core.TraverseFilter)
 

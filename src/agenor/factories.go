@@ -73,5 +73,5 @@ func (f *runnerFac) Configure(addons ...Addon) Director {
 
 type (
 	// Addon is a type that can be added to a session.
-	Addon interface{}
+	Addon any
 )

@@ -1,12 +1,9 @@
-package highway
+package bedrock
 
 import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
-
-	"github.com/snivilised/jaywalk/src/app/bedrock"
 )
 
 // AnimationState holds loaded animation data from config.
@@ -35,7 +32,7 @@ type SpinnerData struct {
 
 // LoadAnimationData decodes animation data from the Highway configuration.
 // This is called ONLY when Highway view is requested.
-func LoadAnimationData(config *bedrock.HighwayConfig) (*AnimationState, error) {
+func LoadAnimationData(config *HighwayConfig) (*AnimationState, error) {
 	state := &AnimationState{}
 
 	if len(config.AnimationData.EnabledTypes) == 0 {
@@ -75,24 +72,6 @@ func LoadAnimationData(config *bedrock.HighwayConfig) (*AnimationState, error) {
 	}
 
 	return state, nil
-}
-
-// SaveAnimationState persists animation data to file for later retrieval.
-func SaveAnimationState(state *AnimationState, path string) error {
-	data, err := json.MarshalIndent(state, "", "  ")
-	if err != nil {
-		return fmt.Errorf("encoding Highway animation data: %w", err)
-	}
-
-	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
-		return fmt.Errorf("creating animation directory: %w", err)
-	}
-
-	if err := os.WriteFile(path, data, 0o600); err != nil {
-		return fmt.Errorf("writing Highway animation data: %w", err)
-	}
-
-	return nil
 }
 
 // LoadAnimationStateFrom loads saved animation data from file.
