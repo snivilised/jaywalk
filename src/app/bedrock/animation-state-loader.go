@@ -10,7 +10,7 @@ import (
 // This is loaded on-demand when Highway view is requested.
 type AnimationState struct {
 	FilmStrip   *SpinnerItemConfig `json:"film-strip,omitempty"`
-	SpaceFilled *SpinnerItemConfig `json:"space-filled,omitempty"`
+	Pulse *SpinnerItemConfig `json:"pulse,omitempty"`
 	Spinner     *SpinnerItemConfig `json:"spinner,omitempty"`
 }
 
@@ -22,7 +22,7 @@ func LoadAnimationData(config *HighwayConfig) (*AnimationState, error) {
 
 	if len(spinners.Enabled) == 0 {
 		state.FilmStrip = &SpinnerItemConfig{Interval: 100}
-		state.SpaceFilled = &SpinnerItemConfig{Interval: 80}
+		state.Pulse = &SpinnerItemConfig{Interval: 80}
 		state.Spinner = &SpinnerItemConfig{Interval: 100}
 	} else {
 		for _, typeName := range spinners.Enabled {
@@ -35,13 +35,13 @@ func LoadAnimationData(config *HighwayConfig) (*AnimationState, error) {
 				} else {
 					state.FilmStrip = &SpinnerItemConfig{Interval: 100}
 				}
-			case "space-filled":
-				if spinners.SpaceFilled != nil {
-					state.SpaceFilled = &SpinnerItemConfig{
-						Interval: spinners.SpaceFilled.Interval,
+			case "pulse":
+				if spinners.Pulse != nil {
+					state.Pulse = &SpinnerItemConfig{
+						Interval: spinners.Pulse.Interval,
 					}
 				} else {
-					state.SpaceFilled = &SpinnerItemConfig{Interval: 80}
+					state.Pulse = &SpinnerItemConfig{Interval: 80}
 				}
 			case "spinner":
 				if spinners.Spinner != nil {

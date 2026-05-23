@@ -58,7 +58,7 @@ func newLinearPresenter(palette prism.Palette) (report.Presenter, error) {
 // the given palette. Only the selected view is instantiated; other views
 // are not created. Returns an error if the mode is unknown or if the
 // palette contains unrecognised colour names.
-func New(mode string, palette prism.Palette) (report.Presenter, error) {
+func New(mode string, palette prism.Palette, hcfg HighwayConfig) (report.Presenter, error) {
 	if mode == "" {
 		mode = ModeDefault
 	}
@@ -68,11 +68,7 @@ func New(mode string, palette prism.Palette) (report.Presenter, error) {
 		return newLinearPresenter(palette)
 
 	case ModeHighway:
-		// HACK: highway view not yet implemented. Fall back to linear
-		// so --tui highway and sprint's default-to-highway both work
-		// without error. Remove this case (let it fall through to default)
-		// once prism/highway view is ready.
-		return newLinearPresenter(palette)
+		return newHighwayPresenter(palette, hcfg)
 
 	default:
 		return nil, fmt.Errorf(

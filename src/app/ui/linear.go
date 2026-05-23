@@ -56,6 +56,7 @@ func (l *linear) OnBegin(e *report.BeginEvent) {
 		StartedAt:  e.StartedAt,
 		Kind:       kind,
 		ResumeFrom: e.ResumeFrom,
+		DateFormat: e.DateFormat,
 	})
 }
 

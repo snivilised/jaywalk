@@ -1,4 +1,4 @@
-package demo
+package highway
 
 import (
 	"testing"
@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestDemo(t *testing.T) {
+func TestHighway(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Demo Suite")
+	RunSpecs(t, "Highway Suite")
 }

@@ -15,6 +15,7 @@ func defaultTreeIcons() TreeIcons {
 		TreeIconFile:           "🔖",
 		TreeIconElapsed:        "⏰",
 		TreeIconSkipped:        "⛔️",
+		TreeIconError:          "🚫",
 		TreeIconBranchVertical: "│",
 		TreeIconBranchJoint:    "├── ",
 		TreeIconBranchLast:     "└── ",
@@ -80,6 +81,21 @@ type Theme struct {
 	// TreeIcons are the glyphs used to render the branch tree in linear
 	// views such as the linear renderer.
 	TreeIcons TreeIcons
+
+	// HeaderStyle is the style of the title text in the highway view.
+	HeaderStyle lipgloss.Style
+
+	// FrameStyle is the style of animation frames in the highway view.
+	FrameStyle lipgloss.Style
+
+	// BorderStyle is the style of box-drawing characters in the highway view.
+	BorderStyle lipgloss.Style
+
+	// BarFilledStyle is the style of filled square-bar glyphs.
+	BarFilledStyle lipgloss.Style
+
+	// BarEmptyStyle is the style of empty square-bar glyphs.
+	BarEmptyStyle lipgloss.Style
 }
 
 // NewTheme constructs a Theme from the given Palette. The colour profile
@@ -196,6 +212,31 @@ func NewTheme(palette Palette, writer io.Writer) (Theme, error) {
 		return Theme{}, err
 	}
 
+	header, err := resolve(palette.Header, "header")
+	if err != nil {
+		return Theme{}, err
+	}
+
+	frame, err := resolve(palette.Frame, "frame")
+	if err != nil {
+		return Theme{}, err
+	}
+
+	border, err := resolve(palette.Border, "border")
+	if err != nil {
+		return Theme{}, err
+	}
+
+	barFilled, err := resolve(palette.BarFilled, "bar-filled")
+	if err != nil {
+		return Theme{}, err
+	}
+
+	barEmpty, err := resolve(palette.BarEmpty, "bar-empty")
+	if err != nil {
+		return Theme{}, err
+	}
+
 	treeIcons := make(TreeIcons)
 	for k, v := range defaultTreeIcons() {
 		treeIcons[k] = v
@@ -269,6 +310,22 @@ func NewTheme(palette Palette, writer io.Writer) (Theme, error) {
 
 		BranchStyle: lipgloss.NewStyle().
 			Foreground(branch),
+
+		HeaderStyle: lipgloss.NewStyle().
+			Foreground(header).
+			Bold(true),
+
+		FrameStyle: lipgloss.NewStyle().
+			Foreground(frame),
+
+		BorderStyle: lipgloss.NewStyle().
+			Foreground(border),
+
+		BarFilledStyle: lipgloss.NewStyle().
+			Foreground(barFilled),
+
+		BarEmptyStyle: lipgloss.NewStyle().
+			Foreground(barEmpty),
 
 		TreeIcons: treeIcons,
 	}, nil

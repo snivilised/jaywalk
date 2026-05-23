@@ -80,6 +80,10 @@ type Overture struct {
 	// Survey holds the results of a prior survey phase. Nil for
 	// single-phase navigations such as the linear view.
 	Survey *SurveyResult
+
+	// DateFormat is the Go time format string for rendering StartedAt.
+	// Empty means use the default (time.RFC1123).
+	DateFormat string
 }
 
 // Motif is the unit of render-able content passed to Renderer.Show for

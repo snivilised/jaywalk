@@ -24,7 +24,7 @@ func filmStripFrame(tick int) string {
 	return "┃" + filled + empty + "┃"
 }
 
-func spaceFilledFrame(tick int) string {
+func pulseFrame(tick int) string {
 	const (
 		steps = 8
 		full  = "█"
@@ -43,9 +43,9 @@ func spinnerFrame(tick int) string {
 }
 
 var builtinSpinners = map[string]SpinnerDef{
-	"film-strip":   {Frames: filmStripFrame, Interval: 100 * time.Millisecond},
-	"space-filled": {Frames: spaceFilledFrame, Interval: 80 * time.Millisecond},
-	"spinner":      {Frames: spinnerFrame, Interval: 100 * time.Millisecond},
+	SpinnerTypeFilmStrip:   {Frames: filmStripFrame, Interval: 100 * time.Millisecond},
+	SpinnerTypePulse: {Frames: pulseFrame, Interval: 80 * time.Millisecond},
+	SpinnerTypeDefault:     {Frames: spinnerFrame, Interval: 100 * time.Millisecond},
 }
 
 func Lookup(name string) (SpinnerDef, bool) {

@@ -41,6 +41,16 @@ type BeginEvent struct {
 
 	// Subscription is the type of nodes being visited.
 	Subscription enums.Subscription
+
+	// ActionName is the name of the configured action, if any.
+	ActionName string
+
+	// PipelineName is the name of the configured pipeline, if any.
+	PipelineName string
+
+	// DateFormat is the Go time format string for rendering StartedAt
+	// in the view header. Empty means use the default (time.RFC1123).
+	DateFormat string
 }
 
 // NeutralEvent is emitted per node visit when no action or pipeline is

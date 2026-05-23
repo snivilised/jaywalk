@@ -15,7 +15,8 @@ type TUIConfig struct {
 
 // InteractionConfig groups all user-interaction knobs.
 type InteractionConfig struct {
-	TUI TUIConfig `mapstructure:"tui"`
+	TUI        TUIConfig `mapstructure:"tui"`
+	DateFormat string    `mapstructure:"date-format"`
 }
 
 // ExtensionsConfig controls how file extensions are normalised.
@@ -146,15 +147,15 @@ type HighwayAnimationConfig struct {
 // SpinnerAnimationConfig groups all spinner-type configurations.
 type SpinnerAnimationConfig struct {
 	// Enabled lists which spinner types should be loaded on demand.
-	// Valid values: 'film-strip', 'space-filled', 'spinner' (etc.)
+	// Valid values: 'film-strip', 'pulse', 'spinner' (etc.)
 	// Only spinners in this list will be loaded when Highway view starts.
 	Enabled []string `mapstructure:"enabled"`
 
 	// FilmStrip configuration.
 	FilmStrip *SpinnerItemConfig `mapstructure:"film-strip,omitempty"`
 
-	// SpaceFilled configuration.
-	SpaceFilled *SpinnerItemConfig `mapstructure:"space-filled,omitempty"`
+	// Pulse configuration.
+	Pulse *SpinnerItemConfig `mapstructure:"pulse,omitempty"`
 
 	// Spinner configuration.
 	Spinner *SpinnerItemConfig `mapstructure:"spinner,omitempty"`

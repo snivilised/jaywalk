@@ -148,7 +148,7 @@ func (c *Coordinator) ExecutePrime(ctx context.Context, req *PrimeRequest) error
 	if isPeerAware && view.NeedsPeerInfo() {
 		// Execute the preview traversal to build the PeerInfoMap and collect.
 		fmt.Println("🦄 DEBUG: Coordinator.ExecutePrime: peer aware ... 🦄")
-		peerInfoMap, builtOptions, result, err := buildPeerInfoMap(
+		peerInfoMap, builtOptions, result, maxDepth, err := buildPeerInfoMap(
 			ctx, req, req.Settings,
 		)
 		if err != nil {
@@ -163,6 +163,10 @@ func (c *Coordinator) ExecutePrime(ctx context.Context, req *PrimeRequest) error
 			uint(dirsCount),  // problem with the last entry in the tree
 			peerInfoMap,
 		)
+
+		if md, ok := view.(interface{ SetMaxDepth(uint) }); ok {
+			md.SetMaxDepth(maxDepth)
+		}
 
 		// The preview captured builtOptions without the coordinator's
 		// logger and adminPath. Apply them now so they are not lost
@@ -285,6 +289,9 @@ func (c *Coordinator) execute(
 		IsPrime:      isPrime,
 		ResumeFrom:   resumeFrom,
 		Subscription: req.Subscription,
+		ActionName:   req.ActionName,
+		PipelineName: req.PipelineName,
+		DateFormat:   c.config.Mapped.Interaction.DateFormat,
 	})
 
 	result, err := req.Scenario(facade, req.Settings...).Navigate(ctx)

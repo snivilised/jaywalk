@@ -42,9 +42,14 @@ func (r *renderer) Begin(overture prism.Overture) {
 		fmt.Sprintf("  jay  %s", overture.Root),
 	)
 
+	dateFmt := overture.DateFormat
+	if dateFmt == "" {
+		dateFmt = time.RFC1123
+	}
+
 	caption := fmt.Sprintf("  %s  -  %s",
 		overture.Caption,
-		overture.StartedAt.Format(time.RFC1123),
+		overture.StartedAt.Format(dateFmt),
 	)
 
 	if overture.Kind == prism.ResumeNavigation && overture.ResumeFrom != "" {
@@ -291,29 +296,28 @@ func (r *renderer) End(summary prism.Summary) {
 		dirLabel = "Dirs (resumed)"
 	}
 
+	errorCount := len(summary.Errors)
+
 	rows := []widget.SummaryRow{
 		r.summaryRow(prism.TreeIconFile, fileLabel, fmt.Sprintf("%d", summary.FilesVisited)),
 		r.summaryRow(prism.TreeIconDirectory, dirLabel, fmt.Sprintf("%d", summary.DirsVisited)),
 		r.summaryRow(prism.TreeIconSkipped, skippedLabel, fmt.Sprintf("%d", summary.Skipped)),
-		r.summaryRow(prism.TreeIconElapsed, elapsedLabel, core.FormatDuration(summary.Elapsed)),
+		r.summaryRow(prism.TreeIconError, "Errors", fmt.Sprintf("%d", errorCount)),
+		r.summaryRow(prism.TreeIconElapsed, elapsedLabel, widget.FormatDuration(summary.Elapsed)),
 	}
 
-	if len(summary.Errors) > 0 {
+	if errorCount > 0 {
 		errorStyles := widget.SummaryCellStyles{
 			Icon:  r.theme.ErrorStyle,
 			Label: r.theme.ErrorStyle,
 			Value: r.theme.ErrorStyle,
 		}
 
-		rows = append(rows, widget.SummaryRow{
-			Label:  "Errors",
-			Value:  fmt.Sprintf("%d", len(summary.Errors)),
-			Styles: &errorStyles,
-		})
+		rows[len(rows)-2].Styles = &errorStyles
 
 		for _, err := range summary.Errors {
 			rows = append(rows, widget.SummaryRow{
-				Label:  "  ! " + err.Error(),
+				Label:  err.Error(),
 				Styles: &errorStyles,
 			})
 		}
