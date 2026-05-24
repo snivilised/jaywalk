@@ -96,6 +96,38 @@ type Theme struct {
 
 	// BarEmptyStyle is the style of empty square-bar glyphs.
 	BarEmptyStyle lipgloss.Style
+
+// HighlightGradients holds resolved colour endpoints for animation
+// overlays. Keyed by gradient name from the theme file. Only populated
+// when the user has configured highlights.gradients in their theme.
+HighlightGradients map[string]ResolvedGradient
+
+// GradientCaches caches the pre-computed interpolated colour steps per
+// gradient name, keyed by gradient name. Empty means compute on-demand
+// using InterpolateBetween(). Only used for highway animation overlays.
+GradientCaches map[string][]color.Color `json:"-"`
+
+// HighlightsComponents maps a component name (e.g. "highway-animation")
+// to a gradient name. Populated from highlights.components in the
+// theme file. A component with no entry falls back to its static style.
+HighlightsComponents map[string]string
+}
+
+// GradientFor looks up the resolved gradient for the given component name.
+// Returns the gradient and true if a gradient is configured; returns a zero
+// ResolvedGradient and false if the component has no mapping or the
+// referenced gradient does not exist. Callers fall back to their static
+// style when false.
+func (t Theme) GradientFor(component string) (ResolvedGradient, bool) {
+	gradName, ok := t.HighlightsComponents[component]
+	if !ok {
+		return ResolvedGradient{}, false
+	}
+	grad, ok := t.HighlightGradients[gradName]
+	if !ok {
+		return ResolvedGradient{}, false
+	}
+	return grad, true
 }
 
 // NewTheme constructs a Theme from the given Palette. The colour profile
@@ -247,6 +279,55 @@ func NewTheme(palette Palette, writer io.Writer) (Theme, error) {
 		}
 	}
 
+// Resolve gradients (silently skip entries with neither hi nor lo).
+	highlightGradients := make(map[string]ResolvedGradient)
+	highlightCaches := make(map[string][]color.Color)
+	for name, gd := range palette.Highlights.Gradients {
+		if gd.Hi == nil && gd.Lo == nil {
+			continue
+		}
+		var hiCol, loCol color.Color
+		if gd.Hi != nil {
+			hiCol, err = resolve(*gd.Hi, "highlights.gradients."+name+".hi")
+			if err != nil {
+				return Theme{}, err
+			}
+		}
+		if gd.Lo != nil {
+			loCol, err = resolve(*gd.Lo, "highlights.gradients."+name+".lo")
+			if err != nil {
+				return Theme{}, err
+			}
+		}
+		if gd.Hi == nil && gd.Lo != nil {
+			hiCol = deriveBrighter(loCol)
+		} else if gd.Hi != nil && gd.Lo == nil {
+			loCol = deriveDimmed(hiCol)
+		}
+		steps := gd.Steps
+		if steps <= 0 {
+			steps = DefaultStepCount() // default to 8-step gradient when not specified
+		}
+		highlightGradients[name] = ResolvedGradient{
+			Steps: steps,
+			Hi:    hiCol,
+			Lo:    loCol,
+		}
+		// Pre-compute gradient steps and cache them (on-demand when empty)
+		if steps > 0 {
+			cached := InterpolateBetween(hiCol, loCol, steps)
+			highlightCaches[name] = cached
+		} else {
+			// Cache nil to indicate compute on-demand during rendering
+			highlightCaches[name] = nil
+		}
+	}
+// Store component-to-gradient bindings (may be empty).
+	highlightsComponents := make(map[string]string)
+	for k, v := range palette.Highlights.Components {
+		highlightsComponents[k] = v
+	}
+
 	return Theme{
 		DirStyle: lipgloss.NewStyle().
 			Foreground(dir).
@@ -327,6 +408,9 @@ func NewTheme(palette Palette, writer io.Writer) (Theme, error) {
 		BarEmptyStyle: lipgloss.NewStyle().
 			Foreground(barEmpty),
 
-		TreeIcons: treeIcons,
+		TreeIcons:           treeIcons,
+		HighlightGradients:  highlightGradients,
+		GradientCaches:      highlightCaches,
+		HighlightsComponents: highlightsComponents,
 	}, nil
 }

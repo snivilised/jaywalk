@@ -136,6 +136,11 @@ type HighwayConfig struct {
 	// AnimationData holds animation type configurations loaded from config.
 	// These are loaded on-demand when Highway view is activated.
 	AnimationData HighwayAnimationConfig `mapstructure:"animation,omitempty"`
+
+	// AnimationGradient specifies which gradient to apply to highway animation frames.
+	// Must match a key in palette.highlights.gradients (e.g., "aurora-borealis").
+	// When empty, no gradient is applied and default styling is used.
+	AnimationGradient string `mapstructure:"animation-gradient,omitempty"`
 }
 
 // HighwayAnimationConfig holds animation data configuration for Highway view.
@@ -147,18 +152,23 @@ type HighwayAnimationConfig struct {
 // SpinnerAnimationConfig groups all spinner-type configurations.
 type SpinnerAnimationConfig struct {
 	// Enabled lists which spinner types should be loaded on demand.
-	// Valid values: 'film-strip', 'pulse', 'spinner' (etc.)
-	// Only spinners in this list will be loaded when Highway view starts.
+	// All registered spinner names are valid. Only spinners in this list
+	// will be loaded when Highway view starts.
 	Enabled []string `mapstructure:"enabled"`
 
-	// FilmStrip configuration.
-	FilmStrip *SpinnerItemConfig `mapstructure:"film-strip,omitempty"`
-
-	// Pulse configuration.
-	Pulse *SpinnerItemConfig `mapstructure:"pulse,omitempty"`
-
-	// Spinner configuration.
-	Spinner *SpinnerItemConfig `mapstructure:"spinner,omitempty"`
+	// Override holds per-spinner config overrides keyed by spinner name.
+	// Only entries listed in Enabled are consulted. The most useful override
+	// is "interval" (milliseconds), which controls the animation speed of
+	// that spinner in the highway view. Larger = slower (e.g. 5000 advances
+	// the frame every 5 seconds). Value 0 or omitted = full speed (advances
+	// every global tick, ~50ms).
+	// Example:
+	//   spinners:
+	//     enabled: [wave]
+	//     override:
+	//       wave:
+	//         interval: 5000   # wave cycles once every 5 seconds
+	Override map[string]*SpinnerItemConfig `mapstructure:"override,omitempty"`
 }
 
 // SpinnerItemConfig holds per-spinner settings.

@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/snivilised/jaywalk/src/prism/traffic"
 )
 
 // ValidationError collects every validation failure in one pass so the
@@ -31,18 +33,10 @@ func (e *ValidationError) asError() error {
 	return e
 }
 
-// ---------------------------------------------------------------------------
 // Validator interface - implemented per-section;
-// ---------------------------------------------------------------------------
-
-// Validator can report whether it is internally consistent.
 type Validator interface {
 	Validate() error
 }
-
-// ---------------------------------------------------------------------------
-// Section validators
-// ---------------------------------------------------------------------------
 
 var validLogLevels = map[string]struct{}{
 	"trace": {}, "debug": {}, "info": {},
@@ -73,7 +67,6 @@ func (c LoggingConfig) Validate() error {
 
 // Validate checks AdvancedConfig.
 func (c AdvancedConfig) Validate() error {
-	// Currently no numeric bounds on AdvancedConfig.  Reserved for future use.
 	return nil
 }
 
@@ -89,21 +82,14 @@ func (c HighwayConfig) Validate() error {
 	}
 
 	spinners := &c.AnimationData.Spinners
-	for _, name := range spinners.Enabled {
-		var cfg *SpinnerItemConfig
-		switch name {
-		case "film-strip":
-			cfg = spinners.FilmStrip
-		case "pulse":
-			cfg = spinners.Pulse
-		case "spinner":
-			cfg = spinners.Spinner
-		default:
+	for _, name := range traffic.ExpandNames(spinners.Enabled) {
+		cfg := spinners.Override[name]
+		if _, known := traffic.SpinnerNames[name]; !known {
 			ve.addF("ui.highway.animation.spinners.enabled: unknown spinner type %q", name)
 			continue
 		}
 		if cfg != nil && cfg.Interval <= 0 {
-			ve.addF("ui.highway.animation.spinners.%s.interval must be > 0, got %d", name, cfg.Interval)
+			ve.addF("ui.highway.animation.spinners.override.%s.interval must be > 0, got %d", name, cfg.Interval)
 		}
 	}
 
@@ -112,7 +98,6 @@ func (c HighwayConfig) Validate() error {
 
 // Validate checks InteractionConfig.
 func (c InteractionConfig) Validate() error {
-	// PerItemDelay is a time.Duration; a negative value is suspicious.
 	ve := &ValidationError{}
 	if c.TUI.PerItemDelay < 0 {
 		ve.addF("interaction.tui.per-item-delay must be ≥ 0, got %v", c.TUI.PerItemDelay)
@@ -124,7 +109,6 @@ func (c InteractionConfig) Validate() error {
 func (c FlagsConfig) Validate() error {
 	ve := &ValidationError{}
 
-	// Short overrides: letters must be single ASCII characters.
 	for cmd, flags := range c.Short {
 		for flag, letter := range flags {
 			if len(letter) != 1 {
@@ -165,10 +149,6 @@ func validatePipelines(pipelines map[string]RawPipeline, actions map[string]RawA
 	}
 	return ve.asError()
 }
-
-// ---------------------------------------------------------------------------
-// Top-level Validate
-// ---------------------------------------------------------------------------
 
 // Validate runs all section validators and aggregates failures.
 func (c *Config) Validate() error {

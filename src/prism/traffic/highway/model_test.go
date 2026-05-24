@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/snivilised/jaywalk/src/prism"
+	"github.com/snivilised/jaywalk/src/prism/traffic"
 )
 
 // ---------------------------------------------------------------------------
@@ -27,7 +28,7 @@ func testTheme() prism.Theme {
 func noopFrame(_ int) string { return "•" }
 
 func baseLane() Lane {
-	return Lane{Emoji: "🔍", Label: "test", FrameFunc: noopFrame}
+	return Lane{Emoji: "🔍", Label: "test", FrameFn: noopFrame}
 }
 
 func baseModel(lanes int) Model {
@@ -35,7 +36,7 @@ func baseModel(lanes int) Model {
 	for i := range l {
 		l[i] = baseLane()
 	}
-	return NewModel(l, 50*time.Millisecond, "/root", 5, testTheme())
+	return NewModel(l, 50*time.Millisecond, "/root", 5, testTheme(), false)
 }
 
 // update is a convenience wrapper that calls Update on the model and
@@ -52,24 +53,6 @@ func invokeCmd(cmd tea.Cmd) tea.Msg {
 	}
 	return cmd()
 }
-
-// ---------------------------------------------------------------------------
-// maxInt
-// ---------------------------------------------------------------------------
-
-var _ = Describe("maxInt", func() {
-	DescribeTable("returns the larger of two ints",
-		func(a, b, expected int) {
-			Expect(maxInt(a, b)).To(Equal(expected))
-		},
-		Entry("a > b", 5, 3, 5),
-		Entry("b > a", 3, 5, 5),
-		Entry("equal", 4, 4, 4),
-		Entry("negative a > b", -3, -5, -3),
-		Entry("negative b > a", -5, -3, -3),
-		Entry("zero and positive", 0, 7, 7),
-	)
-})
 
 // ---------------------------------------------------------------------------
 // NewModel
@@ -115,6 +98,23 @@ var _ = Describe("NewModel", func() {
 	It("initialises the progress model", func() {
 		m := baseModel(1)
 		Expect(m.progress).NotTo(BeNil())
+	})
+})
+
+// ---------------------------------------------------------------------------
+// RegisterAll / Lookup Integration
+// ---------------------------------------------------------------------------
+
+var _ = Describe("RegisterAll smoke test", func() {
+	It("Lookup returns all spinner types after RegisterAll", func() {
+		traffic.RegisterAll()
+		for name := range traffic.SpinnerNames {
+			def, ok := traffic.Lookup(name)
+			Expect(ok).To(BeTrue(), "Lookup(%q) should succeed", name)
+			Expect(def.Frames).NotTo(BeNil())
+			hasNonEmpty := def.Frames(0) != "" || def.Frames(1) != "" || def.Frames(2) != "" || def.Frames(3) != ""
+			Expect(hasNonEmpty).To(BeTrue(), "spinner %q should have a non-empty frame within the first 4 ticks", name)
+		}
 	})
 })
 
@@ -173,6 +173,54 @@ var _ = Describe("Model.Update — KeyMsg", func() {
 })
 
 // ---------------------------------------------------------------------------
+// initLaneSkip
+// ---------------------------------------------------------------------------
+
+var _ = Describe("initLaneSkip", func() {
+	It("returns zero factors when no lane has IntervalMs", func() {
+		lanes := []Lane{
+			{Emoji: "🔍", Label: "a", FrameFn: noopFrame},
+			{Emoji: "🔍", Label: "b", FrameFn: noopFrame},
+		}
+		factors := initLaneSkip(lanes, 50*time.Millisecond)
+		Expect(factors).To(HaveLen(2))
+		Expect(factors[0]).To(Equal(0))
+		Expect(factors[1]).To(Equal(0))
+	})
+
+	It("computes skip factor from IntervalMs / tickRate", func() {
+		lanes := []Lane{
+			{Emoji: "🔍", Label: "fast", FrameFn: noopFrame},
+			{Emoji: "🔍", Label: "slow", FrameFn: noopFrame, IntervalMs: 5000},
+			{Emoji: "🔍", Label: "medium", FrameFn: noopFrame, IntervalMs: 500},
+		}
+		// tickRate = 50ms → 5000/50 = 100, 500/50 = 10
+		factors := initLaneSkip(lanes, 50*time.Millisecond)
+		Expect(factors).To(HaveLen(3))
+		Expect(factors[0]).To(Equal(0))
+		Expect(factors[1]).To(Equal(100))
+		Expect(factors[2]).To(Equal(10))
+	})
+
+	It("defaults tickMs to 50 when zero", func() {
+		lanes := []Lane{
+			{Emoji: "🔍", Label: "slow", FrameFn: noopFrame, IntervalMs: 500},
+		}
+		factors := initLaneSkip(lanes, 0)
+		Expect(factors[0]).To(Equal(10))
+	})
+
+	It("clamps minimum skip factor to 1", func() {
+		lanes := []Lane{
+			{Emoji: "🔍", Label: "barely", FrameFn: noopFrame, IntervalMs: 25},
+		}
+		// 25/50 = 0 → clamped to 1
+		factors := initLaneSkip(lanes, 50*time.Millisecond)
+		Expect(factors[0]).To(Equal(1))
+	})
+})
+
+// ---------------------------------------------------------------------------
 // Model.Update — tickMsg
 // ---------------------------------------------------------------------------
 
@@ -221,6 +269,37 @@ var _ = Describe("Model.Update — tickMsg", func() {
 		updated, cmd := update(m, tickMsg(time.Now()))
 		Expect(updated.start.IsZero()).To(BeFalse())
 		_ = cmd
+	})
+
+	It("advances slow lane fewer ticks than fast lane based on IntervalMs", func() {
+		fast := Lane{Emoji: "🔍", Label: "fast", FrameFn: noopFrame}
+		slow := Lane{Emoji: "🐢", Label: "slow", FrameFn: noopFrame, IntervalMs: 500}
+		lanes := []Lane{fast, slow}
+		m := NewModel(lanes, 50*time.Millisecond, "/root", 5, testTheme(), false)
+
+		// After 10 ticks at 50ms:
+		//   fast (skip=0) → tick = 10
+		//   slow (IntervalMs=500, skip=10) → tick = 1 (every 10th tick)
+		for range 10 {
+			m, _ = update(m, tickMsg(time.Now()))
+		}
+		Expect(m.lanes[0].tick).To(Equal(10), "fast lane should advance every tick")
+		Expect(m.lanes[1].tick).To(Equal(1), "slow lane should advance every 10th tick")
+	})
+
+	It("respects different intervals per lane", func() {
+		fast := Lane{Emoji: "🔍", Label: "fast", FrameFn: noopFrame}
+		medium := Lane{Emoji: "⚡", Label: "medium", FrameFn: noopFrame, IntervalMs: 200}
+		verySlow := Lane{Emoji: "🐌", Label: "very-slow", FrameFn: noopFrame, IntervalMs: 5000}
+		lanes := []Lane{fast, medium, verySlow}
+		m := NewModel(lanes, 50*time.Millisecond, "/root", 5, testTheme(), false)
+
+		for range 100 {
+			m, _ = update(m, tickMsg(time.Now()))
+		}
+		Expect(m.lanes[0].tick).To(Equal(100), "fast: every tick")
+		Expect(m.lanes[1].tick).To(Equal(25), "medium: 200/50=4, 100/4=25")
+		Expect(m.lanes[2].tick).To(Equal(1), "very-slow: 5000/50=100, 100/100=1")
 	})
 })
 

@@ -18,20 +18,32 @@ import (
 
 // HighwayConfig holds configuration for the highway bubbletea view.
 type HighwayConfig struct {
-	// Pool is a space-separated list of emoji runes for lane decoration.
+	// Pool is a space-separated list of emoji runes for decoration.
 	Pool string
 
 	// Separator between emoji and content info (default: " ").
 	Separator string
 
 	// SpinnerNames lists the spinner types to use for each lane, looked up
-	// from prism/traffic (e.g. "film-strip", "pulse", "spinner").
+	// Categories expand via traffic.SpinnerCategories; individual spinner names
+	// are registered in traffic.SpinnerNames.
 	// When empty, buildHighwayLanes falls back to defaults.
 	SpinnerNames []string
 
 	// Labels for each lane, paired with SpinnerNames. When empty, defaults
 	// are used.
 	Labels []string
+
+	// Overrides maps spinner name to interval in milliseconds.
+	// When set, the lane's animation advances at this rate instead of the
+	// global tick rate. Multiple lanes sharing the same spinner name each
+	// get the same interval behaviour.
+	Overrides map[string]int
+
+	// AnimationGradient specifies the gradient to apply to frame animations.
+	// Optional; nil or empty means use default styling without gradients.
+	// When set, uses highlights.gradients configuration from palette (hi/lo endpoints).
+	AnimationGradient string // name of gradient defined in theme palette (DEPRECATED - unused)
 }
 
 type highwayPresenter struct {
@@ -43,9 +55,11 @@ type highwayPresenter struct {
 	totalFiles uint
 	totalDirs  uint
 	theme      prism.Theme
+	noRecurse  bool
 }
 
 func newHighwayPresenter(palette prism.Palette, cfg HighwayConfig) (report.Presenter, error) {
+	traffic.RegisterAll()
 	theme, err := prism.NewTheme(palette, os.Stdout)
 	if err != nil {
 		return nil, err
@@ -55,6 +69,7 @@ func newHighwayPresenter(palette prism.Palette, cfg HighwayConfig) (report.Prese
 
 func (h *highwayPresenter) OnTraversalOptions(o *pref.Options) {
 	h.noW = o.Concurrency.NoW
+	h.noRecurse = o.Behaviours.Cascade.NoRecurse
 }
 
 func subscriptionLabelFor(s enums.Subscription) string {
@@ -77,8 +92,8 @@ func subscriptionLabelFor(s enums.Subscription) string {
 func (h *highwayPresenter) OnBegin(e *report.BeginEvent) {
 	h.done = make(chan struct{})
 
-	lanes := buildHighwayLanes(h.cfg, h.noW)
-	model := highway.NewModel(lanes, highwayTickRate, e.Root, h.maxDepth, h.theme)
+	lanes := BuildHighwayLanes(h.cfg, h.noW)
+	model := highway.NewModel(lanes, highwayTickRate, e.Root, h.maxDepth, h.theme, h.noRecurse)
 	h.program = tea.NewProgram(model)
 
 	go func() {
@@ -140,9 +155,12 @@ func (h *highwayPresenter) OnSkipEvent(e *report.SkipEvent) {
 		uint(e.Node.Extension.Depth), e.Name, "", "", "", false, nil)
 }
 
+// sendMotif sends a motif message with optional gradient overlay.
+// The gradient is retrieved from the theme's HighlightsComponents for the
+// highway-animation component using component-based lookup. This ensures
+// gradients configured in themes are properly applied to animation frames.
 func (h *highwayPresenter) sendMotif(path, name string, isDir bool, depth uint,
-	actionName, pipelineName, commandOutput, executionString string, dryRun bool, err error,
-) {
+	actionName, pipelineName, commandOutput, executionString string, dryRun bool, err error) {
 	select {
 	case <-h.done:
 		return
@@ -150,6 +168,15 @@ func (h *highwayPresenter) sendMotif(path, name string, isDir bool, depth uint,
 	}
 
 	defer func() { _ = recover() }()
+
+	var grad *prism.ResolvedGradient
+	// Retrieve gradient by component name lookup (not direct gradient name).
+	// GradientFor handles the component → gradient name → resolved gradient chain.
+	g, has := h.theme.GradientFor(prism.GradientComponentHighwayAnimation)
+	if has && g.Steps > 0 {
+		grad = &prism.ResolvedGradient{Steps: g.Steps, Hi: g.Hi, Lo: g.Lo}
+	}
+
 	h.program.Send(highway.MotifMsg{
 		Data: highway.MotifData{
 			Path:            path,
@@ -162,6 +189,7 @@ func (h *highwayPresenter) sendMotif(path, name string, isDir bool, depth uint,
 			ExecutionString: executionString,
 			DryRun:          dryRun,
 			Err:             err,
+			Gradient:        grad,
 		},
 	})
 }
@@ -189,7 +217,7 @@ func (h *highwayPresenter) OnComplete(t *report.Traversal) {
 	<-h.done
 }
 
-func buildHighwayLanes(cfg HighwayConfig, now uint) []highway.Lane {
+func BuildHighwayLanes(cfg HighwayConfig, now uint) []highway.Lane {
 	emojis := strings.Fields(cfg.Pool)
 	if len(emojis) == 0 {
 		emojis = defaultEmojiPool
@@ -201,15 +229,12 @@ func buildHighwayLanes(cfg HighwayConfig, now uint) []highway.Lane {
 		deck[i], deck[j] = deck[j], deck[i]
 	})
 
-	names := cfg.SpinnerNames
+	names := traffic.ExpandNames(cfg.SpinnerNames)
 	labels := cfg.Labels
 
-	numLanes := len(names)
-	if numLanes == 0 {
-		numLanes = int(now) //nolint:gosec // ok
-		if numLanes < 1 {
-			numLanes = defaultLaneCount
-		}
+	numLanes := int(now) //nolint:gosec // ok
+	if numLanes < 1 {
+		numLanes = defaultLaneCount
 	}
 
 	lanes := make([]highway.Lane, numLanes)
@@ -232,10 +257,19 @@ func buildHighwayLanes(cfg HighwayConfig, now uint) []highway.Lane {
 		if !ok {
 			def, _ = traffic.Lookup(traffic.SpinnerTypeDefault)
 		}
+		interval := cfg.Overrides[name]
+		if interval < 1 {
+			interval = 0
+		}
+
 		lanes[i] = highway.Lane{
-			Emoji:     deck[i%len(deck)],
-			Label:     label,
-			FrameFunc: def.Frames,
+			Emoji:       deck[i%len(deck)],
+			Label:       label,
+			FrameFn:     def.Frames,
+			SpinnerName: name,
+			IntervalMs:  interval,
+			// HighlightGradient will be populated by the model when MotifMsg is received
+			HighlightGradient: nil,
 		}
 	}
 	return lanes

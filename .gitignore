@@ -32,3 +32,5 @@ thumbs.db
 .tmp
 issue.md
 *implementation-plan*.md
+tmp/
+.aider*

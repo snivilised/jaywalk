@@ -256,12 +256,22 @@ func (b *Bootstrap) Root(options ...ConfigureAppOptionFn) *cobra.Command {
 					return err
 				}
 
-				mgr, err := ui.New(mode, palette, ui.HighwayConfig{
-					Pool:         highwayCfg.Pool,
-					Separator:    highwayCfg.Separator,
-					SpinnerNames: highwayCfg.AnimationData.Spinners.Enabled,
-				})
-				if err != nil {
+				overrides := make(map[string]int)
+				for name, cfg := range highwayCfg.AnimationData.Spinners.Override {
+					if cfg != nil && cfg.Interval > 0 {
+						overrides[name] = cfg.Interval
+					}
+				}
+
+		mgr, err := ui.New(mode, palette, ui.HighwayConfig{
+			Pool:           highwayCfg.Pool,
+			Separator:      highwayCfg.Separator,
+			SpinnerNames:   highwayCfg.AnimationData.Spinners.Enabled,
+			AnimationGradient: b.themeLoader.NameFromPalette(palette, "highway-animation"),
+			Overrides:      overrides,
+		})
+
+	if err != nil {
 					return err
 				}
 

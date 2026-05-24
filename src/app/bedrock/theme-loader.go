@@ -170,6 +170,19 @@ func (tl *ThemeLoader) Load(name string) (prism.Palette, error) {
 	)
 }
 
+// NameFromPalette extracts the component's gradient name or empty string.
+func (tl *ThemeLoader) NameFromPalette(p prism.Palette, componentName string) string {
+	components := p.Highlights.Components
+	if len(components) == 0 {
+		return ""
+	}
+	name, ok := components[componentName]
+	if !ok {
+		return ""
+	}
+	return name
+}
+
 // ThemesDir returns the resolved themes directory path. Useful for
 // error messages and the --theme flag's help text.
 func (tl *ThemeLoader) ThemesDir() string {

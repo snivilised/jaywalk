@@ -16,9 +16,6 @@ var _ = Describe("Palette", func() {
 	// ------------------------------------------------------------------
 
 	Describe("ResolveANSI16", func() {
-		// In lipgloss v2, Color is a function returning color.Color
-		// (image/color.Color). We verify the returned value is non-nil
-		// and equal to calling lipgloss.Color with the expected number.
 		DescribeTable("valid colour names resolve to the correct ANSI number",
 			func(input, expectedNumber string) {
 				c, err := prism.ResolveANSI16(input)
@@ -125,8 +122,6 @@ var _ = Describe("Palette", func() {
 
 				ansi, ansi256, trueCol, err := sc.Resolve()
 
-				// nil satisfies color.Color - it is the zero value for the
-				// interface, indicating no colour is set for that tier.
 				Expect(err).To(BeNil())
 				Expect(ansi).To(BeNil())
 				Expect(ansi256).To(BeNil())
@@ -147,6 +142,37 @@ var _ = Describe("Palette", func() {
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("turquoise"))
 				Expect(ansi).To(BeNil())
+			})
+		})
+
+		Context("when ansi256 is set with an out-of-range value", func() {
+			It("accepts the value without validation", func() {
+				sc := prism.SemanticColour{
+					ANSI16:    "cyan",
+					ANSI256:   "300",
+					TrueColor: "#89DCEB",
+				}
+
+				ansi, ansi256, _, err := sc.Resolve()
+
+				Expect(err).To(BeNil())
+				Expect(ansi).NotTo(BeNil())
+				Expect(ansi256).To(Equal(lipgloss.Color("300")))
+			})
+		})
+
+		Context("when true-color is an empty string", func() {
+			It("treats it as unset (nil)", func() {
+				sc := prism.SemanticColour{
+					ANSI16:    "cyan",
+					TrueColor: "",
+				}
+
+				ansi, _, trueCol, err := sc.Resolve()
+
+				Expect(err).To(BeNil())
+				Expect(ansi).NotTo(BeNil())
+				Expect(trueCol).To(BeNil())
 			})
 		})
 	})
@@ -184,53 +210,29 @@ var _ = Describe("Palette", func() {
 
 			for _, sc := range fields {
 				_, _, _, err := sc.Resolve()
-				Expect(err).To(BeNil(),
-					"expected all SystemPalette entries to resolve without error",
-				)
+				Expect(err).To(BeNil())
 			}
 		})
 
 		It("returns a palette with no TrueColor or ANSI256 values set", func() {
 			palette := prism.SystemPalette()
 
-			fields := []prism.SemanticColour{
-				palette.Directory,
-				palette.File,
-				palette.Root,
-				palette.Action,
-				palette.Pipeline,
-				palette.Skipped,
-				palette.Error,
-				palette.Muted,
-				palette.Progress,
-				palette.BoxBorder,
-				palette.SummaryLabel,
-				palette.SummaryValue,
-				palette.Worker,
-				palette.WorkerIdle,
-				palette.LaneHeader,
-				palette.Header,
-				palette.Frame,
-				palette.Border,
-				palette.BarFilled,
-				palette.BarEmpty,
-			}
-
-			for _, sc := range fields {
-				Expect(sc.TrueColor).To(BeEmpty(),
-					"SystemPalette should not set TrueColor values",
-				)
-				Expect(sc.ANSI256).To(BeEmpty(),
-					"SystemPalette should not set ANSI256 values",
-				)
+			for _, field := range []string{
+				"Directory", "File", "Root", "Action", "Pipeline",
+				"Skipped", "Error", "Muted", "Progress",
+				"BoxBorder", "SummaryLabel", "SummaryValue",
+				"Worker", "WorkerIdle", "LaneHeader",
+				"Header", "Frame", "Border", "BarFilled", "BarEmpty",
+			} {
+				sc := getFieldByName(palette, field)
+				Expect(sc.TrueColor).To(BeEmpty())
+				Expect(sc.ANSI256).To(BeEmpty())
 			}
 		})
 
 		It("returns a palette where all ANSI16 names are non-empty", func() {
 			palette := prism.SystemPalette()
 
-			// Verify every entry has an ANSI16 value - the system palette
-			// must always be fully populated so it works without config.
 			fields := map[string]string{
 				"Directory":    palette.Directory.ANSI16,
 				"File":         palette.File.ANSI16,
@@ -254,33 +256,120 @@ var _ = Describe("Palette", func() {
 				"BarEmpty":     palette.BarEmpty.ANSI16,
 			}
 
-			for name, ansi16 := range fields {
-				Expect(ansi16).NotTo(BeEmpty(),
-					"SystemPalette.%s.ANSI16 must not be empty", name,
-				)
+			for _, ansi16 := range fields {
+				Expect(ansi16).NotTo(BeEmpty())
 			}
 		})
 	})
 
 	// ------------------------------------------------------------------
-	// Ensure color.Color interface is satisfied
+	// Palette struct fields
 	// ------------------------------------------------------------------
 
-	Describe("lipgloss.Color return type", func() {
-		It("satisfies the color.Color interface", func() {
-			// lipgloss.Color() returns color.Color - verify this compiles
-			// and the value is usable as a standard library colour.
-			var c = lipgloss.Color("6")
-			Expect(c).NotTo(BeNil())
+	Describe("Palette struct", func() {
+		It("has all expected fields for traversal nodes", func() {
+			p := prism.Palette{}
+			// Check that semantic colour fields exist and are of correct type
+			Expect(p.Directory.ANSI16).To(BeEmpty()) // exists, can be empty
+			Expect(p.File.ANSI16).To(BeEmpty())
+			Expect(p.Root.ANSI16).To(BeEmpty())
+			Expect(p.Branch.ANSI16).To(BeEmpty())
+			Expect(p.TreeIcons).To(BeNil())
+		})
 
-			// color.Color requires RGBA() - verify it is callable.
-			r, g, b, a := c.RGBA()
-			// ANSI colours have implementation-defined RGBA values but
-			// must not panic.
-			_ = r
-			_ = g
-			_ = b
-			_ = a
+		It("has all expected fields for execution", func() {
+			p := prism.Palette{}
+			Expect(p.Action.ANSI16).To(BeEmpty())
+			Expect(p.Pipeline.ANSI16).To(BeEmpty())
+			Expect(p.LandingStrip.ANSI16).To(BeEmpty())
+			Expect(p.Skipped.ANSI16).To(BeEmpty())
+		})
+
+		It("has all expected fields for status", func() {
+			p := prism.Palette{}
+			Expect(p.Error.ANSI16).To(BeEmpty())
+			Expect(p.Muted.ANSI16).To(BeEmpty())
+			Expect(p.Progress.ANSI16).To(BeEmpty())
+		})
+
+		It("has all expected fields for summary", func() {
+			p := prism.Palette{}
+			Expect(p.BoxBorder.ANSI16).To(BeEmpty())
+			Expect(p.SummaryLabel.ANSI16).To(BeEmpty())
+			Expect(p.SummaryValue.ANSI16).To(BeEmpty())
+		})
+
+		It("has all expected fields for concurrent views", func() {
+			p := prism.Palette{}
+			Expect(p.Worker.ANSI16).To(BeEmpty())
+			Expect(p.WorkerIdle.ANSI16).To(BeEmpty())
+			Expect(p.LaneHeader.ANSI16).To(BeEmpty())
+		})
+
+		It("has all expected fields for highway view", func() {
+			p := prism.Palette{}
+			Expect(p.Header.ANSI16).To(BeEmpty())
+			Expect(p.Frame.ANSI16).To(BeEmpty())
+			Expect(p.Border.ANSI16).To(BeEmpty())
+			Expect(p.BarFilled.ANSI16).To(BeEmpty())
+			Expect(p.BarEmpty.ANSI16).To(BeEmpty())
+			// Highlights is a value type, not pointer; check that its internal maps are nil
+			Expect(p.Highlights.Gradients).To(BeNil())
+			Expect(p.Highlights.Components).To(BeNil())
+		})
+
+		It("has HighlightsConfig with empty maps initially", func() {
+			p := prism.Palette{}
+			Expect(p.Highlights.Gradients).To(BeNil())
+			Expect(p.Highlights.Components).To(BeNil())
 		})
 	})
 })
+
+// Helper function to get field by name (works for testing SystemPalette)
+func getFieldByName(p prism.Palette, name string) prism.SemanticColour {
+	switch name {
+	case "Directory":
+		return p.Directory
+	case "File":
+		return p.File
+	case "Root":
+		return p.Root
+	case "Action":
+		return p.Action
+	case "Pipeline":
+		return p.Pipeline
+	case "Skipped":
+		return p.Skipped
+	case "Error":
+		return p.Error
+	case "Muted":
+		return p.Muted
+	case "Progress":
+		return p.Progress
+	case "BoxBorder":
+		return p.BoxBorder
+	case "SummaryLabel":
+		return p.SummaryLabel
+	case "SummaryValue":
+		return p.SummaryValue
+	case "Worker":
+		return p.Worker
+	case "WorkerIdle":
+		return p.WorkerIdle
+	case "LaneHeader":
+		return p.LaneHeader
+	case "Header":
+		return p.Header
+	case "Frame":
+		return p.Frame
+	case "Border":
+		return p.Border
+	case "BarFilled":
+		return p.BarFilled
+	case "BarEmpty":
+		return p.BarEmpty
+	default:
+		return prism.SemanticColour{}
+	}
+}
