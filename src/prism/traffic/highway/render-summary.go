@@ -85,7 +85,7 @@ func (m Model) renderSummary(b *strings.Builder) {
 	)
 	body := lipgloss.JoinHorizontal(lipgloss.Left,
 		leftContent,
-		strings.Repeat(" ", maxInt(1,
+		strings.Repeat(" ", max(1,
 			inner-lipgloss.Width(leftContent)-lipgloss.Width(elapsedText),
 		)),
 		elapsedText,
@@ -96,7 +96,7 @@ func (m Model) renderSummary(b *strings.Builder) {
 	b.WriteString(borderStyle.Render(" │"))
 	b.WriteString("\n")
 
-	N := maxInt(0, m.width-7)
+	N := max(0, m.width-7)
 	b.WriteString(borderStyle.Render(
 		"╰─..★." + strings.Repeat("─", N) + "╯",
 	))

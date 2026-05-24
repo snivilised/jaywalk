@@ -118,6 +118,50 @@ palette:
     ansi256: ""
     true-color: ""
 
+  # --- Animation gradients (highway view) ---
+
+  highlights:
+    gradients:
+      aurora-borealis:
+        steps: 8
+        hi:
+          ansi16: cyan
+          true-color: "#00E5FF"
+        lo:
+          ansi16: magenta
+          true-color: "#B388FF"
+
+      ember-glow:
+        hi:
+          ansi16: red
+          true-color: "#FF6F00"
+        lo:
+          ansi16: yellow
+          true-color: "#FFD54F"
+
+      neon-pulse:
+        hi:
+          ansi16: bright-green
+          true-color: "#00E676"
+
+      crimson-flare:
+        hi:
+          ansi16: red
+          true-color: "#FF1744"
+
+      deep-ocean:
+        lo:
+          ansi16: blue
+          true-color: "#1A237E"
+
+      shadow-veil:
+        lo:
+          ansi16: bright-black
+          true-color: "#263238"
+
+    components:
+      highway-animation: aurora-borealis
+
 # TreeIcons holds optional glyph configuration used by tree-style
 # stream renderers such as the linear view.
 tree-icons:

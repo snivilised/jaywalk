@@ -1,12 +1,58 @@
 package traffic
 
 const (
-	// SpinnerTypeFilmStrip is the name of the film-strip spinner.
-	SpinnerTypeFilmStrip = "film-strip"
-
-	// SpinnerTypePulse is the name of the pulse spinner.
-	SpinnerTypePulse = "pulse"
-
-	// SpinnerTypeDefault is the name of the basic line spinner.
 	SpinnerTypeDefault = "spinner"
+
+	SpinnerTypeBraille      = "braille"
+	SpinnerTypeBrailleWave  = "braillewave"
+	SpinnerTypeDNA          = "dna"
+	SpinnerTypeScan         = "scan"
+	SpinnerTypeRain         = "rain"
+	SpinnerTypeScanLine     = "scanline"
+	SpinnerTypeBraillePulse = "braille-pulse"
+	SpinnerTypeSnake        = "snake"
+	SpinnerTypeSparkle      = "sparkle"
+	SpinnerTypeCascade      = "cascade"
+	SpinnerTypeColumns      = "columns"
+	SpinnerTypeOrbit        = "orbit"
+	SpinnerTypeBreathe      = "breathe"
+	SpinnerTypeWaveRows     = "waverows"
+	SpinnerTypeCheckerboard = "checkerboard"
+	SpinnerTypeHelix        = "helix"
+	SpinnerTypeFillSweep    = "fillsweep"
+	SpinnerTypeDiagSwipe    = "diagswipe"
+
+	SpinnerTypeBounce = "bounce"
+
+	SpinnerTypeClassicWaveform  = "classic-waveform"
+	SpinnerTypeParticleDrift    = "particle-drift"
+	SpinnerTypePulsingRings     = "pulsing-rings"
+	SpinnerTypeASCIILandscape   = "ascii-landscape"
+	SpinnerTypeMatrixRain       = "matrix-rain"
+	SpinnerTypeGradientFlow     = "gradient-flow"
+	SpinnerTypeBreathingCircles = "breathing-circles"
+	SpinnerTypeNetworkGraph     = "network-graph"
+
+	SpinnerTypeWave       = "wave"
+	SpinnerTypeFairlight  = "fairlight"
+	SpinnerTypeAmour      = "amour"
+	SpinnerTypeJamboree   = "jamboree"
+	SpinnerTypeMusical    = "musical"
+	SpinnerTypeTrinkets   = "trinkets"
+	SpinnerTypeMorse      = "morse"
+	SpinnerTypeStarlight  = "starlight"
+	SpinnerTypeInfantry   = "infantry"
+	SpinnerTypeHeartThrob = "heart-throb"
+	SpinnerTypeBarcode    = "barcode"
+
+	SpinnerTypeDot       = "dot"
+	SpinnerTypeJump      = "jump"
+	SpinnerTypePulse     = "pulse"
+	SpinnerTypePoints    = "points"
+	SpinnerTypeGlobe     = "globe"
+	SpinnerTypeMoon      = "moon"
+	SpinnerTypeMonkey    = "monkey"
+	SpinnerTypeMeter     = "meter"
+	SpinnerTypeHamburger = "hamburger"
+	SpinnerTypeEllipsis  = "ellipsis"
 )

@@ -11,7 +11,7 @@ func (m Model) renderHeader(b *strings.Builder) {
 	borderStyle := m.theme.BorderStyle
 	hStyle := m.theme.HeaderStyle
 
-	dashes := strings.Repeat("─", maxInt(0, m.width-2))
+	dashes := strings.Repeat("─", max(0, m.width-2))
 	pathDisplay := m.rootPath
 	if pathDisplay == "" {
 		pathDisplay = "."
@@ -20,12 +20,12 @@ func (m Model) renderHeader(b *strings.Builder) {
 
 	maxPathWidth := m.width - 13
 	if pathWidth > maxPathWidth {
-		keep := maxInt(0, maxPathWidth-3)
+		keep := max(0, maxPathWidth-3)
 		pathDisplay = "..." + pathDisplay[lipgloss.Width(pathDisplay)-keep:]
 		pathWidth = maxPathWidth
 	}
 
-	avail := maxInt(2, m.width-pathWidth-11)
+	avail := max(2, m.width-pathWidth-11)
 	L := avail / 2
 	R := avail - L
 
@@ -58,7 +58,7 @@ func (m Model) renderHeader(b *strings.Builder) {
 		pipelineInd := m.theme.PipelineStyle.Render(
 			fmt.Sprintf("─── [ • via pipeline '%s' ] ───", m.pipelineName),
 		)
-		availSpace := maxInt(1,
+		availSpace := max(1,
 			m.width-4-lipgloss.Width(middle)-lipgloss.Width(pipelineInd),
 		)
 		headerContent = lipgloss.JoinHorizontal(lipgloss.Left,
@@ -70,7 +70,7 @@ func (m Model) renderHeader(b *strings.Builder) {
 		middle := header + infoPart
 		headerContent = lipgloss.JoinHorizontal(lipgloss.Left,
 			middle,
-			strings.Repeat(" ", maxInt(1, m.width-4-lipgloss.Width(middle))),
+			strings.Repeat(" ", max(1, m.width-4-lipgloss.Width(middle))),
 		)
 	}
 

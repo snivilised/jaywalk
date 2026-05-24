@@ -12,44 +12,71 @@ import (
 type tickMsg time.Time
 
 type Model struct {
-	lanes              []Lane
-	width              int
-	start              time.Time
-	tickRate           time.Duration
-	totalTicks         int64
-	rootPath           string
-	progress           progress.Model
-	percent            int
-	realMode           bool
-	done               bool
-	files              int
-	dirs               int
-	errors             int
-	elapsed            time.Duration
-	currentLaneIdx     int
-	totalFiles         uint
-	totalDirs          uint
-	maxDepth           uint
-	pipelineName       string
-	subscriptionLabel  string
-	startedAt          time.Time
-	caption            string
-	dateFormat         string
-	theme              prism.Theme
-	counted            map[string]bool
-	errMsg             string
+	lanes             []Lane
+	skip              []int
+	width             int
+	start             time.Time
+	tickRate          time.Duration
+	totalTicks        int64
+	rootPath          string
+	progress          progress.Model
+	percent           int
+	realMode          bool
+	done              bool
+	noRecurse         bool
+	files             int
+	dirs              int
+	errors            int
+	elapsed           time.Duration
+	currentLaneIdx    int
+	totalFiles        uint
+	totalDirs         uint
+	maxDepth          uint
+	pipelineName      string
+	subscriptionLabel string
+	startedAt         time.Time
+	caption           string
+	dateFormat        string
+	theme             prism.Theme
+	counted           map[string]bool
+	errMsg            string
+}
+
+// initLaneSkip computes the per-lane skip factor from each lane's
+// IntervalMs. The skip factor = IntervalMs / tickRate (in ms). A lane
+// with no override (IntervalMs=0) gets factor 0 — it advances every
+// tick. A lane with IntervalMs=5000 at 50ms tick rate gets factor 100,
+// advancing one frame every 100 ticks (every 5 seconds).
+// See Lane.IntervalMs for the config override path.
+func initLaneSkip(lanes []Lane, tickRate time.Duration) []int {
+	factors := make([]int, len(lanes))
+	tickMs := int(tickRate.Milliseconds())
+	if tickMs == 0 {
+		tickMs = 50
+	}
+	for i, lane := range lanes {
+		if lane.IntervalMs > 0 {
+			factors[i] = lane.IntervalMs / tickMs
+			if factors[i] < 1 {
+				factors[i] = 1
+			}
+		}
+	}
+	return factors
 }
 
 func NewModel(lanes []Lane, tickRate time.Duration, rootPath string,
-	maxDepth uint, theme prism.Theme) Model {
+	maxDepth uint, theme prism.Theme, noRecurse bool) Model {
 	return Model{
-		lanes:    lanes,
-		tickRate: tickRate,
-		width:    80,
-		rootPath: rootPath,
-		maxDepth: maxDepth,
-		theme:    theme,
-		counted:  make(map[string]bool),
+		lanes:     lanes,
+		skip:      initLaneSkip(lanes, tickRate),
+		tickRate:  tickRate,
+		noRecurse: noRecurse,
+		width:     80,
+		rootPath:  rootPath,
+		maxDepth:  maxDepth,
+		theme:     theme,
+		counted:   make(map[string]bool),
 		progress: progress.New(
 			progress.WithSolidFill("#B9FBC0"),
 			progress.WithoutPercentage(),
@@ -84,9 +111,35 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.start = time.Now()
 		}
 		m.totalTicks++
-		for i := range m.lanes {
+	// Advance each lane's frame counter independently.
+	// Lanes with a skip factor > 0 (set via IntervalMs override)
+	// only advance their tick every N global ticks, producing a
+	// visibly slower animation. Lanes with skip factor 0 advance
+	// every tick (full speed).
+	for i := range m.lanes {
+		if m.skip != nil && i < len(m.skip) && m.skip[i] > 0 {
+			m.lanes[i].skipCounter++
+			if m.lanes[i].skipCounter >= m.skip[i] {
+				m.lanes[i].skipCounter = 0
+				m.lanes[i].tick++
+			}
+		} else {
 			m.lanes[i].tick++
 		}
+		
+		// Advance gradient state for lanes with configured gradients.
+		// IMPORTANT: This updates the state (offset/index) but does NOT apply
+		// the gradient colours to frameContent - that happens in renderLanes().
+		// The GradientState.Offset tracks current position in gradient array;
+		// ApplyGradient() uses this offset to interpolate characters from Hi->Lo.
+		if m.lanes[i].HighlightGradient != nil {
+			windowSize := m.lanes[i].WindowSize()
+			if windowSize <= 0 {
+				windowSize = 4
+			}
+			m.lanes[i].GradientState.Update(windowSize)
+		}
+	}
 		tickCmd := tea.Tick(m.tickRate, func(t time.Time) tea.Msg {
 			return tickMsg(t)
 		})
@@ -136,6 +189,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.lanes[m.currentLaneIdx].ExecutionString = msg.Data.ExecutionString
 			m.lanes[m.currentLaneIdx].DryRun = msg.Data.DryRun
 			m.lanes[m.currentLaneIdx].Err = msg.Data.Err
+			// Copy gradient from message to lane if provided.
+			// The gradient is a ResolvedGradient {Steps, Hi, Lo} from the theme palette.
+			// It holds colour endpoint info; we apply it in renderLanes() using ApplyGradient().
+			if msg.Data.Gradient != nil {
+				m.lanes[m.currentLaneIdx].HighlightGradient = msg.Data.Gradient
+				// Also ensure GradientState exists and is configured with steps.
+				if m.lanes[m.currentLaneIdx].GradientState == nil {
+					m.lanes[m.currentLaneIdx].GradientState = NewGradientState()
+				}
+				m.lanes[m.currentLaneIdx].GradientState.TotalSteps = msg.Data.Gradient.Steps
+			}
 			m.currentLaneIdx = (m.currentLaneIdx + 1) % len(m.lanes)
 		}
 		if m.totalFiles > 0 {

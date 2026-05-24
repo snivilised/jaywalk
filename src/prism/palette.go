@@ -117,6 +117,88 @@ const (
 	TreeIconBranchIndent   = "branch-indent"
 )
 
+// ---------------------------------------------------------------------------
+// Gradients (animation colour overlays)
+// ---------------------------------------------------------------------------
+
+// GradientDef defines a colour gradient used by animation rendering.
+// At least one of Hi or Lo must be set. When only one is set, the missing
+// end is derived by dimming (missing lo) or brightening (missing hi) the
+// resolved colour, creating a single-colour fade.
+type GradientDef struct {
+	// Steps is the number of colour stops in the gradient (including
+	// both endpoints). The renderer interpolates this many colours
+	// between Hi and Lo. When 0, the renderer picks a default based
+	// on the animation frame count.
+	Steps int             `mapstructure:"steps,omitempty"`
+	Hi    *SemanticColour `mapstructure:"hi,omitempty"`
+	Lo    *SemanticColour `mapstructure:"lo,omitempty"`
+}
+
+// HighlightsConfig holds gradient definitions and their component bindings.
+// Components maps a semantic component name (e.g. "highway-frame") to a
+// gradient name defined under Gradients. Multiple components can share the
+// same gradient.
+type HighlightsConfig struct {
+	Gradients  map[string]GradientDef `mapstructure:"gradients,omitempty"`
+	Components map[string]string      `mapstructure:"components,omitempty"`
+}
+
+// ResolvedGradient holds the resolved colour endpoints after theme
+// construction. Hi and Lo are the best-available-tier colours from the
+// palette's colour profile. They are never both nil.
+type ResolvedGradient struct {
+	// Steps is the number of colour stops, copied from GradientDef.
+	// 0 means the renderer should use its own default.
+	Steps int
+	Hi    color.Color
+	Lo    color.Color
+}
+
+// Gradient component names — used in theme YAML under
+// highlights.components to bind a gradient to a rendering component.
+const (
+	GradientComponentHighwayAnimation = "highway-animation"
+)
+
+// deriveDimmed returns a colour approximately halfway between the given
+// colour and black. Used when a gradient defines only one endpoint to
+// produce a natural fade. Works on any color.Color by converting to RGBA,
+// scaling each channel by 0.5, and returning the clamped result.
+// deriveBrighter returns a colour approximately halfway between the given
+// colour and white. Used as the inverse of deriveDimmed: when a gradient
+// defines only lo (no hi), this produces a natural bright endpoint.
+func deriveBrighter(c color.Color) color.Color {
+	r, g, b, a := c.RGBA()
+	return color.RGBA{
+		R: clampU8((float64(r>>8) + 255) * 0.5),
+		G: clampU8((float64(g>>8) + 255) * 0.5),
+		B: clampU8((float64(b>>8) + 255) * 0.5),
+		A: uint8(a >> 8), //nolint:gosec // a>>8 is always 0-255
+	}
+}
+
+// clampU8 clamps a float to the uint8 range [0, 255].
+func clampU8(v float64) uint8 {
+	if v < 0 {
+		return 0
+	}
+	if v > 255 {
+		return 255
+	}
+	return uint8(v)
+}
+
+func deriveDimmed(c color.Color) color.Color {
+	r, g, b, a := c.RGBA()
+	return color.RGBA{
+		R: clampU8(float64(r>>8) * 0.5),
+		G: clampU8(float64(g>>8) * 0.5),
+		B: clampU8(float64(b>>8) * 0.5),
+		A: uint8(a >> 8), //nolint:gosec // a>>8 is always 0-255
+	}
+}
+
 // Palette is the full traversal visual vocabulary for prism. Each field
 // represents a distinct visual concept encountered during directory
 // traversal. Multiple concepts may map to the same ANSI-16 colour -
@@ -124,6 +206,13 @@ const (
 // concepts appear simultaneously in all views.
 //
 // Fields use mapstructure tags for YAML theme file decoding.
+//
+// TODO: It feels like this is defined in the wrong place. Configuration
+// concerns are in bedrock. Palette here has been decorated with persistence
+// tags, that mean this is be used as a data access object. That feels like
+// a pollution of responsibilities. If we have a DAO and a model object,
+// then these responsibilities should be split and a translation defined
+// between the two.
 type Palette struct {
 	// --- Traversal nodes ---
 
@@ -207,6 +296,10 @@ type Palette struct {
 
 	// BarEmpty is the colour of empty square-bar glyphs in the highway view.
 	BarEmpty SemanticColour `mapstructure:"bar-empty"`
+
+	// Highlights holds named gradients and their component bindings for
+	// animation colour overlays. See HighlightsConfig, GradientDef.
+	Highlights HighlightsConfig `mapstructure:"highlights,omitempty"`
 }
 
 // SystemPalette returns the default ANSI-16-only palette. All TrueColor

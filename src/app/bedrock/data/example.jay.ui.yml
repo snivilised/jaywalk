@@ -23,19 +23,25 @@ ui:
     # Animation data configuration for Highway view lanes
     animation:
       # List of animation types to load on demand
-      # Valid values: 'film-strip', 'pulse', 'spinner'
+      # Categories (expand to all members):
+      #   film-strip-set, braille-set, charm-set, skin-set, basics-set
+      # Individual spinners:
+      #   wave, fairlight, amour, jamboree, musical, trinkets, morse,
+      #   starlight, infantry, heart-throb, barcode, bounce, spinner,
+      #   braille, braillewave, dna, scan, rain, scanline, braille-pulse,
+      #   snake, sparkle, cascade, columns, orbit, breathe, waverows,
+      #   checkerboard, helix, fillsweep, diagswipe, car,
+      #   classic-waveform, particle-drift, pulsing-rings, ascii-landscape,
+      #   matrix-rain, gradient-flow, breathing-circles, network-graph,
+      #   dot, jump, pulse, points, globe, moon, monkey, meter,
+      #   hamburger, ellipsis
       # Empty or omitted loads all default animations
-      enabled-types: ['film-strip', 'pulse']
+      spinners:
+        enabled: ['film-strip-set', 'braille-set', 'skin-set']
 
-      # Film strip configuration
-      film-strip:
-        speed: 100          # ms per frame (lower = faster animation)
-        amplitude: 5        # intensity level
-
-      # Pulse bar configuration
-      pulse:
-        gradient-steps: 8   # █░░░░ progression steps
-
-      # Spinner configuration
-      spinner:
-        rotation-speed: 0.1 # radians per tick
+        # Override per-spinner settings
+        override:
+          wave:
+            interval: 120
+          braille:
+            interval: 60

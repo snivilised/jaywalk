@@ -3,8 +3,9 @@ package bedrock_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	bedrock "github.com/snivilised/jaywalk/src/app/bedrock"
+	"github.com/snivilised/jaywalk/src/app/bedrock"
 	"github.com/snivilised/jaywalk/src/locale"
+	"github.com/snivilised/jaywalk/src/prism/traffic"
 	"github.com/snivilised/li18ngo"
 )
 
@@ -17,6 +18,7 @@ var _ = Describe("Validate", Ordered, func() {
 				}
 			},
 		)).To(Succeed())
+		traffic.RegisterAll()
 	})
 
 	// -----------------------------------------------------------------------
@@ -128,6 +130,57 @@ var _ = Describe("Validate", Ordered, func() {
 			})
 			Expect(err).NotTo(BeNil())
 			Expect(err.Error()).To(ContainSubstring("ghost-action"))
+		})
+	})
+
+	// -----------------------------------------------------------------------
+	// HighwayConfig spinner validation
+	// -----------------------------------------------------------------------
+	Describe("HighwayConfig.Validate — spinners", func() {
+		It("rejects unknown spinner name", func() {
+			c := bedrock.HighwayConfig{}
+			c.AnimationData.Spinners.Enabled = []string{"nonexistent-spinner"}
+			err := c.Validate()
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("nonexistent-spinner"))
+		})
+
+		It("accepts all known spinner names", func() {
+			c := bedrock.HighwayConfig{}
+			c.AnimationData.Spinners.Enabled = []string{
+				"wave", "fairlight", "amour", "jamboree", "musical",
+				"trinkets", "morse", "starlight", "infantry", "heart-throb",
+				"barcode", "bounce", "spinner", "braille", "braillewave",
+				"dna", "scan", "rain", "scanline", "braille-pulse",
+				"snake", "sparkle", "cascade", "columns", "orbit",
+				"breathe", "waverows", "checkerboard", "helix",
+				"fillsweep", "diagswipe", "classic-waveform",
+				"particle-drift", "pulsing-rings", "ascii-landscape",
+				"matrix-rain", "gradient-flow", "breathing-circles",
+				"network-graph",
+				"dot", "jump", "pulse", "points", "globe",
+				"moon", "monkey", "meter", "hamburger", "ellipsis",
+			}
+			err := c.Validate()
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("accepts category name in enabled list", func() {
+			c := bedrock.HighwayConfig{}
+			c.AnimationData.Spinners.Enabled = []string{"film-strip-set"}
+			err := c.Validate()
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("rejects zero interval in override", func() {
+			c := bedrock.HighwayConfig{}
+			c.AnimationData.Spinners.Enabled = []string{"wave"}
+			c.AnimationData.Spinners.Override = map[string]*bedrock.SpinnerItemConfig{
+				"wave": {Interval: 0},
+			}
+			err := c.Validate()
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("interval must be > 0"))
 		})
 	})
 
