@@ -170,6 +170,19 @@ var _ = Describe("Model.Update — KeyMsg", func() {
 		_, cmd := update(m, tea.KeyPressMsg{})
 		Expect(cmd).To(BeNil())
 	})
+
+	It("returns tea.Quit on ctrl+c before done", func() {
+		m := baseModel(1)
+		_, cmd := update(m, tea.KeyPressMsg{Code: 'c', Mod: tea.ModCtrl})
+		Expect(cmd).NotTo(BeNil())
+	})
+
+	It("returns tea.Quit on ctrl+c after done", func() {
+		m := baseModel(1)
+		m.done = true
+		_, cmd := update(m, tea.KeyPressMsg{Code: 'c', Mod: tea.ModCtrl})
+		Expect(cmd).NotTo(BeNil())
+	})
 })
 
 // ---------------------------------------------------------------------------

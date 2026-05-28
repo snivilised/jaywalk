@@ -1,11 +1,13 @@
 package controller
 
 import (
+	"context"
 	"regexp"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/snivilised/jaywalk/src/agenor/core"
 	"github.com/snivilised/jaywalk/src/app/bedrock"
 )
 
@@ -64,5 +66,41 @@ var _ = Describe("Dispatch Output Processing", func() {
 			Expect(result).To(Equal("this is a very long line that should be truncated normally, but let us  ..."))
 			Expect(len(result)).To(Equal(75))
 		})
+	})
+})
+
+var _ = Describe("executeAction", func() {
+	It("propagates context cancellation from exec", func() {
+		cfg := &bedrock.Config{}
+		cfg.Raw.Actions = map[string]bedrock.RawAction{
+			"test-action": {Cmd: "echo hello"},
+		}
+		c := &Coordinator{
+			config: cfg,
+			exec: func(_ context.Context, _ string) ([]byte, error) {
+				return nil, context.Canceled
+			},
+		}
+
+		node := core.New("test-path", nil, nil, nil, nil)
+		result := c.executeAction(context.Background(), node, "test-action", "", false)
+		Expect(result.Event.Err).To(MatchError(context.Canceled))
+	})
+
+	It("returns nil error when exec succeeds", func() {
+		cfg := &bedrock.Config{}
+		cfg.Raw.Actions = map[string]bedrock.RawAction{
+			"test-action": {Cmd: "echo hello"},
+		}
+		c := &Coordinator{
+			config: cfg,
+			exec: func(_ context.Context, _ string) ([]byte, error) {
+				return []byte("ok"), nil
+			},
+		}
+
+		node := core.New("test-path", nil, nil, nil, nil)
+		result := c.executeAction(context.Background(), node, "test-action", "", false)
+		Expect(result.Event.Err).To(BeNil())
 	})
 })
