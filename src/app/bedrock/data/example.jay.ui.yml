@@ -14,8 +14,11 @@
 
 ui:
   highway:
-    # Emoji pool for decoration (space-separated, at least 10 recommended)
-    emoji-pool: '😎 😄 👽 🤖 🦊 🐯 👻 🧙 🦄 🦁 🦉 🐸'
+    # Worker emoji pool for lane decoration (space-separated, at least 10 recommended)
+    worker-emoji-pool: '😎 😄 👽 🤖 🦊 🐯 👻 🧙 🦄 🦁 🦉 🐸'
+
+    # Job emoji pool for job arrival decoration (space-separated, at least 4 recommended)
+    job-emoji-pool: '🍎 🍊 🍋 🍇 🍓 🍑 🍒 🍌 🍍 🥝'
 
     # Character between emoji and content info (default: single space)
     separator: ' '

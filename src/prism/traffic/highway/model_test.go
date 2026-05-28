@@ -29,7 +29,7 @@ func testTheme() contract.Theme {
 func noopFrame(_ int) string { return "•" }
 
 func baseLane() Lane {
-	return Lane{Emoji: "🔍", Label: "test", FrameFn: noopFrame}
+	return Lane{Emoji: "🔍", JobEmoji: "🍎", Label: "test", FrameFn: noopFrame}
 }
 
 func baseModel(lanes int) Model {

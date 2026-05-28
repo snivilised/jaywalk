@@ -18,8 +18,11 @@ import (
 
 // HighwayConfig holds configuration for the highway bubbletea view.
 type HighwayConfig struct {
-	// Pool is a space-separated list of emoji runes for decoration.
-	Pool string
+	// WorkerPool is a space-separated list of emoji runes for worker/lane decoration.
+	WorkerPool string
+
+	// JobPool is a space-separated list of emoji runes for job decoration.
+	JobPool string
 
 	// Separator between emoji and content info (default: " ").
 	Separator string
@@ -56,6 +59,9 @@ type highwayPresenter struct {
 	totalDirs  uint
 	theme      prism.Theme
 	noRecurse  bool
+
+	// Job emoji pool state — populated from config, random emoji picked per job arrival.
+	jobEmojiPool []string
 }
 
 func newHighwayPresenter(palette prism.Palette, cfg HighwayConfig) (report.Presenter, error) {
@@ -89,9 +95,21 @@ func subscriptionLabelFor(s enums.Subscription) string {
 	}
 }
 
+// initJobEmojiPool loads the job emoji pool from config or defaults.
+// A random emoji is picked from the pool on each job arrival.
+func (h *highwayPresenter) initJobEmojiPool() {
+	jobEmojis := strings.Fields(h.cfg.JobPool)
+	if len(jobEmojis) == 0 {
+		jobEmojis = defaultJobEmojiPool
+	}
+	h.jobEmojiPool = make([]string, len(jobEmojis))
+	copy(h.jobEmojiPool, jobEmojis)
+}
+
 func (h *highwayPresenter) OnBegin(e *report.BeginEvent) {
 	h.done = make(chan struct{})
 
+	h.initJobEmojiPool()
 	lanes := BuildHighwayLanes(h.cfg, h.noW)
 	model := highway.NewModel(lanes, highwayTickRate, e.Root, h.maxDepth, h.theme, h.noRecurse)
 	h.program = tea.NewProgram(model)
@@ -179,6 +197,9 @@ func (h *highwayPresenter) sendMotif(path, name string, isDir bool, depth uint,
 
 	defer func() { _ = recover() }()
 
+	// Pick a random job emoji from the pool for each job arrival.
+	jobEmoji := h.jobEmojiPool[rand.IntN(len(h.jobEmojiPool))] //nolint:gosec // non-security random
+
 	var grad *prism.ResolvedGradient
 	// Retrieve gradient by component name lookup (not direct gradient name).
 	g, has := h.theme.GradientFor(prism.GradientComponentActivity)
@@ -204,6 +225,7 @@ func (h *highwayPresenter) sendMotif(path, name string, isDir bool, depth uint,
 			ExecutionString:   executionString,
 			DryRun:            dryRun,
 			Err:               err,
+			JobEmoji:          jobEmoji,
 			Gradient:          grad,
 			PeriscopeGradient: periscopeGrad,
 		},
@@ -234,9 +256,10 @@ func (h *highwayPresenter) OnComplete(t *report.Traversal) {
 }
 
 func BuildHighwayLanes(cfg HighwayConfig, now uint) []highway.Lane {
-	emojis := strings.Fields(cfg.Pool)
+	// Static worker emoji allocation: shuffle once, assign sequentially per lane.
+	emojis := strings.Fields(cfg.WorkerPool)
 	if len(emojis) == 0 {
-		emojis = defaultEmojiPool
+		emojis = defaultWorkerEmojiPool
 	}
 
 	deck := make([]string, len(emojis))
@@ -284,7 +307,7 @@ func BuildHighwayLanes(cfg HighwayConfig, now uint) []highway.Lane {
 			FrameFn:     def.Frames,
 			SpinnerName: name,
 			IntervalMs:  interval,
-			// HighlightGradient will be populated by the model when MotifMsg is received
+			// JobEmoji is populated dynamically by the model when MotifMsg is received
 			HighlightGradient: nil,
 		}
 	}

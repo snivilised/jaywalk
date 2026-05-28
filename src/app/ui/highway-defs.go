@@ -9,7 +9,8 @@ const (
 )
 
 var (
-	defaultEmojiPool    = []string{"🔍", "⚙️", "🔄", "📡"}
+	defaultWorkerEmojiPool = []string{"🔍", "⚙️", "🔄", "📡"}
+	defaultJobEmojiPool    = []string{"🍎", "🍊", "🍋", "🍇", "🍓", "🍑", "🍒", "🍌", "🍍", "🥝"}
 	highwaySpinnerTypes = []string{
 		"wave",
 		"musical",

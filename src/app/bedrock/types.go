@@ -126,9 +126,14 @@ type Config struct {
 // HighwayConfig holds the emoji pool and animation data for Highway view.
 // This configuration is loaded from jay.ui.yml when Highway view is requested.
 type HighwayConfig struct {
-	// Pool is a space-separated list of emoji runes for decoration.
+	// WorkerPool is a space-separated list of emoji runes for worker/lane decoration.
 	// Recommended: at least 10 emojis for variety across lanes/workers.
-	Pool string `mapstructure:"emoji-pool"`
+	WorkerPool string `mapstructure:"worker-emoji-pool"`
+
+	// JobPool is a space-separated list of emoji runes for job decoration.
+	// Each new job arrival gets the next emoji from this pool.
+	// Recommended: at least 6 emojis for variety.
+	JobPool string `mapstructure:"job-emoji-pool"`
 
 	// Separator between emoji and content info (default: " ").
 	Separator string `mapstructure:"separator"`
