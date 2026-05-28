@@ -31,7 +31,8 @@ var _ = Describe("ViewConfigLoader", Ordered, func() {
 			Data: []byte(`
 ui:
   highway:
-    emoji-pool: '😎 😄 👽 🤖 🦊 🐯 👻 🧙 🦄 🦁'
+    worker-emoji-pool: '😎 😄 👽 🤖 🦊 🐯 👻 🧙 🦄 🦁'
+    job-emoji-pool: '🍎 🍊 🍋 🍇 🍓'
     separator: ' '
     animation:
       spinners:
@@ -46,7 +47,8 @@ ui:
 		var cfg bedrock.HighwayConfig
 		err := loader.Load("highway", &cfg)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(cfg.Pool).To(Equal("😎 😄 👽 🤖 🦊 🐯 👻 🧙 🦄 🦁"))
+		Expect(cfg.WorkerPool).To(Equal("😎 😄 👽 🤖 🦊 🐯 👻 🧙 🦄 🦁"))
+		Expect(cfg.JobPool).To(Equal("🍎 🍊 🍋 🍇 🍓"))
 		Expect(cfg.Separator).To(Equal(" "))
 		Expect(cfg.AnimationData.Spinners.Enabled).To(ConsistOf("wave", "braille"))
 		Expect(cfg.AnimationData.Spinners.Override).NotTo(BeNil())
@@ -60,7 +62,7 @@ ui:
 			var cfg bedrock.HighwayConfig
 			err := loader.Load("highway", &cfg)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(cfg.Pool).To(BeEmpty())
+			Expect(cfg.WorkerPool).To(BeEmpty())
 		})
 
 		It("returns nil when view section is absent", func() {
@@ -77,7 +79,7 @@ ui:
 			var cfg bedrock.HighwayConfig
 			err := loader.Load("highway", &cfg)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(cfg.Pool).To(BeEmpty())
+			Expect(cfg.WorkerPool).To(BeEmpty())
 		})
 
 		It("loads empty animation types gracefully", func() {
@@ -86,7 +88,7 @@ ui:
 				Data: []byte(`
 ui:
   highway:
-    emoji-pool: '😎 😄 👽 🤖 🦊 🐯 👻 🧙 🦄 🦁'
+    worker-emoji-pool: '😎 😄 👽 🤖 🦊 🐯 👻 🧙 🦄 🦁'
 `),
 			}
 
@@ -103,7 +105,7 @@ ui:
 				Data: []byte(`
 ui:
   highway:
-    emoji-pool: '😎 😄 👽 🤖 🦊 🐯 👻 🧙 🦄 🦁'
+    worker-emoji-pool: '😎 😄 👽 🤖 🦊 🐯 👻 🧙 🦄 🦁'
 `),
 			}
 
@@ -111,7 +113,7 @@ ui:
 			var cfg bedrock.HighwayConfig
 			err := loader.Load("highway", &cfg)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(cfg.Pool).To(Equal("😎 😄 👽 🤖 🦊 🐯 👻 🧙 🦄 🦁"))
+			Expect(cfg.WorkerPool).To(Equal("😎 😄 👽 🤖 🦊 🐯 👻 🧙 🦄 🦁"))
 		})
 
 		It("prefers .yaml over .yml", func() {
@@ -120,14 +122,14 @@ ui:
 				Data: []byte(`
 ui:
   highway:
-    emoji-pool: 'from-yaml'
+    worker-emoji-pool: 'from-yaml'
 `),
 			}
 			fS.MapFS[configHome+"/jay.ui.yml"] = &fstest.MapFile{
 				Data: []byte(`
 ui:
   highway:
-    emoji-pool: 'from-yml'
+    worker-emoji-pool: 'from-yml'
 `),
 			}
 
@@ -135,7 +137,7 @@ ui:
 			var cfg bedrock.HighwayConfig
 			err := loader.Load("highway", &cfg)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(cfg.Pool).To(Equal("from-yaml"))
+			Expect(cfg.WorkerPool).To(Equal("from-yaml"))
 		})
 
 		It("returns error on malformed YAML", func() {

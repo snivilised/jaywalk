@@ -190,6 +190,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 		if len(m.lanes) > 0 {
+			m.lanes[m.currentLaneIdx].JobEmoji = msg.Data.JobEmoji
 			m.lanes[m.currentLaneIdx].Path = msg.Data.Path
 			m.lanes[m.currentLaneIdx].Name = msg.Data.Name
 			m.lanes[m.currentLaneIdx].IsDir = msg.Data.IsDir

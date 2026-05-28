@@ -11,19 +11,20 @@ import (
 
 // renderLanes renders each highway lane with animation frames and event data.
 // Rendering order per lane (left to right inside one frame):
-// | 🤖  ◼◻◻◻◻◻◻◻◻◻  🌀  • via boo  braillewave       <Path>  ⠁⠂⠄⡀                                    [👾 sleep 1.0s] |
+// | 🤖  ◼◻◻◻◻◻◻◻◻◻  🍎  📁  • via boo  braillewave       <Path>  ⠁⠂⠄⡀                                    [👾 sleep 1.0s] |
 //
 //  1. Left border segment │
-//  2. Emoji indicator (e.g., 🔄, ⏳)
+//  2. Worker emoji indicator (changes per job arrival)
 //  3. Periscope bar (indentation depth or animated fill pattern)
-//  4. Node icon (file/folder tree icon, if path is present)
-//  5. Action info (error message / action name / pipeline name)
-//  6. Spinner column (fixed width label for spinner type: "default", "bounce", etc.)
-//  7. Styled path or label (files get DirStyle/FileStyle, empty lanes get MutedStyle)
-//  8. Animation frame (frame content from FrameFunc in quotes)
-//  9. Landing strip
+//  4. Job emoji indicator (changes per job arrival)
+//  5. Node icon (file/folder tree icon, if path is present)
+//  6. Action info (error message / action name / pipeline name)
+//  7. Spinner column (fixed width label for spinner type: "default", "bounce", etc.)
+//  8. Styled path or label (files get DirStyle/FileStyle, empty lanes get MutedStyle)
+//  9. Animation frame (frame content from FrameFunc in quotes)
+// 10. Landing strip
 //
-// 10. Right border segment │
+// 11. Right border segment │
 func (m Model) renderLanes(b *strings.Builder) {
 	laneBarWidth := LaneBarWidth
 
@@ -89,6 +90,9 @@ func (m Model) renderLanes(b *strings.Builder) {
 		row.
 			Content(emojiPart).Gap(2).
 			Content(laneBar).Gap(2)
+		if lane.JobEmoji != "" {
+			row.Content(lane.JobEmoji).Gap(2)
+		}
 		if nodeIcon != "" {
 			row.Content(nodeIcon).Gap(1)
 		}

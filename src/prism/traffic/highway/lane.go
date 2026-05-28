@@ -7,6 +7,7 @@ import (
 // Lane
 type Lane struct {
 	Emoji           string
+	JobEmoji        string
 	Label           string
 	FrameFn         contract.FrameFunc
 	SpinnerName     string

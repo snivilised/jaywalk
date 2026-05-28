@@ -265,7 +265,8 @@ func (b *Bootstrap) Root(options ...ConfigureAppOptionFn) *cobra.Command {
 				}
 
 		mgr, err := ui.New(mode, palette, ui.HighwayConfig{
-			Pool:           highwayCfg.Pool,
+			WorkerPool:     highwayCfg.WorkerPool,
+			JobPool:        highwayCfg.JobPool,
 			Separator:      highwayCfg.Separator,
 			SpinnerNames:   highwayCfg.AnimationData.Spinners.Enabled,
 			AnimationGradient: b.themeLoader.NameFromPalette(palette, prism.GradientComponentActivity),

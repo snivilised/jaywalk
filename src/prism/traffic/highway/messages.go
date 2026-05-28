@@ -27,7 +27,11 @@ type MotifData struct {
 	ExecutionString string
 	DryRun          bool
 	Err             error
-	
+
+	// JobEmoji is the emoji associated with the incoming job, rendered
+	// after the periscope bar.
+	JobEmoji string
+
 	// Gradient is the optional animation gradient to apply to this lane's frame.
 	// Populated when HighwayConfig.AnimationGradient is set in config; nil otherwise.
 	Gradient *contract.ResolvedGradient

@@ -74,10 +74,17 @@ func (c AdvancedConfig) Validate() error {
 func (c HighwayConfig) Validate() error {
 	ve := &ValidationError{}
 
-	if c.Pool != "" {
-		emojis := strings.Fields(c.Pool)
+	if c.WorkerPool != "" {
+		emojis := strings.Fields(c.WorkerPool)
 		if len(emojis) < 10 {
-			ve.addF("ui.highway.emoji-pool must have at least 10 emojis, got %d", len(emojis))
+			ve.addF("ui.highway.worker-emoji-pool must have at least 10 emojis, got %d", len(emojis))
+		}
+	}
+
+	if c.JobPool != "" {
+		emojis := strings.Fields(c.JobPool)
+		if len(emojis) < 4 {
+			ve.addF("ui.highway.job-emoji-pool must have at least 4 emojis, got %d", len(emojis))
 		}
 	}
 
