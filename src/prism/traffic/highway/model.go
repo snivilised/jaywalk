@@ -142,6 +142,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			m.lanes[i].GradientState.Update(windowSize)
 		}
+
+		if m.lanes[i].PeriscopeGradient != nil {
+			windowSize := m.lanes[i].WindowSize()
+			if windowSize <= 0 {
+				windowSize = 4
+			}
+			m.lanes[i].PeriscopeGradientState.Update(windowSize)
+		}
 	}
 		tickCmd := tea.Tick(m.tickRate, func(t time.Time) tea.Msg {
 			return tickMsg(t)
@@ -202,6 +210,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.lanes[m.currentLaneIdx].GradientState = NewGradientState()
 				}
 				m.lanes[m.currentLaneIdx].GradientState.TotalSteps = msg.Data.Gradient.Steps
+			}
+
+			if msg.Data.PeriscopeGradient != nil {
+				m.lanes[m.currentLaneIdx].PeriscopeGradient = msg.Data.PeriscopeGradient
+				if m.lanes[m.currentLaneIdx].PeriscopeGradientState == nil {
+					m.lanes[m.currentLaneIdx].PeriscopeGradientState = NewGradientState()
+				}
+				m.lanes[m.currentLaneIdx].PeriscopeGradientState.TotalSteps = msg.Data.PeriscopeGradient.Steps
 			}
 			m.currentLaneIdx = (m.currentLaneIdx + 1) % len(m.lanes)
 		}

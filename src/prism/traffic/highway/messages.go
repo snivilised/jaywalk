@@ -31,6 +31,10 @@ type MotifData struct {
 	// Gradient is the optional animation gradient to apply to this lane's frame.
 	// Populated when HighwayConfig.AnimationGradient is set in config; nil otherwise.
 	Gradient *contract.ResolvedGradient
+
+	// PeriscopeGradient is the optional gradient for this lane's periscope bar.
+	// Looked up via theme.GradientFor(GradientComponentPeriscope) in sendMotif.
+	PeriscopeGradient *contract.ResolvedGradient
 }
 
 type MotifMsg struct {

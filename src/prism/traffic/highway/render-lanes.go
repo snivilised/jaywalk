@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"charm.land/lipgloss/v2"
 	"github.com/snivilised/jaywalk/src/prism/layout"
 	"github.com/snivilised/jaywalk/src/prism/widget"
 )
@@ -131,6 +132,35 @@ func (m Model) renderPeriscopeBar(lane Lane, idx int, laneBarWidth int, styles w
 	} else {
 		fill = (lane.tick * (7 + idx*3)) % (laneBarWidth + 1)
 	}
+
+	if lane.PeriscopeGradient != nil {
+		barContent := strings.Repeat("◼", fill) + strings.Repeat("◻", laneBarWidth-fill)
+
+		if lane.PeriscopeGradient.Animate {
+			if lane.PeriscopeGradientState != nil && fill > 0 {
+				runs := ApplyGradient(
+					lane.PeriscopeGradient.Hi,
+					lane.PeriscopeGradient.Lo,
+					barContent,
+					lane.PeriscopeGradientState,
+				)
+				if runs != nil {
+					return ApplyGradientStyled(runs)
+				}
+			}
+		} else {
+			runs := ApplyGradientStatic(
+				lane.PeriscopeGradient.Hi,
+				lane.PeriscopeGradient.Lo,
+				barContent,
+				lane.PeriscopeGradient.Steps,
+			)
+			if runs != nil {
+				return ApplyGradientStyled(runs)
+			}
+		}
+	}
+
 	return widget.RenderPeriscope(widget.PeriscopeConfig{
 		Width:  laneBarWidth,
 		Fill:   fill,
@@ -158,16 +188,38 @@ func (m Model) renderActivityFrame(lane Lane, styles widget.ActivityStyles) stri
 	}
 
 	if lane.HighlightGradient != nil && lane.GradientState != nil {
+		// Strip outer ┃ bars from film-strip and bounce frames so the
+		// gradient doesn't sweep through them. The bars are re-added
+		// with the gradient's Hi (left) and Lo (right) colours.
+		inner, hasBars := stripOuterBars(frameContent)
+
 		gradientRuns := ApplyGradient(
 			lane.HighlightGradient.Hi,
 			lane.HighlightGradient.Lo,
-			frameContent,
+			inner,
 			lane.GradientState,
 		)
 		if gradientRuns != nil {
 			styledFrame := ApplyGradientStyled(gradientRuns)
+			if hasBars {
+				leftBarStyle := lipgloss.NewStyle().Foreground(lane.HighlightGradient.Hi)
+				rightBarStyle := lipgloss.NewStyle().Foreground(lane.HighlightGradient.Lo)
+				return leftBarStyle.Render("┃") +
+					styledFrame +
+					rightBarStyle.Render("┃")
+			}
 			return m.theme.FrameStyle.Render(styledFrame)
 		}
 	}
 	return widget.RenderActivity(widget.ActivityConfig{Content: frameContent}, styles)
+}
+
+// stripOuterBars checks if content is wrapped in ┃...┃ and returns the
+// inner portion. Returns hasBars=false when no outer bars are detected.
+func stripOuterBars(content string) (inner string, hasBars bool) {
+	runes := []rune(content)
+	if len(runes) >= 2 && runes[0] == '┃' && runes[len(runes)-1] == '┃' {
+		return string(runes[1 : len(runes)-1]), true
+	}
+	return content, false
 }

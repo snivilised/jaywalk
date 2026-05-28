@@ -75,31 +75,21 @@ func (s *GradientState) Reset() {
 	s.stepsArray = nil
 }
 
-// GetEffectiveIndex returns the current gradient index, accounting for direction.
+// GetEffectiveIndex returns the gradient index for character at position pos.
+// Uses modular wrapping so the gradient scrolls through the content rather
+// than clamping to the last colour. The Offset acts as a phase shift that
+// advances each tick via Update(), creating a pulsing sweep effect.
 func (s *GradientState) GetEffectiveIndex(pos int) int {
 	if len(s.stepsArray) == 0 {
 		return -1
 	}
 
-	offsetIdx := s.Offset + pos
-
-	if offsetIdx >= len(s.stepsArray) && s.Direction > 0 {
-		s.Offset = len(s.stepsArray) - 1
-		s.Direction = -1
-		offsetIdx = s.Offset + pos
-	} else if offsetIdx < 0 && s.Direction < 0 {
-		s.Offset = 0
-		s.Direction = 1
-		offsetIdx = s.Offset + pos
+	idx := (s.Offset + pos) % len(s.stepsArray)
+	if idx < 0 {
+		idx += len(s.stepsArray)
 	}
 
-	if offsetIdx < 0 {
-		offsetIdx = 0
-	} else if offsetIdx >= len(s.stepsArray) {
-		offsetIdx = len(s.stepsArray) - 1
-	}
-
-	return offsetIdx
+	return idx
 }
 
 // ApplyGradient applies a colour gradient from Hi to Lo across an animation frame.
@@ -152,6 +142,53 @@ func ApplyGradient(hiCol, loCol color.Color, frameContent string, state *Gradien
 				B: steps[stepIdx].B,
 			},
 		})
+	}
+
+	return result
+}
+
+// ApplyGradientStatic applies a colour gradient from Hi to Lo across content
+// without animation. Each character gets a colour based on its position in the
+// content, distributed evenly across the gradient steps. Unlike ApplyGradient,
+// this does not use GradientState and produces a fixed, non-animated output.
+//
+//nolint:all
+func ApplyGradientStatic(hiCol, loCol color.Color, content string, totalSteps int) []RunWithColour {
+	hiR, hiG, hiB, _ := hiCol.RGBA()
+	loR, loG, loB, _ := loCol.RGBA()
+
+	steps := InterpolateBetweenRGBA(
+		uint8(hiR>>8),
+		uint8(hiG>>8),
+		uint8(hiB>>8),
+		uint8(loR>>8),
+		uint8(loG>>8),
+		uint8(loB>>8),
+		totalSteps,
+	)
+
+	if len(steps) == 0 {
+		return nil
+	}
+
+	runeSlice := []rune(content)
+	result := make([]RunWithColour, len(runeSlice))
+	lastStep := len(steps) - 1
+	maxPos := max(len(runeSlice)-1, 1)
+
+	for i, r := range runeSlice {
+		idx := i * lastStep / maxPos
+		if idx > lastStep {
+			idx = lastStep
+		}
+		result[i] = RunWithColour{
+			Rune: r,
+			Colour: Colour{
+				R: steps[idx].R,
+				G: steps[idx].G,
+				B: steps[idx].B,
+			},
+		}
 	}
 
 	return result
