@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"github.com/charmbracelet/bubbles/spinner"
+	"github.com/snivilised/jaywalk/src/prism/contract"
 )
 
 // SpinnerDef holds a spinner's frame generator.
@@ -11,7 +12,7 @@ import (
 // the config override mechanism (see HighwayConfig.Overrides →
 // Lane.IntervalMs → initLaneSkip in the highway model).
 type SpinnerDef struct {
-	Frames func(tick int) string
+	Frames contract.FrameFunc
 }
 
 var (
@@ -90,7 +91,7 @@ func spinnerFrame(tick int) string {
 	return spinner.Line.Frames[tick%len(spinner.Line.Frames)]
 }
 
-func frameArraySpinner(frames []string) func(tick int) string {
+func frameArraySpinner(frames []string) contract.FrameFunc {
 	return func(tick int) string {
 		return frames[tick%len(frames)]
 	}

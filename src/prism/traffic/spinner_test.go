@@ -5,6 +5,7 @@ import (
 	"github.com/mattn/go-runewidth"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/snivilised/jaywalk/src/prism/contract"
 )
 
 var _ = Describe("SpinnerFrames", func() {
@@ -65,7 +66,7 @@ var _ = Describe("SpinnerFrames", func() {
 	// Unicode animation first frames
 	// -----------------------------------------------------------------------
 	DescribeTable("braille spinners first frame",
-		func(fn func(tick int) string, expected string) {
+		func(fn contract.FrameFunc, expected string) {
 			Expect(fn(0)).To(Equal(expected))
 		},
 		Entry("braille", frameArraySpinner(spinner.MiniDot.Frames), "⠋"),
@@ -92,7 +93,7 @@ var _ = Describe("SpinnerFrames", func() {
 	// Charm built-in spinners first frame
 	// -----------------------------------------------------------------------
 	DescribeTable("charm spinners first frame",
-		func(fn func(tick int) string, expected string) {
+		func(fn contract.FrameFunc, expected string) {
 			Expect(fn(0)).To(Equal(expected))
 		},
 		Entry("dot", frameArraySpinner(spinner.Dot.Frames), "⣾ "),
@@ -111,7 +112,7 @@ var _ = Describe("SpinnerFrames", func() {
 	// Unicode animation wrap-around (last frame then tick beyond)
 	// -----------------------------------------------------------------------
 	DescribeTable("braille spinners wrap correctly",
-		func(fn func(tick int) string, firstFrame string) {
+		func(fn contract.FrameFunc, firstFrame string) {
 			Expect(fn(0)).To(Equal(firstFrame))
 		},
 		Entry("braille wraps at 10", frameArraySpinner(spinner.MiniDot.Frames), "⠋"),
@@ -164,7 +165,7 @@ var _ = Describe("SpinnerFrames", func() {
 	// Animation skins — render non-empty
 	// -----------------------------------------------------------------------
 	DescribeTable("animation skins render without panic",
-		func(name string, fn func(tick int) string) {
+		func(name string, fn contract.FrameFunc) {
 			Expect(fn(0)).NotTo(BeEmpty())
 			Expect(fn(5)).NotTo(BeEmpty())
 			Expect(fn(15)).NotTo(BeEmpty())
@@ -208,7 +209,7 @@ var _ = Describe("SpinnerFrames", func() {
 	// All unicode spinners wrap without panic across the full cycle
 	// -----------------------------------------------------------------------
 	It("all spinners produce non-empty frames across the full cycle", func() {
-		for _, fn := range []func(tick int) string{
+		for _, fn := range []contract.FrameFunc{
 			frameArraySpinner(spinner.MiniDot.Frames),
 			brailleWaveSpinner, dnaSpinner,
 			scanSpinner, rainSpinner, scanLineSpinner,

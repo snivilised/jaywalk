@@ -4,14 +4,11 @@ import (
 	"github.com/snivilised/jaywalk/src/prism/contract"
 )
 
-// FrameFunc generates the animation frame string for a lane at the given tick.
-type FrameFunc func(tick int) string
-
 // Lane
 type Lane struct {
 	Emoji           string
 	Label           string
-	FrameFn         FrameFunc
+	FrameFn         contract.FrameFunc
 	SpinnerName     string
 	Path            string
 	Name            string

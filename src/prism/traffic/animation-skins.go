@@ -1,10 +1,14 @@
 package traffic
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/snivilised/jaywalk/src/prism/contract"
+)
 
 var intensityChars = []string{" ", "░", "▒", "▓", "█"}
 
-func newClassicWaveform() func(tick int) string {
+func newClassicWaveform() contract.FrameFunc {
 	chars := []string{"▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"}
 	return func(tick int) string {
 		phase := tick % 16
@@ -17,7 +21,7 @@ func newClassicWaveform() func(tick int) string {
 	}
 }
 
-func newParticleDrift() func(tick int) string {
+func newParticleDrift() contract.FrameFunc {
 	particles := []string{" ", "·", "∙", "○"}
 	return func(tick int) string {
 		seed := tick % 20
@@ -30,7 +34,7 @@ func newParticleDrift() func(tick int) string {
 	}
 }
 
-func newPulsingRings() func(tick int) string {
+func newPulsingRings() contract.FrameFunc {
 	rings := []string{" ", "○", "◌", "◍", "●"}
 	return func(tick int) string {
 		pos := tick % 10
@@ -43,7 +47,7 @@ func newPulsingRings() func(tick int) string {
 	}
 }
 
-func newASCIILandscape() func(tick int) string {
+func newASCIILandscape() contract.FrameFunc {
 	terrain := []string{"▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"}
 	return func(tick int) string {
 		offset := tick % 32
@@ -56,7 +60,7 @@ func newASCIILandscape() func(tick int) string {
 	}
 }
 
-func newMatrixRain() func(tick int) string {
+func newMatrixRain() contract.FrameFunc {
 	chars := []string{"╲", "│", "╱"}
 	return func(tick int) string {
 		pos := tick % 12
@@ -69,7 +73,7 @@ func newMatrixRain() func(tick int) string {
 	}
 }
 
-func newGradientFlow() func(tick int) string {
+func newGradientFlow() contract.FrameFunc {
 	return func(tick int) string {
 		pos := tick % 20
 		var out strings.Builder
@@ -81,7 +85,7 @@ func newGradientFlow() func(tick int) string {
 	}
 }
 
-func newBreathingCircles() func(tick int) string {
+func newBreathingCircles() contract.FrameFunc {
 	cycle := []string{" ", "·", "○", "●", "◉"}
 	return func(tick int) string {
 		pos := tick % 12
@@ -94,7 +98,7 @@ func newBreathingCircles() func(tick int) string {
 	}
 }
 
-func newNetworkGraph() func(tick int) string {
+func newNetworkGraph() contract.FrameFunc {
 	nodes := []string{" ", "o", "○", "●"}
 	return func(tick int) string {
 		pos := tick % 16
