@@ -1,16 +1,10 @@
 package highway
 
 import (
-	"github.com/snivilised/jaywalk/src/prism"
+	"github.com/snivilised/jaywalk/src/prism/contract"
 )
 
-// FrameFunc
-//
-// This type probably needs to move into traffic, but before doing so, we need to
-// make sure that the direction of dependency is correct. Currently, I think this
-// is wrong. It alway feels wrong to me to have a child package dependent upon it
-// parent. It should alway be the other way around. traffic should be dependent on
-// highway, but I fear this is not the case; this needs to be verified.
+// FrameFunc generates the animation frame string for a lane at the given tick.
 type FrameFunc func(tick int) string
 
 // Lane
@@ -43,7 +37,7 @@ type Lane struct {
 
 	// New gradient field for Phase 2 implementation.
 	// nil means no gradient configured - use default styling.
-	HighlightGradient *prism.ResolvedGradient
+	HighlightGradient *contract.ResolvedGradient
 
 	// GradientState holds in-memory state for this lane's gradient animation.
 	GradientState *GradientState

@@ -2,8 +2,8 @@ package highway
 
 import (
 	"time"
-	
-	"github.com/snivilised/jaywalk/src/prism"
+
+	"github.com/snivilised/jaywalk/src/prism/contract"
 )
 
 type OvertureMsg struct {
@@ -30,7 +30,7 @@ type MotifData struct {
 	
 	// Gradient is the optional animation gradient to apply to this lane's frame.
 	// Populated when HighwayConfig.AnimationGradient is set in config; nil otherwise.
-	Gradient *prism.ResolvedGradient
+	Gradient *contract.ResolvedGradient
 }
 
 type MotifMsg struct {

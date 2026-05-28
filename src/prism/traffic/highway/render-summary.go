@@ -7,7 +7,7 @@ import (
 
 	"charm.land/lipgloss/v2"
 
-	"github.com/snivilised/jaywalk/src/prism"
+	"github.com/snivilised/jaywalk/src/prism/contract"
 	"github.com/snivilised/jaywalk/src/prism/widget"
 )
 
@@ -38,17 +38,17 @@ func (m Model) renderSummary(b *strings.Builder) {
 	pct := m.percent
 	barView := m.progress.ViewAs(float64(m.percent) / 100.0)
 
-	fileIcon := m.theme.TreeIcons[prism.TreeIconFile]
+	fileIcon := m.theme.TreeIcons[contract.TreeIconFile]
 	fileLabel := m.theme.SummaryLabelStyle.Render(fileIcon + " files:")
 	fileValue := m.theme.SummaryValueStyle.Render(fmt.Sprintf("%4d", files))
 	seg1 := " " + fileLabel + " " + fileValue + " "
 
-	dirIcon := m.theme.TreeIcons[prism.TreeIconDirectory]
+	dirIcon := m.theme.TreeIcons[contract.TreeIconDirectory]
 	dirLabel := m.theme.SummaryLabelStyle.Render(dirIcon + " dirs:")
 	dirValue := m.theme.SummaryValueStyle.Render(fmt.Sprintf("%3d", dirs))
 	seg2 := " " + dirLabel + " " + dirValue + " "
 
-	errIcon := m.theme.TreeIcons[prism.TreeIconError]
+	errIcon := m.theme.TreeIcons[contract.TreeIconError]
 	errLabel := m.theme.ErrorStyle.Render(errIcon + " errors:")
 	errValue := m.theme.SummaryValueStyle.Render(fmt.Sprintf("%3d", errors))
 	seg3 := " " + errLabel + " " + errValue + " "
@@ -69,7 +69,7 @@ func (m Model) renderSummary(b *strings.Builder) {
 		}
 	}
 
-	elapsedIcon := m.theme.TreeIcons[prism.TreeIconElapsed]
+	elapsedIcon := m.theme.TreeIcons[contract.TreeIconElapsed]
 	elapsedLabel := m.theme.SummaryLabelStyle.Render(elapsedIcon + " elapsed:")
 	elapsedStr := widget.FormatDuration(elapsed)
 	elapsedValue := m.theme.SummaryValueStyle.Render(elapsedStr)

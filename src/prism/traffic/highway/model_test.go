@@ -9,7 +9,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/snivilised/jaywalk/src/prism"
+	"github.com/snivilised/jaywalk/src/prism/contract"
 	"github.com/snivilised/jaywalk/src/prism/traffic"
 )
 
@@ -17,8 +17,8 @@ import (
 // Helpers
 // ---------------------------------------------------------------------------
 
-func testTheme() prism.Theme {
-	t, err := prism.NewTheme(prism.SystemPalette(), io.Discard)
+func testTheme() contract.Theme {
+	t, err := contract.NewTheme(contract.SystemPalette(), io.Discard)
 	if err != nil {
 		panic(err)
 	}
@@ -86,7 +86,7 @@ var _ = Describe("NewModel", func() {
 
 	It("stores the theme", func() {
 		m := baseModel(1)
-		Expect(m.theme).NotTo(Equal(prism.Theme{}))
+		Expect(m.theme).NotTo(Equal(contract.Theme{}))
 	})
 
 	It("initialises the counted map", func() {
