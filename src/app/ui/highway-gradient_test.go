@@ -351,10 +351,10 @@ var _ = Describe("Highway Gradient API", func() {
 
 	Describe("Empty highlights config", func() {
 		It("creates valid Theme with empty gradient maps", func() {
-			palette := prism.SystemPalette() // has no highlights
+			palette = prism.SystemPalette() // has no highlights
 			w.Reset()
 
-			theme, err := prism.NewTheme(palette, w)
+			theme, err = prism.NewTheme(palette, w)
 			Expect(err).To(BeNil())
 
 			Expect(theme.HighlightGradients).NotTo(BeNil())
@@ -366,6 +366,96 @@ var _ = Describe("Highway Gradient API", func() {
 			gGrad, has := theme.GradientFor(prism.GradientComponentActivity)
 			Expect(has).To(BeFalse())
 			Expect(gGrad.Steps).To(Equal(0))
+		})
+	})
+
+	Describe("Periscope component gradient", func() {
+		It("retrieves periscope gradient using component name constant", func() {
+			highlights := prism.HighlightsConfig{
+				Gradients: map[string]prism.GradientDef{
+					"aurora-borealis": {
+						Steps: 8,
+						Hi:    &prism.SemanticColour{ANSI16: "cyan", TrueColor: "#00E5FF"},
+						Lo:    &prism.SemanticColour{ANSI16: "magenta", TrueColor: "#B388FF"},
+					},
+				},
+				Components: map[string]string{
+					prism.GradientComponentActivity:  "aurora-borealis",
+					prism.GradientComponentPeriscope: "aurora-borealis",
+				},
+			}
+
+			palette.Highlights = highlights
+			w = &bytes.Buffer{}
+
+			theme, err = prism.NewTheme(palette, w)
+			Expect(err).To(BeNil())
+
+			pgGrad, has := theme.GradientFor(prism.GradientComponentPeriscope)
+			Expect(has).To(BeTrue())
+			Expect(pgGrad.Steps).To(Equal(8))
+			Expect(pgGrad.Hi).NotTo(BeNil())
+			Expect(pgGrad.Lo).NotTo(BeNil())
+		})
+
+		It("returns false when periscope component is not configured", func() {
+			highlights := prism.HighlightsConfig{
+				Gradients: map[string]prism.GradientDef{
+					"aurora-borealis": {
+						Steps: 8,
+						Hi:    &prism.SemanticColour{ANSI16: "cyan"},
+						Lo:    &prism.SemanticColour{ANSI16: "magenta"},
+					},
+				},
+				Components: map[string]string{
+					prism.GradientComponentActivity: "aurora-borealis",
+				},
+			}
+
+			palette.Highlights = highlights
+			w.Reset()
+
+			theme, err = prism.NewTheme(palette, w)
+			Expect(err).To(BeNil())
+
+			_, has := theme.GradientFor(prism.GradientComponentPeriscope)
+			Expect(has).To(BeFalse())
+		})
+
+		It("independent from activity-control gradient", func() {
+			highlights := prism.HighlightsConfig{
+				Gradients: map[string]prism.GradientDef{
+					"aurora-borealis": {
+						Steps: 8,
+						Hi:    &prism.SemanticColour{ANSI16: "cyan", TrueColor: "#00E5FF"},
+						Lo:    &prism.SemanticColour{ANSI16: "magenta", TrueColor: "#B388FF"},
+					},
+					"ember-glow": {
+						Hi: &prism.SemanticColour{ANSI16: "red", TrueColor: "#FF6F00"},
+						Lo: &prism.SemanticColour{ANSI16: "yellow", TrueColor: "#FFD54F"},
+					},
+				},
+				Components: map[string]string{
+					prism.GradientComponentActivity:  "aurora-borealis",
+					prism.GradientComponentPeriscope: "ember-glow",
+				},
+			}
+
+			palette.Highlights = highlights
+			w.Reset()
+
+			theme, err = prism.NewTheme(palette, w)
+			Expect(err).To(BeNil())
+
+			aGrad, hasActivity := theme.GradientFor(prism.GradientComponentActivity)
+			Expect(hasActivity).To(BeTrue())
+			Expect(aGrad.Hi).NotTo(BeNil())
+
+			pGrad, hasPeriscope := theme.GradientFor(prism.GradientComponentPeriscope)
+			Expect(hasPeriscope).To(BeTrue())
+			Expect(pGrad.Hi).NotTo(BeNil())
+
+			Expect(aGrad.Hi).NotTo(Equal(pGrad.Hi))
 		})
 	})
 })

@@ -186,19 +186,26 @@ func (h *highwayPresenter) sendMotif(path, name string, isDir bool, depth uint,
 		grad = &prism.ResolvedGradient{Steps: g.Steps, Hi: g.Hi, Lo: g.Lo}
 	}
 
+	var periscopeGrad *prism.ResolvedGradient
+	pg, hasPG := h.theme.GradientFor(prism.GradientComponentPeriscope)
+	if hasPG && pg.Steps > 0 {
+		periscopeGrad = &prism.ResolvedGradient{Steps: pg.Steps, Hi: pg.Hi, Lo: pg.Lo}
+	}
+
 	h.program.Send(highway.MotifMsg{
 		Data: highway.MotifData{
-			Path:            path,
-			Name:            name,
-			IsDir:           isDir,
-			Depth:           depth,
-			ActionName:      actionName,
-			PipelineName:    pipelineName,
-			CommandOutput:   commandOutput,
-			ExecutionString: executionString,
-			DryRun:          dryRun,
-			Err:             err,
-			Gradient:        grad,
+			Path:              path,
+			Name:              name,
+			IsDir:             isDir,
+			Depth:             depth,
+			ActionName:        actionName,
+			PipelineName:      pipelineName,
+			CommandOutput:     commandOutput,
+			ExecutionString:   executionString,
+			DryRun:            dryRun,
+			Err:               err,
+			Gradient:          grad,
+			PeriscopeGradient: periscopeGrad,
 		},
 	})
 }

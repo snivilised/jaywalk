@@ -32,12 +32,19 @@ type Lane struct {
 	tick        int
 	skipCounter int
 
-	// New gradient field for Phase 2 implementation.
+	// HighlightGradient is the animation gradient for this lane's activity frame.
 	// nil means no gradient configured - use default styling.
 	HighlightGradient *contract.ResolvedGradient
 
-	// GradientState holds in-memory state for this lane's gradient animation.
+	// GradientState holds in-memory state for this lane's activity gradient animation.
 	GradientState *GradientState
+
+	// PeriscopeGradient is the animation gradient for this lane's periscope bar.
+	// nil means no gradient configured - use default styling.
+	PeriscopeGradient *contract.ResolvedGradient
+
+	// PeriscopeGradientState holds in-memory state for this lane's periscope gradient animation.
+	PeriscopeGradientState *GradientState
 }
 
 func (l *Lane) WindowSize() int {

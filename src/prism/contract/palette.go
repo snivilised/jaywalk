@@ -115,6 +115,10 @@ type GradientDef struct {
 	Steps int             `mapstructure:"steps,omitempty"`
 	Hi    *SemanticColour `mapstructure:"hi,omitempty"`
 	Lo    *SemanticColour `mapstructure:"lo,omitempty"`
+
+	// Animate controls whether the gradient sweeps over time (true) or
+	// is applied statically (false). When nil, defaults to true.
+	Animate *bool `mapstructure:"animate,omitempty"`
 }
 
 // HighlightsConfig holds gradient definitions and their component bindings.
@@ -135,6 +139,10 @@ type ResolvedGradient struct {
 	Steps int
 	Hi    color.Color
 	Lo    color.Color
+
+	// Animate controls whether the gradient sweeps over time.
+	// True means animate using GradientState; false means static.
+	Animate bool
 }
 
 // Gradient component names — used in theme YAML under

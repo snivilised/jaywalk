@@ -308,10 +308,15 @@ func NewTheme(palette Palette, writer io.Writer) (Theme, error) {
 		if steps <= 0 {
 			steps = DefaultStepCount() // default to 8-step gradient when not specified
 		}
+		animate := true
+		if gd.Animate != nil {
+			animate = *gd.Animate
+		}
 		highlightGradients[name] = ResolvedGradient{
-			Steps: steps,
-			Hi:    hiCol,
-			Lo:    loCol,
+			Steps:   steps,
+			Hi:      hiCol,
+			Lo:      loCol,
+			Animate: animate,
 		}
 		// Pre-compute gradient steps and cache them (on-demand when empty)
 		if steps > 0 {
