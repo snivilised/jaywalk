@@ -2,6 +2,7 @@ package kernel_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -262,4 +263,69 @@ var _ = Describe("Navigator", Ordered, func() {
 			Consume: true,
 		}, SpecTimeout(time.Second*2)),
 	)
+})
+
+var _ = Describe("Navigator cancellation", func() {
+	var fS *luna.MemFS
+
+	BeforeEach(func() {
+		Expect(li18ngo.Register(
+			func(o *li18ngo.UseOptions) {
+				o.From.Sources = li18ngo.TranslationFiles{
+					locale.SourceID: li18ngo.TranslationSource{Name: "agenor"},
+				}
+			},
+		)).To(Succeed())
+		services.Reset()
+		fS = hanno.Nuxx(verbose, lab.Static.RetroWave)
+	})
+
+	It("should return saved error when context is cancelled mid-sprint", SpecTimeout(time.Second*2), func(specCtx SpecContext) {
+		lab.WithTestContext(specCtx, func(ctx context.Context, cancel context.CancelFunc) {
+			var wg sync.WaitGroup
+
+			navCtx, navCancel := context.WithCancel(ctx)
+			defer navCancel()
+
+			cancelled := false
+			callback := func(servant core.Servant) error {
+				if !cancelled {
+					cancelled = true
+					navCancel()
+				}
+				return nil
+			}
+
+			result, err := agenor.Sprint(&wg).Configure(
+				enclave.Loader(func(active *core.ActiveState) {
+					active.Tree = lab.Static.RetroWave
+					active.Subscription = enums.SubscribeUniversal
+				}),
+			).Extent(
+				agenor.Prime(
+					&pref.Using{
+						Tree:         lab.Static.RetroWave,
+						Subscription: enums.SubscribeUniversal,
+						Head: pref.Head{
+							Handler: callback,
+							GetForest: func(_ string) *core.Forest {
+								return &core.Forest{
+									T: fS,
+									R: tfs.New(),
+								}
+							},
+						},
+					},
+					agenor.WithNoW(3),
+				),
+			).Navigate(navCtx)
+
+			wg.Wait()
+
+			Expect(err).To(HaveOccurred())
+			var savedErr *locale.TraversalSavedError
+			Expect(errors.As(err, &savedErr)).To(BeTrue())
+			Expect(result).NotTo(BeNil())
+		})
+	})
 })

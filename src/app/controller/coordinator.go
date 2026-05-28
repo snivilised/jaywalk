@@ -292,6 +292,7 @@ func (c *Coordinator) execute(
 		ActionName:   req.ActionName,
 		PipelineName: req.PipelineName,
 		DateFormat:   c.config.Mapped.Interaction.DateFormat,
+		Cancel:       cancel,
 	})
 
 	result, err := req.Scenario(facade, req.Settings...).Navigate(ctx)
@@ -359,7 +360,9 @@ func (c *Coordinator) useShellPoolExec(
 	pool := newShellPoolExecutor(manifold)
 
 	previousExec := c.exec
-	c.exec = pool.Execute
+	c.exec = func(_ context.Context, command string) ([]byte, error) {
+		return pool.Execute(ctx, command)
+	}
 
 	return func() {
 		c.exec = previousExec

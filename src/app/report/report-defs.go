@@ -1,6 +1,7 @@
 package report
 
 import (
+	"context"
 	"time"
 
 	"github.com/snivilised/jaywalk/src/agenor/core"
@@ -51,6 +52,11 @@ type BeginEvent struct {
 	// DateFormat is the Go time format string for rendering StartedAt
 	// in the view header. Empty means use the default (time.RFC1123).
 	DateFormat string
+
+	// Cancel is the context cancellation function for the traversal.
+	// When set, the presenter may call Cancel to abort the traversal
+	// (e.g., in response to a user interrupt like Ctrl-C in the TUI).
+	Cancel context.CancelFunc
 }
 
 // NeutralEvent is emitted per node visit when no action or pipeline is

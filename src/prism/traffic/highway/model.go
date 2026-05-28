@@ -98,7 +98,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyMsg:
-		if m.done && msg.String() == "space" {
+		switch {
+		case m.done && msg.String() == "space":
+			return m, tea.Quit
+		case msg.String() == "ctrl+c":
 			return m, tea.Quit
 		}
 		return m, nil

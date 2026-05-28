@@ -101,6 +101,16 @@ func (h *highwayPresenter) OnBegin(e *report.BeginEvent) {
 		close(h.done)
 	}()
 
+	// Monitor for premature bubbletea exit (e.g., user pressed Ctrl-C).
+	// When the program exits before OnComplete is called, cancel the
+	// traversal context so the navigator stops and saves resume state.
+	if e.Cancel != nil {
+		go func() {
+			<-h.done
+			e.Cancel()
+		}()
+	}
+
 	h.program.Send(highway.OvertureMsg{
 		Root:              e.Root,
 		Caption:           e.Caption,
