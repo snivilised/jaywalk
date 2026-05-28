@@ -6,18 +6,18 @@ import (
 	"charm.land/lipgloss/v2"
 )
 
-type SquareBarStyles struct {
+type PeriscopeStyles struct {
 	Filled lipgloss.Style
 	Empty  lipgloss.Style
 }
 
-type SquareBarConfig struct {
+type PeriscopeConfig struct {
 	Width  int
 	Fill   int
-	Styles SquareBarStyles
+	Styles PeriscopeStyles
 }
 
-func RenderSquareBar(cfg SquareBarConfig) string {
+func RenderPeriscope(cfg PeriscopeConfig) string {
 	fill := min(max(cfg.Fill, 0), cfg.Width)
 
 	filled := cfg.Styles.Filled.Render(strings.Repeat("◼", fill))

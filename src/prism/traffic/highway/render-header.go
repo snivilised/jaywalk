@@ -5,6 +5,8 @@ import (
 	"strings"
 
 	"charm.land/lipgloss/v2"
+
+	"github.com/snivilised/jaywalk/src/prism/layout"
 )
 
 func (m Model) renderHeader(b *strings.Builder) {
@@ -51,32 +53,20 @@ func (m Model) renderHeader(b *strings.Builder) {
 		infoPart = m.theme.SummaryValueStyle.Render(infoStr)
 	}
 
-	var headerContent string
-	if m.pipelineName != "" {
-		middle := header + infoPart
+	middle := header + infoPart
 
+	row := layout.NewRow(m.width - 4).
+		Caps(borderStyle.Render("│ "), borderStyle.Render(" │")).
+		Content(middle)
+
+	if m.pipelineName != "" {
 		pipelineInd := m.theme.PipelineStyle.Render(
 			fmt.Sprintf("─── [ • via pipeline '%s' ] ───", m.pipelineName),
 		)
-		availSpace := max(1,
-			m.width-4-lipgloss.Width(middle)-lipgloss.Width(pipelineInd),
-		)
-		headerContent = lipgloss.JoinHorizontal(lipgloss.Left,
-			middle,
-			strings.Repeat(" ", availSpace),
-			pipelineInd,
-		)
-	} else {
-		middle := header + infoPart
-		headerContent = lipgloss.JoinHorizontal(lipgloss.Left,
-			middle,
-			strings.Repeat(" ", max(1, m.width-4-lipgloss.Width(middle))),
-		)
+		row.RightContent(pipelineInd)
 	}
 
-	b.WriteString(borderStyle.Render("│ "))
-	b.WriteString(headerContent)
-	b.WriteString(borderStyle.Render(" │"))
+	row.RenderTo(b)
 	b.WriteString("\n")
 
 	b.WriteString(borderStyle.Render("├" + dashes + "┤"))

@@ -5,9 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"charm.land/lipgloss/v2"
-
 	"github.com/snivilised/jaywalk/src/prism/contract"
+	"github.com/snivilised/jaywalk/src/prism/layout"
 	"github.com/snivilised/jaywalk/src/prism/widget"
 )
 
@@ -75,25 +74,20 @@ func (m Model) renderSummary(b *strings.Builder) {
 	elapsedValue := m.theme.SummaryValueStyle.Render(elapsedStr)
 	elapsedText := " " + elapsedLabel + " " + elapsedValue + " "
 
-	inner := m.width - 4
-	leftContent := lipgloss.JoinHorizontal(lipgloss.Left,
-		seg1, borderStyle.Render("│"),
-		seg2, borderStyle.Render("│"),
-		seg3, borderStyle.Render("│"),
-		seg4, borderStyle.Render("│"),
-		seg5,
-	)
-	body := lipgloss.JoinHorizontal(lipgloss.Left,
-		leftContent,
-		strings.Repeat(" ", max(1,
-			inner-lipgloss.Width(leftContent)-lipgloss.Width(elapsedText),
-		)),
-		elapsedText,
-	)
+	row := layout.NewRow(m.width - 4).
+		Caps(borderStyle.Render("│ "), borderStyle.Render(" │")).
+		Content(seg1).
+		Content(borderStyle.Render("│")).
+		Content(seg2).
+		Content(borderStyle.Render("│")).
+		Content(seg3).
+		Content(borderStyle.Render("│")).
+		Content(seg4).
+		Content(borderStyle.Render("│")).
+		Content(seg5).
+		RightContent(elapsedText)
 
-	b.WriteString(borderStyle.Render("│ "))
-	b.WriteString(body)
-	b.WriteString(borderStyle.Render(" │"))
+	row.RenderTo(b)
 	b.WriteString("\n")
 
 	N := max(0, m.width-7)

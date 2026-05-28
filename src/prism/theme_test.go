@@ -249,7 +249,7 @@ var _ = Describe("Theme", func() {
 						},
 					},
 					Components: map[string]string{
-						prism.GradientComponentHighwayAnimation: "aurora-borealis",
+						prism.GradientComponentActivity: "aurora-borealis",
 					},
 				}
 
@@ -267,7 +267,7 @@ var _ = Describe("Theme", func() {
 				// Verify components map
 				Expect(theme.HighlightsComponents).NotTo(BeNil())
 				Expect(len(theme.HighlightsComponents)).To(Equal(1))
-				gradientName, ok := theme.HighlightsComponents[prism.GradientComponentHighwayAnimation]
+				gradientName, ok := theme.HighlightsComponents[prism.GradientComponentActivity]
 				Expect(ok).To(BeTrue())
 				Expect(gradientName).To(Equal("aurora-borealis"))
 			})
@@ -284,7 +284,7 @@ var _ = Describe("Theme", func() {
 						},
 					},
 					Components: map[string]string{
-						prism.GradientComponentHighwayAnimation: "ember-glow",
+						prism.GradientComponentActivity: "ember-glow",
 					},
 				}
 
@@ -294,7 +294,7 @@ var _ = Describe("Theme", func() {
 				theme, err := prism.NewTheme(palette, w)
 				Expect(err).To(BeNil())
 
-				grad, has := theme.GradientFor(prism.GradientComponentHighwayAnimation)
+				grad, has := theme.GradientFor(prism.GradientComponentActivity)
 				Expect(has).To(BeTrue())
 				Expect(grad.Steps).To(Equal(4))
 				// Verify Hi and Lo are non-nil (they're resolved by NewTheme)
@@ -319,7 +319,7 @@ var _ = Describe("Theme", func() {
 						},
 					},
 					Components: map[string]string{
-						prism.GradientComponentHighwayAnimation: "unknown-gradient", // gradient doesn't exist
+						prism.GradientComponentActivity: "unknown-gradient", // gradient doesn't exist
 					},
 				}
 
@@ -329,7 +329,7 @@ var _ = Describe("Theme", func() {
 				theme, err := prism.NewTheme(palette, w)
 				Expect(err).To(BeNil())
 
-				grad, has := theme.GradientFor(prism.GradientComponentHighwayAnimation)
+				grad, has := theme.GradientFor(prism.GradientComponentActivity)
 				// Component exists but gradient doesn't → lookup fails gracefully
 				Expect(has).To(BeFalse())
 				Expect(grad.Steps).To(Equal(0))
@@ -347,7 +347,7 @@ var _ = Describe("Theme", func() {
 							Lo: &prism.SemanticColour{ANSI16: "blue"},
 						},
 					},
-					// No component mapping for highway-animation
+					// No component mapping for activity-control
 				}
 
 				palette.Highlights = highlights
@@ -356,7 +356,7 @@ var _ = Describe("Theme", func() {
 				theme, err := prism.NewTheme(palette, w)
 				Expect(err).To(BeNil())
 
-				grad, has := theme.GradientFor(prism.GradientComponentHighwayAnimation)
+				grad, has := theme.GradientFor(prism.GradientComponentActivity)
 				// Component doesn't exist → lookup fails gracefully
 				Expect(has).To(BeFalse())
 				Expect(grad.Steps).To(Equal(0))
@@ -373,7 +373,7 @@ var _ = Describe("Theme", func() {
 						},
 					},
 					Components: map[string]string{
-						prism.GradientComponentHighwayAnimation: "hi-only",
+						prism.GradientComponentActivity: "hi-only",
 					},
 				}
 
@@ -383,7 +383,7 @@ var _ = Describe("Theme", func() {
 				theme, err := prism.NewTheme(palette, w)
 				Expect(err).To(BeNil())
 
-				grad, has := theme.GradientFor(prism.GradientComponentHighwayAnimation)
+				grad, has := theme.GradientFor(prism.GradientComponentActivity)
 				Expect(has).To(BeTrue())
 				Expect(grad.Steps).To(Equal(8))
 				Expect(grad.Hi).NotTo(BeNil())
@@ -406,7 +406,7 @@ var _ = Describe("Theme", func() {
 						},
 					},
 					Components: map[string]string{
-						prism.GradientComponentHighwayAnimation: "lo-only",
+						prism.GradientComponentActivity: "lo-only",
 					},
 				}
 
@@ -416,7 +416,7 @@ var _ = Describe("Theme", func() {
 				theme, err := prism.NewTheme(palette, w)
 				Expect(err).To(BeNil())
 
-				grad, has := theme.GradientFor(prism.GradientComponentHighwayAnimation)
+				grad, has := theme.GradientFor(prism.GradientComponentActivity)
 				Expect(has).To(BeTrue())
 				Expect(grad.Steps).To(Equal(8))
 				Expect(grad.Lo).NotTo(BeNil())
@@ -442,7 +442,7 @@ var _ = Describe("Theme", func() {
 						},
 					},
 					Components: map[string]string{
-						prism.GradientComponentHighwayAnimation: "zero-steps",
+						prism.GradientComponentActivity: "zero-steps",
 					},
 				}
 
@@ -452,7 +452,7 @@ var _ = Describe("Theme", func() {
 				theme, err := prism.NewTheme(palette, w)
 				Expect(err).To(BeNil())
 
-				grad, has := theme.GradientFor(prism.GradientComponentHighwayAnimation)
+				grad, has := theme.GradientFor(prism.GradientComponentActivity)
 				Expect(has).To(BeTrue())
 				// Should use default step count (8) when 0 is specified
 				Expect(grad.Steps).To(Equal(8))
@@ -473,7 +473,7 @@ var _ = Describe("Theme", func() {
 					},
 				},
 				Components: map[string]string{
-					prism.GradientComponentHighwayAnimation: "test-gradient-1",
+					prism.GradientComponentActivity: "test-gradient-1",
 				},
 			}
 
@@ -484,7 +484,7 @@ var _ = Describe("Theme", func() {
 			Expect(err).To(BeNil())
 
 			// Roundtrip test: component name -> gradient name -> resolved gradient
-			componentName := prism.GradientComponentHighwayAnimation
+			componentName := prism.GradientComponentActivity
 			actualGradientName, exists := theme.HighlightsComponents[componentName]
 			Expect(exists).To(BeTrue())
 			Expect(actualGradientName).To(Equal("test-gradient-1"))
@@ -513,7 +513,7 @@ var _ = Describe("Theme", func() {
 					},
 				},
 				Components: map[string]string{
-					prism.GradientComponentHighwayAnimation: "gradient-alpha", // highway uses alpha only
+					prism.GradientComponentActivity: "gradient-alpha", // highway uses alpha only
 				},
 			}
 
@@ -524,7 +524,7 @@ var _ = Describe("Theme", func() {
 			Expect(err).To(BeNil())
 
 			// Component should resolve to "gradient-alpha", not "gradient-beta"
-			resolved, has := theme.GradientFor(prism.GradientComponentHighwayAnimation)
+			resolved, has := theme.GradientFor(prism.GradientComponentActivity)
 			Expect(has).To(BeTrue())
 			Expect(resolved.Steps).To(Equal(8)) // gradient-alpha's steps
 			Expect(resolved.Hi).NotTo(BeNil())
