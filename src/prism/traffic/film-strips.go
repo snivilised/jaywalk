@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/mattn/go-runewidth"
+	"github.com/snivilised/jaywalk/src/prism/contract"
 )
 
 const filmStripWindow = 7
@@ -105,7 +106,7 @@ func ExpandNames(names []string) []string {
 	return expanded
 }
 
-func newFilmStripFrame(strip []rune) func(tick int) string {
+func newFilmStripFrame(strip []rune) contract.FrameFunc {
 	return func(tick int) string {
 		start := tick % len(strip)
 		var seg []rune
