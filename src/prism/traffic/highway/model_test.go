@@ -11,6 +11,7 @@ import (
 
 	"github.com/snivilised/jaywalk/src/prism/contract"
 	"github.com/snivilised/jaywalk/src/prism/traffic"
+	"github.com/snivilised/jaywalk/src/prism/widget"
 )
 
 // ---------------------------------------------------------------------------
@@ -562,26 +563,34 @@ var _ = Describe("Model.Update — unknown message", func() {
 })
 
 // ---------------------------------------------------------------------------
-// renderExecutionInfo
+// RenderLandingStrip (via widget)
 // ---------------------------------------------------------------------------
 
-var _ = Describe("renderExecutionInfo", func() {
+var _ = Describe("RenderLandingStrip", func() {
 	It("returns the command output wrapped in branch/landing-strip styles", func() {
 		m := baseModel(1)
-		result := m.renderExecutionInfo(Lane{
+		styles := widget.LandingStripStyles{
+			BranchStyle:       m.theme.BranchStyle,
+			LandingStripStyle: m.theme.LandingStripStyle,
+		}
+		result := widget.RenderLandingStrip(widget.LandingStripConfig{
 			CommandOutput: "ffmpeg -i input.mp4",
-		})
+		}, styles)
 		Expect(result).NotTo(BeEmpty())
 		Expect(result).To(ContainSubstring("ffmpeg -i input.mp4"))
 	})
 
 	It("returns the execution string when DryRun is true", func() {
 		m := baseModel(1)
-		result := m.renderExecutionInfo(Lane{
+		styles := widget.LandingStripStyles{
+			BranchStyle:       m.theme.BranchStyle,
+			LandingStripStyle: m.theme.LandingStripStyle,
+		}
+		result := widget.RenderLandingStrip(widget.LandingStripConfig{
 			CommandOutput:   "real command",
 			ExecutionString: "dry-run command",
 			DryRun:          true,
-		})
+		}, styles)
 		Expect(result).NotTo(BeEmpty())
 		Expect(result).To(ContainSubstring("dry-run command"))
 		Expect(result).NotTo(ContainSubstring("real command"))
@@ -589,15 +598,23 @@ var _ = Describe("renderExecutionInfo", func() {
 
 	It("returns empty string when CommandOutput is empty and not DryRun", func() {
 		m := baseModel(1)
-		result := m.renderExecutionInfo(Lane{})
+		styles := widget.LandingStripStyles{
+			BranchStyle:       m.theme.BranchStyle,
+			LandingStripStyle: m.theme.LandingStripStyle,
+		}
+		result := widget.RenderLandingStrip(widget.LandingStripConfig{}, styles)
 		Expect(result).To(BeEmpty())
 	})
 
 	It("returns empty string when ExecutionString is empty and DryRun is true", func() {
 		m := baseModel(1)
-		result := m.renderExecutionInfo(Lane{
+		styles := widget.LandingStripStyles{
+			BranchStyle:       m.theme.BranchStyle,
+			LandingStripStyle: m.theme.LandingStripStyle,
+		}
+		result := widget.RenderLandingStrip(widget.LandingStripConfig{
 			DryRun: true,
-		})
+		}, styles)
 		Expect(result).To(BeEmpty())
 	})
 })

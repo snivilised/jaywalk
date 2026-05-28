@@ -121,7 +121,7 @@ palette:
   # --- Animation gradients (highway view) ---
 
   # Highlights defines named colour gradients for animation overlays.
-  # Each gradient maps a component name (e.g. highway-animation) to a
+  # Each gradient maps a component name (e.g. activity-control) to a
   # named gradient definition. Components and gradients are decoupled
   # so that multiple components can share the same gradient.
   #
@@ -173,7 +173,7 @@ palette:
           true-color: "#263238"
 
     components:
-      highway-animation: aurora-borealis
+      activity-control: aurora-borealis
 
 # TreeIcons holds optional glyph configuration used by tree-style
 # stream renderers such as the linear view.

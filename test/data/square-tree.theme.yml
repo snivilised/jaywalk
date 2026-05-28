@@ -160,7 +160,7 @@ palette:
           true-color: "#263238"
 
     components:
-      highway-animation: aurora-borealis
+      activity-control: aurora-borealis
 
 # TreeIcons holds optional glyph configuration used by tree-style
 # stream renderers such as the linear view.

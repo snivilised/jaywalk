@@ -7,9 +7,9 @@ import (
 	"github.com/snivilised/jaywalk/src/prism/widget"
 )
 
-var _ = Describe("SquareBar", func() {
+var _ = Describe("Periscope", func() {
 	It("renders all empty squares at fill 0", func() {
-		out := ansi.Strip(widget.RenderSquareBar(widget.SquareBarConfig{
+		out := ansi.Strip(widget.RenderPeriscope(widget.PeriscopeConfig{
 			Width: 5,
 			Fill:  0,
 		}))
@@ -17,7 +17,7 @@ var _ = Describe("SquareBar", func() {
 	})
 
 	It("renders all filled squares at fill == width", func() {
-		out := ansi.Strip(widget.RenderSquareBar(widget.SquareBarConfig{
+		out := ansi.Strip(widget.RenderPeriscope(widget.PeriscopeConfig{
 			Width: 5,
 			Fill:  5,
 		}))
@@ -25,7 +25,7 @@ var _ = Describe("SquareBar", func() {
 	})
 
 	It("renders partial fill correctly", func() {
-		out := ansi.Strip(widget.RenderSquareBar(widget.SquareBarConfig{
+		out := ansi.Strip(widget.RenderPeriscope(widget.PeriscopeConfig{
 			Width: 5,
 			Fill:  3,
 		}))
@@ -33,7 +33,7 @@ var _ = Describe("SquareBar", func() {
 	})
 
 	It("clamps fill at width", func() {
-		out := ansi.Strip(widget.RenderSquareBar(widget.SquareBarConfig{
+		out := ansi.Strip(widget.RenderPeriscope(widget.PeriscopeConfig{
 			Width: 5,
 			Fill:  7,
 		}))
@@ -41,7 +41,7 @@ var _ = Describe("SquareBar", func() {
 	})
 
 	It("handles width 0", func() {
-		out := ansi.Strip(widget.RenderSquareBar(widget.SquareBarConfig{
+		out := ansi.Strip(widget.RenderPeriscope(widget.PeriscopeConfig{
 			Width: 0,
 			Fill:  0,
 		}))
@@ -49,11 +49,10 @@ var _ = Describe("SquareBar", func() {
 	})
 
 	It("wraps each segment in its own style", func() {
-		out := widget.RenderSquareBar(widget.SquareBarConfig{
+		out := widget.RenderPeriscope(widget.PeriscopeConfig{
 			Width: 3,
 			Fill:  1,
 		})
-		// Strip once to remove outer style, verify two distinct ANSI sequences
 		stripped := ansi.Strip(out)
 		Expect(stripped).To(Equal("◼◻◻"))
 	})

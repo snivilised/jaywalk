@@ -69,7 +69,12 @@ const (
 )
 
 const (
-	GradientComponentHighwayAnimation = contract.GradientComponentHighwayAnimation
+	GradientComponentActivity         = contract.GradientComponentActivity
+	GradientComponentPeriscope        = contract.GradientComponentPeriscope
+	GradientComponentAction           = contract.GradientComponentAction
+	GradientComponentNodePath         = contract.GradientComponentNodePath
+	GradientComponentLandingStrip     = contract.GradientComponentLandingStrip
+
 )
 
 // New constructs a Renderer for the requested view kind. Delegates to

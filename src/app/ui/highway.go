@@ -166,9 +166,9 @@ func (h *highwayPresenter) OnSkipEvent(e *report.SkipEvent) {
 }
 
 // sendMotif sends a motif message with optional gradient overlay.
-// The gradient is retrieved from the theme's HighlightsComponents for the
-// highway-animation component using component-based lookup. This ensures
-// gradients configured in themes are properly applied to animation frames.
+// The gradient is retrieved from the theme's HighlightsComponents using
+// component-based lookup. This ensures gradients configured in themes
+// are properly applied to animation frames.
 func (h *highwayPresenter) sendMotif(path, name string, isDir bool, depth uint,
 	actionName, pipelineName, commandOutput, executionString string, dryRun bool, err error) {
 	select {
@@ -181,8 +181,7 @@ func (h *highwayPresenter) sendMotif(path, name string, isDir bool, depth uint,
 
 	var grad *prism.ResolvedGradient
 	// Retrieve gradient by component name lookup (not direct gradient name).
-	// GradientFor handles the component → gradient name → resolved gradient chain.
-	g, has := h.theme.GradientFor(prism.GradientComponentHighwayAnimation)
+	g, has := h.theme.GradientFor(prism.GradientComponentActivity)
 	if has && g.Steps > 0 {
 		grad = &prism.ResolvedGradient{Steps: g.Steps, Hi: g.Hi, Lo: g.Lo}
 	}

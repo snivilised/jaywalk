@@ -140,7 +140,21 @@ type ResolvedGradient struct {
 // Gradient component names — used in theme YAML under
 // highlights.components to bind a gradient to a rendering component.
 const (
-	GradientComponentHighwayAnimation = "highway-animation"
+	// GradientComponentActivity is the component name for animation frames.
+	GradientComponentActivity = "activity-control"
+
+	// GradientComponentPeriscope is the depth bar (formerly squarebar).
+	GradientComponentPeriscope = "periscope-control"
+
+	// GradientComponentAction is the action/pipeline/error info area.
+	GradientComponentAction = "action-control"
+
+	// GradientComponentNodePath is the node path display area.
+	GradientComponentNodePath = "node-path-control"
+
+	// GradientComponentLandingStrip is the execution info at the lane end.
+	GradientComponentLandingStrip = "landing-strip-control"
+
 )
 
 // deriveDimmed returns a colour approximately halfway between the given

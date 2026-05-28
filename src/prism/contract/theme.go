@@ -107,7 +107,7 @@ type Theme struct {
 	// using InterpolateBetween(). Only used for highway animation overlays.
 	GradientCaches map[string][]color.Color `json:"-"`
 
-	// HighlightsComponents maps a component name (e.g. "highway-animation")
+	// HighlightsComponents maps a component name (e.g. "activity-control")
 	// to a gradient name. Populated from highlights.components in the
 	// theme file. A component with no entry falls back to its static style.
 	HighlightsComponents map[string]string

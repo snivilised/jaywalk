@@ -211,20 +211,19 @@ func (r *renderer) renderActionOrPipeline(motif contract.Motif) string {
 }
 
 func (r *renderer) renderExecutionInfo(motif contract.Motif) string {
-	skipped := lo.Ternary(motif.Skipped, fmt.Sprintf(" %s", r.treeIcons[contract.TreeIconSkipped]), "")
-	content := motif.CommandOutput
-	if motif.DryRun {
-		content = motif.ExecutionString
+	skippedIcon := ""
+	if motif.Skipped {
+		skippedIcon = r.treeIcons[contract.TreeIconSkipped]
 	}
-
-	if content == "" && skipped == "" {
-		return ""
-	}
-
-	// brackets are part of the chrome, so use BranchStyle
-	return r.theme.BranchStyle.Render(" ["+skipped) +
-		r.theme.LandingStripStyle.Render(content) +
-		r.theme.BranchStyle.Render("]")
+	return widget.RenderLandingStrip(widget.LandingStripConfig{
+		CommandOutput:   motif.CommandOutput,
+		ExecutionString: motif.ExecutionString,
+		DryRun:          motif.DryRun,
+		SkippedIcon:     skippedIcon,
+	}, widget.LandingStripStyles{
+		BranchStyle:       r.theme.BranchStyle,
+		LandingStripStyle: r.theme.LandingStripStyle,
+	})
 }
 
 func (r *renderer) branchPrefix(motif contract.Motif) string {
