@@ -7,6 +7,8 @@ import (
 	"image/color"
 	"math"
 	"strings"
+
+	"github.com/snivilised/jaywalk/src/prism/contract"
 )
 
 // Colour is a simple RGBA colour type for in-package gradient interpolation.
@@ -16,39 +18,9 @@ type Colour struct {
 }
 
 // DefaultStepCount returns the default number of gradient steps.
+// Delegates to contract.DefaultStepCount to avoid duplication.
 func DefaultStepCount() int {
-	// Why isn't this just a const?
-	return 8
-}
-
-// InterpolateGradientSteps creates a gradient by interpolating between two Colour values.
-// Returns a slice of len(steps) colours from hi to lo.
-func InterpolateGradientSteps(hi, lo Colour, steps int) []Colour {
-	steps = max(steps, 2)
-
-	hR := float64(hi.R)
-	hG := float64(hi.G)
-	hB := float64(hi.B)
-	lR := float64(lo.R)
-	lG := float64(lo.G)
-	lB := float64(lo.B)
-
-	stepSizeR := (hR - lR) / float64(steps-1)
-	stepSizeG := (hG - lG) / float64(steps-1)
-	stepSizeB := (hB - lB) / float64(steps-1)
-
-	gradient := make([]Colour, steps)
-	for i := 0; i < steps; i++ {
-		t := float64(i) / float64(steps-1)
-
-		r := uint8(math.Max(0, math.Min(255, hR-t*stepSizeR)))
-		g := uint8(math.Max(0, math.Min(255, hG-t*stepSizeG)))
-		b := uint8(math.Max(0, math.Min(255, hB-t*stepSizeB)))
-
-		gradient[i] = Colour{R: r, G: g, B: b}
-	}
-
-	return gradient
+	return contract.DefaultStepCount()
 }
 
 // GradientState holds in-memory state for a single lane's gradient animation.

@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/snivilised/jaywalk/src/prism"
+	"github.com/snivilised/jaywalk/src/prism/contract"
 )
 
 // New constructs a linear renderer for linear-style output.
-func New(palette prism.Palette, writer io.Writer, opts ...LinearOption) (prism.Renderer, error) {
-	theme, err := prism.NewTheme(palette, writer)
+func New(palette contract.Palette, writer io.Writer, opts ...LinearOption) (contract.Renderer, error) {
+	theme, err := contract.NewTheme(palette, writer)
 	if err != nil {
 		return nil, fmt.Errorf("flow.New: %w", err)
 	}
@@ -27,10 +27,10 @@ func New(palette prism.Palette, writer io.Writer, opts ...LinearOption) (prism.R
 	return r, nil
 }
 
-// Register installs the linear view factory into prism's shared factory map.
+// Register installs the linear view factory into contract's shared factory map.
 // Call this explicitly during application bootstrap before invoking prism.New.
 func Register() {
-	prism.RegisterFactory(prism.LinearView, func(palette prism.Palette, writer io.Writer) (prism.Renderer, error) {
+	contract.RegisterFactory(contract.LinearView, func(palette contract.Palette, writer io.Writer) (contract.Renderer, error) {
 		return New(palette, writer)
 	})
 }

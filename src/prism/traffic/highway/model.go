@@ -6,7 +6,7 @@ import (
 	"charm.land/bubbletea/v2"
 	"github.com/charmbracelet/bubbles/progress"
 
-	"github.com/snivilised/jaywalk/src/prism"
+	"github.com/snivilised/jaywalk/src/prism/contract"
 )
 
 type tickMsg time.Time
@@ -37,7 +37,7 @@ type Model struct {
 	startedAt         time.Time
 	caption           string
 	dateFormat        string
-	theme             prism.Theme
+	theme             contract.Theme
 	counted           map[string]bool
 	errMsg            string
 }
@@ -66,7 +66,7 @@ func initLaneSkip(lanes []Lane, tickRate time.Duration) []int {
 }
 
 func NewModel(lanes []Lane, tickRate time.Duration, rootPath string,
-	maxDepth uint, theme prism.Theme, noRecurse bool) Model {
+	maxDepth uint, theme contract.Theme, noRecurse bool) Model {
 	return Model{
 		lanes:     lanes,
 		skip:      initLaneSkip(lanes, tickRate),

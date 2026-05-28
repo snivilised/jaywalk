@@ -6,7 +6,7 @@ import (
 
 	"charm.land/lipgloss/v2"
 
-	"github.com/snivilised/jaywalk/src/prism"
+	"github.com/snivilised/jaywalk/src/prism/contract"
 	"github.com/snivilised/jaywalk/src/prism/widget"
 )
 
@@ -73,9 +73,9 @@ func (m Model) renderLanes(b *strings.Builder) {
 		// + Node icon
 		nodeIcon := ""
 		if lane.Path != "" {
-			nodeIcon = m.theme.TreeIcons[prism.TreeIconFile]
+			nodeIcon = m.theme.TreeIcons[contract.TreeIconFile]
 			if lane.IsDir {
-				nodeIcon = m.theme.TreeIcons[prism.TreeIconDirectory]
+				nodeIcon = m.theme.TreeIcons[contract.TreeIconDirectory]
 			}
 		}
 

@@ -1,9 +1,7 @@
-// package prism defines presentation layer used by jay, assisted by the charm
+// Package prism defines the presentation layer used by jay, assisted by the charm
 // universe. prism is also designed to be used by third parties.
+//
+// Architecture: shared types (Palette, Theme, Renderer, Motif, etc.) live in the
+// sub-package prism/contract. Both prism root and its child packages (flow, highway)
+// import contract, ensuring parent -> child dependency direction.
 package prism
-
-// TODO: we need a refactor inside prism. There are too many instances where
-// child packages are dependent on types in parent packages. That is an absurd package
-// relationship. Parents can depend on children, not the other way around.
-// EG highway.lane.go depends on types in prism. This suggests that types need
-// to be moved around.

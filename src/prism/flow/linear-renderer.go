@@ -1,8 +1,8 @@
 // Package flow contains the linear renderer implementation and its
 // view-specific options.
 //
-// Dependency rule: this package imports root prism contracts, but root prism
-// must not import this package to avoid import cycles.
+// Dependency rule: flow imports contract (shared types) and is imported
+// by prism root. Parent depends on child; no import cycles.
 package flow
 
 import (
@@ -13,7 +13,7 @@ import (
 
 	"charm.land/lipgloss/v2"
 	"github.com/snivilised/jaywalk/src/agenor/core"
-	"github.com/snivilised/jaywalk/src/prism"
+	"github.com/snivilised/jaywalk/src/prism/contract"
 	"github.com/snivilised/jaywalk/src/prism/widget"
 	"github.com/snivilised/jaywalk/src/third/lo"
 )
@@ -21,11 +21,11 @@ import (
 // renderer is the linear scrolling view. Output is written immediately as
 // events arrive - no internal buffering.
 type renderer struct {
-	theme  prism.Theme
+	theme  contract.Theme
 	writer io.Writer
 
 	// treeIcons holds configured tree glyphs from the resolved theme/options.
-	treeIcons prism.TreeIcons
+	treeIcons contract.TreeIcons
 
 	// branchStack tracks ancestor continuation state for tree branch rendering.
 	branchStack []bool
@@ -36,8 +36,8 @@ type renderer struct {
 
 // Begin renders the opening banner using the Overture metadata. The banner
 // adapts to indicate prime or resume traversal.
-func (r *renderer) Begin(overture prism.Overture) {
-	title := lo.Ternary(overture.Kind == prism.ResumeNavigation,
+func (r *renderer) Begin(overture contract.Overture) {
+	title := lo.Ternary(overture.Kind == contract.ResumeNavigation,
 		fmt.Sprintf("  jay  resuming %s", overture.Root),
 		fmt.Sprintf("  jay  %s", overture.Root),
 	)
@@ -52,7 +52,7 @@ func (r *renderer) Begin(overture prism.Overture) {
 		overture.StartedAt.Format(dateFmt),
 	)
 
-	if overture.Kind == prism.ResumeNavigation && overture.ResumeFrom != "" {
+	if overture.Kind == contract.ResumeNavigation && overture.ResumeFrom != "" {
 		caption += fmt.Sprintf("  -  from: %s", overture.ResumeFrom)
 	}
 
@@ -68,7 +68,7 @@ func (r *renderer) Begin(overture prism.Overture) {
 }
 
 // Show renders a single Motif immediately to the output writer.
-func (r *renderer) Show(motif prism.Motif) {
+func (r *renderer) Show(motif contract.Motif) {
 	prefix := r.branchPrefix(motif)
 	depth := r.theme.BranchStyle.Render(prefix)
 
@@ -101,10 +101,10 @@ func (r *renderer) Show(motif prism.Motif) {
 	r.updateBranchStack(motif)
 }
 
-func (r *renderer) itemLabel(motif prism.Motif) string {
-	icon := r.treeIcons[prism.TreeIconFile]
+func (r *renderer) itemLabel(motif contract.Motif) string {
+	icon := r.treeIcons[contract.TreeIconFile]
 	if motif.IsDir {
-		icon = r.treeIcons[prism.TreeIconDirectory]
+		icon = r.treeIcons[contract.TreeIconDirectory]
 	}
 
 	label := ""
@@ -119,7 +119,7 @@ func (r *renderer) itemLabel(motif prism.Motif) string {
 	return label
 }
 
-func (r *renderer) renderSkipped(motif prism.Motif) string {
+func (r *renderer) renderSkipped(motif contract.Motif) string {
 	var b strings.Builder
 
 	itemName := "~ " + motif.Name
@@ -139,10 +139,10 @@ func (r *renderer) renderSkipped(motif prism.Motif) string {
 	return b.String()
 }
 
-func (r *renderer) renderRoot(motif prism.Motif) string {
+func (r *renderer) renderRoot(motif contract.Motif) string {
 	var b strings.Builder
 
-	icon := r.treeIcons[prism.TreeIconRoot]
+	icon := r.treeIcons[contract.TreeIconRoot]
 	if icon != "" {
 		b.WriteString(icon)
 		b.WriteString(" ")
@@ -156,7 +156,7 @@ func (r *renderer) renderRoot(motif prism.Motif) string {
 	return r.theme.RootStyle.Render(b.String())
 }
 
-func (r *renderer) renderDir(motif prism.Motif) string {
+func (r *renderer) renderDir(motif contract.Motif) string {
 	var b strings.Builder
 
 	b.WriteString(r.theme.DirStyle.Render(r.itemLabel(motif)))
@@ -165,7 +165,7 @@ func (r *renderer) renderDir(motif prism.Motif) string {
 	return b.String()
 }
 
-func (r *renderer) renderFile(motif prism.Motif) string {
+func (r *renderer) renderFile(motif contract.Motif) string {
 	var b strings.Builder
 
 	b.WriteString(r.theme.FileStyle.Render(r.itemLabel(motif)))
@@ -174,7 +174,7 @@ func (r *renderer) renderFile(motif prism.Motif) string {
 	return b.String()
 }
 
-func (r *renderer) renderStep(motif prism.Motif) string {
+func (r *renderer) renderStep(motif contract.Motif) string {
 	var b strings.Builder
 
 	if motif.Err != nil {
@@ -196,7 +196,7 @@ func (r *renderer) renderStep(motif prism.Motif) string {
 	return b.String()
 }
 
-func (r *renderer) renderActionOrPipeline(motif prism.Motif) string {
+func (r *renderer) renderActionOrPipeline(motif contract.Motif) string {
 	var b strings.Builder
 
 	if motif.ActionName != "" {
@@ -210,8 +210,8 @@ func (r *renderer) renderActionOrPipeline(motif prism.Motif) string {
 	return b.String()
 }
 
-func (r *renderer) renderExecutionInfo(motif prism.Motif) string {
-	skipped := lo.Ternary(motif.Skipped, fmt.Sprintf(" %s", r.treeIcons[prism.TreeIconSkipped]), "")
+func (r *renderer) renderExecutionInfo(motif contract.Motif) string {
+	skipped := lo.Ternary(motif.Skipped, fmt.Sprintf(" %s", r.treeIcons[contract.TreeIconSkipped]), "")
 	content := motif.CommandOutput
 	if motif.DryRun {
 		content = motif.ExecutionString
@@ -227,7 +227,7 @@ func (r *renderer) renderExecutionInfo(motif prism.Motif) string {
 		r.theme.BranchStyle.Render("]")
 }
 
-func (r *renderer) branchPrefix(motif prism.Motif) string {
+func (r *renderer) branchPrefix(motif contract.Motif) string {
 	if motif.VisualDepth == 0 {
 		return ""
 	}
@@ -236,12 +236,12 @@ func (r *renderer) branchPrefix(motif prism.Motif) string {
 	//nolint:gosec // branchStack is only modified by updateBranchStack based on motif.VisualDepth.
 	for level := 1; level < int(motif.VisualDepth); level++ {
 		if level-1 < len(r.branchStack) && r.branchStack[level-1] {
-			b.WriteString(r.treeIcons[prism.TreeIconBranchVertical])
-			b.WriteString(r.treeIcons[prism.TreeIconBranchIndent])
+			b.WriteString(r.treeIcons[contract.TreeIconBranchVertical])
+			b.WriteString(r.treeIcons[contract.TreeIconBranchIndent])
 		} else {
 			b.WriteString(
 				strings.Repeat(" ",
-					len(r.treeIcons[prism.TreeIconBranchVertical])+len(r.treeIcons[prism.TreeIconBranchIndent]),
+					len(r.treeIcons[contract.TreeIconBranchVertical])+len(r.treeIcons[contract.TreeIconBranchIndent]),
 				),
 			)
 		}
@@ -249,15 +249,15 @@ func (r *renderer) branchPrefix(motif prism.Motif) string {
 
 	isLast := lo.Ternary(motif.IsPipelineStep, motif.IsLastStep && !motif.IsDir, motif.IsLast)
 	branchIcon := lo.Ternary(isLast,
-		prism.TreeIconBranchLast,
-		prism.TreeIconBranchJoint,
+		contract.TreeIconBranchLast,
+		contract.TreeIconBranchJoint,
 	)
 	b.WriteString(r.treeIcons[branchIcon])
 
 	return b.String()
 }
 
-func (r *renderer) updateBranchStack(motif prism.Motif) {
+func (r *renderer) updateBranchStack(motif contract.Motif) {
 	if motif.VisualDepth == 0 {
 		r.branchStack = nil
 		r.previousDepth = motif.VisualDepth
@@ -285,13 +285,13 @@ func (r *renderer) updateBranchStack(motif prism.Motif) {
 }
 
 // End renders the closing summary box with traversal counts and elapsed time.
-func (r *renderer) End(summary prism.Summary) {
+func (r *renderer) End(summary contract.Summary) {
 	fileLabel := "Files"
 	dirLabel := "Directories"
 	skippedLabel := "Skipped"
 	elapsedLabel := "Elapsed"
 
-	if summary.Kind == prism.ResumeNavigation {
+	if summary.Kind == contract.ResumeNavigation {
 		fileLabel = "Files (resumed)"
 		dirLabel = "Dirs (resumed)"
 	}
@@ -299,11 +299,11 @@ func (r *renderer) End(summary prism.Summary) {
 	errorCount := len(summary.Errors)
 
 	rows := []widget.SummaryRow{
-		r.summaryRow(prism.TreeIconFile, fileLabel, fmt.Sprintf("%d", summary.FilesVisited)),
-		r.summaryRow(prism.TreeIconDirectory, dirLabel, fmt.Sprintf("%d", summary.DirsVisited)),
-		r.summaryRow(prism.TreeIconSkipped, skippedLabel, fmt.Sprintf("%d", summary.Skipped)),
-		r.summaryRow(prism.TreeIconError, "Errors", fmt.Sprintf("%d", errorCount)),
-		r.summaryRow(prism.TreeIconElapsed, elapsedLabel, widget.FormatDuration(summary.Elapsed)),
+		r.summaryRow(contract.TreeIconFile, fileLabel, fmt.Sprintf("%d", summary.FilesVisited)),
+		r.summaryRow(contract.TreeIconDirectory, dirLabel, fmt.Sprintf("%d", summary.DirsVisited)),
+		r.summaryRow(contract.TreeIconSkipped, skippedLabel, fmt.Sprintf("%d", summary.Skipped)),
+		r.summaryRow(contract.TreeIconError, "Errors", fmt.Sprintf("%d", errorCount)),
+		r.summaryRow(contract.TreeIconElapsed, elapsedLabel, widget.FormatDuration(summary.Elapsed)),
 	}
 
 	if errorCount > 0 {
