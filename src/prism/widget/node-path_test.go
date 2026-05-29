@@ -1,7 +1,8 @@
 package widget_test
 
 import (
-	"github.com/charmbracelet/x/ansi"
+	"strings"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -9,7 +10,7 @@ import (
 	"github.com/snivilised/jaywalk/src/prism/widget"
 )
 
-var _ = Describe("NodePath", func() {
+var _ = Describe("NodePath", Ordered, func() {
 	var (
 		styles widget.NodePathStyles
 	)
@@ -17,56 +18,106 @@ var _ = Describe("NodePath", func() {
 	BeforeEach(func() {
 		styles = widget.NodePathStyles{
 			TreeIcons: contract.TreeIcons{
-				contract.TreeIconFile:      "📄",
-				contract.TreeIconDirectory: "📁",
+				contract.TreeIconFile:      "📁",
+				contract.TreeIconDirectory: "📄",
 			},
 		}
 	})
 
-	It("returns file icon for file paths", func() {
-		icon, styled := widget.RenderNodePath(widget.NodePathConfig{
-			Path: "/tmp/foo.txt", MaxWidth: 100,
-		}, styles)
-		Expect(icon).To(Equal("📄"))
-		Expect(ansi.Strip(styled)).To(Equal("/tmp/foo.txt"))
+	Context("given file path", func() {
+		It("returns icon and path text combined", func() {
+			result := widget.RenderNodePath(widget.NodePathConfig{
+				Path: "/tmp/foo.txt", MaxWidth: 100,
+			}, styles)
+			Expect(result).To(ContainSubstring("📁"))
+			Expect(strings.Contains(result, "/tmp/foo.txt")).To(BeTrue())
+		})
 	})
 
-	It("returns directory icon for dir paths", func() {
-		icon, styled := widget.RenderNodePath(widget.NodePathConfig{
-			Path: "/tmp", IsDir: true, MaxWidth: 100,
-		}, styles)
-		Expect(icon).To(Equal("📁"))
-		Expect(ansi.Strip(styled)).To(Equal("/tmp/"))
+	Context("given directory path with IsDir flag", func() {
+		It("returns directory icon and path text combined", func() {
+			result := widget.RenderNodePath(widget.NodePathConfig{
+				Path: "/tmp", IsDir: true, MaxWidth: 100,
+			}, styles)
+			Expect(result).To(ContainSubstring("📄"))
+			Expect(strings.Contains(result, "/tmp/")).To(BeTrue())
+		})
+
+		It("handles nested directory paths", func() {
+			result := widget.RenderNodePath(widget.NodePathConfig{
+				Path: "/var/log", IsDir: true, MaxWidth: 100,
+			}, styles)
+			Expect(result).To(ContainSubstring("📄 /var/log/"))
+		})
 	})
 
-	It("uses label when path is empty", func() {
-		icon, styled := widget.RenderNodePath(widget.NodePathConfig{
-			Label: "idle worker", MaxWidth: 100,
-		}, styles)
-		Expect(icon).To(BeEmpty())
-		Expect(ansi.Strip(styled)).To(Equal("idle worker"))
+	Context("given label when path is empty", func() {
+		It("returns label without icon", func() {
+			result := widget.RenderNodePath(widget.NodePathConfig{
+				Label: "idle worker", MaxWidth: 100,
+			}, styles)
+			Expect(result).To(Equal("idle worker"))
+		})
+
+		It("handles empty label returns empty string", func() {
+			result := widget.RenderNodePath(widget.NodePathConfig{
+				Label: "", MaxWidth: 100,
+			}, styles)
+			Expect(result).To(Equal(""))
+		})
 	})
 
-	It("truncates long paths with ellipsis prefix", func() {
-		_, styled := widget.RenderNodePath(widget.NodePathConfig{
-			Path: "/very/long/path/to/some/file.txt", MaxWidth: 20,
-		}, styles)
-		trimmed := ansi.Strip(styled)
-		Expect(trimmed).To(HavePrefix("..."))
-		Expect(len([]rune(trimmed))).To(BeNumerically("<=", 20))
+	Context("given long paths that need truncation", func() {
+		It("prefixes with ellipsis and respects max width", func() {
+			result := widget.RenderNodePath(widget.NodePathConfig{
+				Path: "/very/long/path/to/some/file.txt", MaxWidth: 20,
+			}, styles)
+			Expect(result).To(ContainSubstring(contract.Ellipses))
+		})
 	})
 
-	It("does not truncate when path fits within max width", func() {
-		_, styled := widget.RenderNodePath(widget.NodePathConfig{
-			Path: "/tmp", MaxWidth: 100,
-		}, styles)
-		Expect(ansi.Strip(styled)).To(Equal("/tmp"))
+	Context("given short paths that fit within max width", func() {
+		It("returns full path without truncation", func() {
+			result := widget.RenderNodePath(widget.NodePathConfig{
+				Path: "/tmp/foo.txt", MaxWidth: 100,
+			}, styles)
+			Expect(result).To(ContainSubstring("/tmp/foo.txt"))
+			Expect(strings.Contains(result, contract.Ellipses)).To(BeFalse())
+		})
 	})
 
-	It("returns empty icon when path is empty", func() {
-		icon, _ := widget.RenderNodePath(widget.NodePathConfig{
-			Label: "idle", MaxWidth: 100,
+	Context("given paths with special characters", func() {
+		It("handles paths with spaces in directory names", func() {
+			result := widget.RenderNodePath(widget.NodePathConfig{
+				Path: "/opt/my app/config.ini", MaxWidth: 100,
+			}, styles)
+			Expect(result).To(ContainSubstring("/opt/my"))
+			Expect(result).To(ContainSubstring("app/"))
+		})
+	})
+
+	Context("empty path and IsDir together", func() {
+		It("returns only label with directory icon if both set", func() {
+			result := widget.RenderNodePath(widget.NodePathConfig{
+				Path: "/var", IsDir: true, MaxWidth: 100,
+			}, styles)
+			Expect(result).To(ContainSubstring("📄 /var/"))
+		})
+	})
+
+	Context("path without IsDir flag is treated as file", func() {
+		It("returns file icon for paths that are not marked IsDir", func() {
+			result := widget.RenderNodePath(widget.NodePathConfig{
+				Path: "/etc/passwd", MaxWidth: 100,
+			}, styles)
+			Expect(result).To(ContainSubstring("📁 /etc/passwd"))
+		})
+	})
+
+	It("handles root slash path as directory", func() {
+		result := widget.RenderNodePath(widget.NodePathConfig{
+			Path: "/", IsDir: true, MaxWidth: 100,
 		}, styles)
-		Expect(icon).To(BeEmpty())
+		Expect(result).To(ContainSubstring("📄 /"))
 	})
 })

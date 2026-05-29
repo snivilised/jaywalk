@@ -10,7 +10,9 @@ description: >
   are permitted for formatting, internal errors, fixed-token content,
   test code, and demo programs - section 2 of this skill defines all
   exemptions precisely. When the situation is genuinely ambiguous, skip
-  i18n and use fmt directly.
+  i18n and use fmt directly. lingo only every needs to be run if changes
+  have been made to underlying-templ-data.go. Do not run lingo when its
+  not required.
 ---
 
 # SKILL: Adding i18n Messages via lingo

@@ -3,9 +3,10 @@ package highway
 import (
 	"time"
 
-	"charm.land/bubbletea/v2"
+	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/bubbles/progress"
 
+	"github.com/snivilised/jaywalk/src/agenor/core"
 	"github.com/snivilised/jaywalk/src/prism/contract"
 )
 
@@ -40,6 +41,15 @@ type Model struct {
 	theme             contract.Theme
 	counted           map[string]bool
 	errMsg            string
+
+	// NEW: header filter and cascade display info (populated by OvertureMsg)
+	CascadeDisplay string // "🔒", "depth:<n>", or ""
+	FilesGlob      string // raw pattern value
+	FilesRegex     string // raw pattern value
+	DirsGlob       string // raw pattern value
+	DirsRegex      string // raw pattern value
+	FileTypeMode   string // "glob" or "regex" for files
+	DirTypeMode    string // "glob" or "regex" for dirs
 }
 
 // initLaneSkip computes the per-lane skip factor from each lane's
@@ -111,46 +121,46 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		if m.start.IsZero() && !m.realMode {
-			m.start = time.Now()
+			m.start = core.Now()
 		}
 		m.totalTicks++
-	// Advance each lane's frame counter independently.
-	// Lanes with a skip factor > 0 (set via IntervalMs override)
-	// only advance their tick every N global ticks, producing a
-	// visibly slower animation. Lanes with skip factor 0 advance
-	// every tick (full speed).
-	for i := range m.lanes {
-		if m.skip != nil && i < len(m.skip) && m.skip[i] > 0 {
-			m.lanes[i].skipCounter++
-			if m.lanes[i].skipCounter >= m.skip[i] {
-				m.lanes[i].skipCounter = 0
+		// Advance each lane's frame counter independently.
+		// Lanes with a skip factor > 0 (set via IntervalMs override)
+		// only advance their tick every N global ticks, producing a
+		// visibly slower animation. Lanes with skip factor 0 advance
+		// every tick (full speed).
+		for i := range m.lanes {
+			if m.skip != nil && i < len(m.skip) && m.skip[i] > 0 {
+				m.lanes[i].skipCounter++
+				if m.lanes[i].skipCounter >= m.skip[i] {
+					m.lanes[i].skipCounter = 0
+					m.lanes[i].tick++
+				}
+			} else {
 				m.lanes[i].tick++
 			}
-		} else {
-			m.lanes[i].tick++
-		}
-		
-		// Advance gradient state for lanes with configured gradients.
-		// IMPORTANT: This updates the state (offset/index) but does NOT apply
-		// the gradient colours to frameContent - that happens in renderLanes().
-		// The GradientState.Offset tracks current position in gradient array;
-		// ApplyGradient() uses this offset to interpolate characters from Hi->Lo.
-		if m.lanes[i].HighlightGradient != nil {
-			windowSize := m.lanes[i].WindowSize()
-			if windowSize <= 0 {
-				windowSize = 4
-			}
-			m.lanes[i].GradientState.Update(windowSize)
-		}
 
-		if m.lanes[i].PeriscopeGradient != nil {
-			windowSize := m.lanes[i].WindowSize()
-			if windowSize <= 0 {
-				windowSize = 4
+			// Advance gradient state for lanes with configured gradients.
+			// IMPORTANT: This updates the state (offset/index) but does NOT apply
+			// the gradient colours to frameContent - that happens in renderLanes().
+			// The GradientState.Offset tracks current position in gradient array;
+			// ApplyGradient() uses this offset to interpolate characters from Hi->Lo.
+			if m.lanes[i].HighlightGradient != nil {
+				windowSize := m.lanes[i].WindowSize()
+				if windowSize <= 0 {
+					windowSize = 4
+				}
+				m.lanes[i].GradientState.Update(windowSize)
 			}
-			m.lanes[i].PeriscopeGradientState.Update(windowSize)
+
+			if m.lanes[i].PeriscopeGradient != nil {
+				windowSize := m.lanes[i].WindowSize()
+				if windowSize <= 0 {
+					windowSize = 4
+				}
+				m.lanes[i].PeriscopeGradientState.Update(windowSize)
+			}
 		}
-	}
 		tickCmd := tea.Tick(m.tickRate, func(t time.Time) tea.Msg {
 			return tickMsg(t)
 		})
@@ -163,13 +173,23 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case OvertureMsg:
 		m.rootPath = msg.Root
-		m.start = time.Now()
+		m.start = core.Now()
 		m.realMode = true
 		m.pipelineName = msg.PipelineName
 		m.subscriptionLabel = msg.SubscriptionLabel
 		m.startedAt = msg.StartedAt
 		m.caption = msg.Caption
 		m.dateFormat = msg.DateFormat
+
+		// NEW: store header widgets info
+		m.CascadeDisplay = msg.CascadeDisplay
+		m.FilesGlob = msg.FilesGlob
+		m.FilesRegex = msg.FilesRegex
+		m.DirsGlob = msg.DirsGlob
+		m.DirsRegex = msg.DirsRegex
+		m.FileTypeMode = msg.FileTypeMode
+		m.DirTypeMode = msg.DirTypeMode
+
 		return m, nil
 
 	case CensusMsg:

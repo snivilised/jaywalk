@@ -30,7 +30,6 @@ type linear struct {
 }
 
 func (l *linear) OnTraversalOptions(o *pref.Options) {
-	fmt.Println("🐸 DEBUG:linear.OnTraversalOptions 🐸")
 	o.View.Peer.IsActive = true
 }
 

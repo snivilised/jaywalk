@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"fmt"
 	"github.com/snivilised/jaywalk/src/agenor"
 	"github.com/snivilised/jaywalk/src/agenor/core"
 	"github.com/snivilised/jaywalk/src/agenor/enums"
@@ -55,31 +56,49 @@ func BuildTraversalSettings(intent TraversalSettingsIntent, ui report.Presenter)
 }
 
 func TranslateFilterIntent(intent FilterIntent) (pref.Option, bool) {
-	hasFileGlob := intent.FilesExGlob != ""
-	hasFileRegex := intent.FilesRegEx != ""
-	hasFolderGlob := intent.DirectoriesGlob != ""
-	hasFolderRegex := intent.DirectoriesRegEx != ""
+	hasFilesFlag := intent.FilesExGlob != "" || intent.FilesRegEx != ""
+	hasDirectoriesFlag := intent.DirectoriesGlob != "" || intent.DirectoriesRegEx != ""
 
-	if !hasFileGlob && !hasFileRegex && !hasFolderGlob && !hasFolderRegex {
+	if !hasFilesFlag && !hasDirectoriesFlag {
 		return nil, false
 	}
 
-	fileDef := core.BenignNodeFilterDef
-	if hasFileGlob {
-		fileDef.Type = enums.FilterTypeGlobEx
-		fileDef.Pattern = intent.FilesExGlob
-	} else if hasFileRegex {
-		fileDef.Type = enums.FilterTypeRegex
-		fileDef.Pattern = intent.FilesRegEx
+	// Build file filter definition with proper type detection
+	var fileDef core.FilterDef
+	fileHasFilter := intent.FilesExGlob != "" || intent.FilesRegEx != ""
+
+	if fileHasFilter {
+		switch {
+		case intent.FilesExGlob != "":
+			fileDef.Type = enums.FilterTypeGlobEx
+			fileDef.Pattern = intent.FilesExGlob
+			fileDef.Description = fmt.Sprintf("files-glob:%s", intent.FilesExGlob)
+		case intent.FilesRegEx != "":
+			fileDef.Type = enums.FilterTypeRegex
+			fileDef.Pattern = intent.FilesRegEx
+			fileDef.Description = fmt.Sprintf("files-regex:%s", intent.FilesRegEx)
+		}
+	} else {
+		fileDef = core.BenignNodeFilterDef // allow all files when no file filter specified
 	}
 
-	dirDef := core.BenignNodeFilterDef
-	if hasFolderGlob {
-		dirDef.Type = enums.FilterTypeGlob
-		dirDef.Pattern = intent.DirectoriesGlob
-	} else if hasFolderRegex {
-		dirDef.Type = enums.FilterTypeRegex
-		dirDef.Pattern = intent.DirectoriesRegEx
+	// Build directory filter definition with proper type detection
+	var dirDef core.FilterDef
+	dirHasFilter := intent.DirectoriesGlob != "" || intent.DirectoriesRegEx != ""
+
+	if dirHasFilter {
+		switch {
+		case intent.DirectoriesGlob != "":
+			dirDef.Type = enums.FilterTypeGlob
+			dirDef.Pattern = intent.DirectoriesGlob
+			dirDef.Description = fmt.Sprintf("dirs-glob:%s", intent.DirectoriesGlob)
+		case intent.DirectoriesRegEx != "":
+			dirDef.Type = enums.FilterTypeRegex
+			dirDef.Pattern = intent.DirectoriesRegEx
+			dirDef.Description = fmt.Sprintf("dirs-regex:%s", intent.DirectoriesRegEx)
+		}
+	} else {
+		dirDef = core.BenignNodeFilterDef // allow all directories when no dir filter specified
 	}
 
 	return pref.WithFilter(&pref.FilterOptions{

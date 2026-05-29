@@ -282,6 +282,10 @@ func (c *Coordinator) execute(
 	}
 	defer closeExec()
 
+	// Extract header info before creating BeginEvent for consistency with highway model
+	cascadeDisplay, filesGlob, filesRegex, dirsGlob, dirsRegex, fileTypeMode, dirTypeMode :=
+		extractHeaderInfo(req)
+
 	req.UI.OnBegin(&report.BeginEvent{
 		Root:         req.Root,
 		Caption:      c.captionFor(req),
@@ -293,6 +297,15 @@ func (c *Coordinator) execute(
 		PipelineName: req.PipelineName,
 		DateFormat:   c.config.Mapped.Interaction.DateFormat,
 		Cancel:       cancel,
+
+		// Header info fields
+		CascadeDisplay: cascadeDisplay,
+		FilesGlob:      filesGlob,
+		FilesRegex:     filesRegex,
+		DirsGlob:       dirsGlob,
+		DirsRegex:      dirsRegex,
+		FileTypeMode:   fileTypeMode,
+		DirTypeMode:    dirTypeMode,
 	})
 
 	result, err := req.Scenario(facade, req.Settings...).Navigate(ctx)
@@ -370,7 +383,64 @@ func (c *Coordinator) useShellPoolExec(
 	}, nil
 }
 
-//nolint:exhaustive // enums.SubscribeDirectoriesWithFiles, enums.SubscribeUniversal
+// extractHeaderInfo extracts cascade display (padlock or depth) and filter flag info from the Options
+// that were passed through BuildTraversalSettings. This preserves display information
+// even though the pref.Options struct doesn't directly expose the original flags.
+func extractHeaderInfo(req *Request) (cascade, filesGlob, filesRegex, dirsGlob, dirsRegex string, fileType, dirType string) {
+	options := &pref.Options{}
+
+	// Extract options from settings by running all option functions
+	for _, setting := range req.Settings {
+		if setting == nil {
+			continue
+		}
+		if err := setting(options); err != nil {
+			return "", "", "", "", "", "", "" // error case - return empty
+		}
+	}
+
+	// Extract cascade display (no-recurse or depth) from behaviours
+	if options.Behaviours.Cascade.NoRecurse {
+		cascade = "🔒"
+	} else if options.Behaviours.Cascade.Depth > 0 {
+		cascade = fmt.Sprintf("depth:%d", options.Behaviours.Cascade.Depth)
+	}
+
+	// Extract filter info from poly filter definitions
+	if options.Filter.Node != nil && options.Filter.Node.Poly != nil {
+		fileDef := options.Filter.Node.Poly.File
+		dirDef := options.Filter.Node.Poly.Directory
+
+		// Determine file pattern and type
+		if fileDef.Type == enums.FilterTypeGlobEx && fileDef.Pattern != "" {
+			filesGlob = fileDef.Pattern
+		} else if fileDef.Type == enums.FilterTypeRegex && fileDef.Pattern != "" {
+			filesRegex = fileDef.Pattern
+		}
+
+		// Determine directory pattern and type
+		if dirDef.Type == enums.FilterTypeGlob && dirDef.Pattern != "" {
+			dirsGlob = dirDef.Pattern
+		} else if dirDef.Type == enums.FilterTypeRegex && dirDef.Pattern != "" {
+			dirsRegex = dirDef.Pattern
+		}
+
+		// Determine filter types based on precedence (regex takes priority when both exist)
+		fileType = determineFileType(fileDef.Type, fileDef.Pattern != "")
+		dirType = determineFileType(dirDef.Type, dirDef.Pattern != "")
+	}
+
+	return cascade, filesGlob, filesRegex, dirsGlob, dirsRegex, fileType, dirType
+}
+
+// determineFileType returns "regex" if pattern is a regex, otherwise "glob".
+// This helps distinguish display format but defaults to glob for backwards compatibility.
+func determineFileType(filterType enums.FilterType, hasPattern bool) string {
+	if filterType == enums.FilterTypeRegex && hasPattern {
+		return "regex"
+	}
+	return "glob" // default
+}
 func (c *Coordinator) captionFor(req *Request) string {
 	subscription := ""
 	switch req.Subscription {
@@ -378,6 +448,12 @@ func (c *Coordinator) captionFor(req *Request) string {
 		subscription = "files only"
 	case enums.SubscribeDirectories:
 		subscription = "folders only"
+	case enums.SubscribeDirectoriesWithFiles:
+		subscription = "folders only /w files"
+	case enums.SubscribeUniversal:
+		subscription = "universal"
+	case enums.SubscribeUndefined:
+		subscription = "undefined"
 	default:
 		subscription = "files and folders"
 	}

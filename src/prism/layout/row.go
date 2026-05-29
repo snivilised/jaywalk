@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"charm.land/lipgloss/v2"
+	"github.com/snivilised/jaywalk/src/prism/contract"
 )
 
 // SegType describes how a segment's width is determined.
@@ -266,7 +267,7 @@ func (r *Row) RenderTo(b *strings.Builder) {
 				width += charWidth
 				truncated = append(truncated, ru)
 			}
-			content = string(truncated) + "…"
+			content = string(truncated) + contract.Ellipses
 		}
 		b.WriteString(content)
 		flexContentWidth = lipgloss.Width(content)
