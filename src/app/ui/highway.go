@@ -60,6 +60,15 @@ type highwayPresenter struct {
 	theme      prism.Theme
 	noRecurse  bool
 
+	// Header info fields for OvertureMsg
+	cascadeDisplay string // "🔒", "depth:N", or ""
+	filesGlob      string // raw pattern when --files-glob used
+	filesRegex     string // raw pattern when --files-regex used
+	dirsGlob       string // raw pattern when --dirs-glob used
+	dirsRegex      string // raw pattern when --dirs-regex used
+	fileTypeMode   string // "glob" or "regex" for files, default "glob"
+	dirTypeMode    string // "glob" or "regex" for dirs, default "glob"
+
 	// Job emoji pool state — populated from config, random emoji picked per job arrival.
 	jobEmojiPool []string
 }
@@ -74,8 +83,8 @@ func newHighwayPresenter(palette prism.Palette, cfg HighwayConfig) (report.Prese
 }
 
 func (h *highwayPresenter) OnTraversalOptions(o *pref.Options) {
+	// Read concurrency settings from options - this is structural configuration, not cascade state.
 	h.noW = o.Concurrency.NoW
-	h.noRecurse = o.Behaviours.Cascade.NoRecurse
 }
 
 func subscriptionLabelFor(s enums.Subscription) string {
@@ -106,13 +115,24 @@ func (h *highwayPresenter) initJobEmojiPool() {
 	copy(h.jobEmojiPool, jobEmojis)
 }
 
-func (h *highwayPresenter) OnBegin(e *report.BeginEvent) {
-	h.done = make(chan struct{})
+func (h *highwayPresenter) SetMaxDepth(maxDepth uint) {
+	h.maxDepth = maxDepth
+}
 
+// OnBegin creates the bubbletea model and starts the program.
+func (h *highwayPresenter) OnBegin(e *report.BeginEvent) {
 	h.initJobEmojiPool()
+
+	// todo: derive noRecurse from e.CascadeDisplay in OnBegin or pass via options
 	lanes := BuildHighwayLanes(h.cfg, h.noW)
 	model := highway.NewModel(lanes, highwayTickRate, e.Root, h.maxDepth, h.theme, h.noRecurse)
 	h.program = tea.NewProgram(model)
+
+	// Initialize done channel before starting the goroutine that closes it.
+	// This prevents "close of nil channel" panic when Ctrl+C interrupts early.
+	if h.done == nil {
+		h.done = make(chan struct{})
+	}
 
 	go func() {
 		_, _ = h.program.Run()
@@ -137,6 +157,15 @@ func (h *highwayPresenter) OnBegin(e *report.BeginEvent) {
 		DateFormat:        e.DateFormat,
 		ActionName:        e.ActionName,
 		PipelineName:      e.PipelineName,
+
+		// Header info for filter widgets and cascade display
+		CascadeDisplay: h.cascadeDisplay,
+		FilesGlob:      h.filesGlob,
+		FilesRegex:     h.filesRegex,
+		DirsGlob:       h.dirsGlob,
+		DirsRegex:      h.dirsRegex,
+		FileTypeMode:   h.fileTypeMode,
+		DirTypeMode:    h.dirTypeMode,
 	})
 
 	if h.totalFiles > 0 || h.totalDirs > 0 {
@@ -158,10 +187,6 @@ func (h *highwayPresenter) OnPeerInfoBegin(files, dirs uint, _ map[string]*core.
 }
 
 func (h *highwayPresenter) OnPeerInfoEnd() {}
-
-func (h *highwayPresenter) SetMaxDepth(maxDepth uint) {
-	h.maxDepth = maxDepth
-}
 
 func (h *highwayPresenter) OnNodeEvent(e *report.NeutralEvent) {
 	h.sendMotif(e.Node.Path, e.Node.Extension.Name, e.Node.IsDirectory(),

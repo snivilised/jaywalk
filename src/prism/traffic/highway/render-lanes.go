@@ -22,6 +22,7 @@ import (
 //  7. Spinner column (fixed width label for spinner type: "default", "bounce", etc.)
 //  8. Styled path or label (files get DirStyle/FileStyle, empty lanes get MutedStyle)
 //  9. Animation frame (frame content from FrameFunc in quotes)
+//
 // 10. Landing strip
 //
 // 11. Right border segment │
@@ -60,9 +61,6 @@ func (m Model) renderLanes(b *strings.Builder) {
 		// Periscope bar (depth indicator)
 		laneBar := m.renderPeriscopeBar(lane, i, laneBarWidth, periscopeStyles)
 
-		// Node icon (determined before layout calc for prefix width)
-		nodeIcon := renderNodeIcon(lane, m.theme.TreeIcons)
-
 		// Action info (error / action name / pipeline name)
 		actionInfo := widget.RenderAction(widget.ActionConfig{
 			Error:        lane.Err,
@@ -85,7 +83,7 @@ func (m Model) renderLanes(b *strings.Builder) {
 		}, landingStripStyles)
 
 		// Build the row layout declaratively
-		row := layout.NewRow(m.width - 4).
+		row := layout.NewRow(m.width-4).
 			Caps(borderStyle.Render("│ "), borderStyle.Render(" │"))
 		row.
 			Content(emojiPart).Gap(2).
@@ -93,26 +91,24 @@ func (m Model) renderLanes(b *strings.Builder) {
 		if lane.JobEmoji != "" {
 			row.Content(lane.JobEmoji).Gap(2)
 		}
-		if nodeIcon != "" {
-			row.Content(nodeIcon).Gap(1)
-		}
 		if actionInfo != "" {
 			row.Content(actionInfo).Gap(2)
 		}
 		row.
 			Fixed(SpinnerNameWidth, spinnerNameCol).
-			Flex(true).Gap(2).     // path: flex with gap(2) after
+			Flex(true).Gap(2).     // path: flex with gap(2) before
 			Content(frame).Gap(1).
 			RightContent(landingStrip)
 
-		// Render the path content with the allocated flex width
-		_, styledPath := widget.RenderNodePath(widget.NodePathConfig{
+		// Render the path content - returns complete formatted string with icon
+		pathContent := widget.RenderNodePath(widget.NodePathConfig{
 			Path:     lane.Path,
 			IsDir:    lane.IsDir,
 			Label:    lane.Label,
 			MaxWidth: row.FlexWidth(),
 		}, nodePathStyles)
-		row.SetFlexContent(styledPath)
+
+		row.SetFlexContent(pathContent)
 
 		row.RenderTo(b)
 		b.WriteString("\n")
@@ -170,16 +166,6 @@ func (m Model) renderPeriscopeBar(lane Lane, idx int, laneBarWidth int, styles w
 		Fill:   fill,
 		Styles: styles,
 	})
-}
-
-func renderNodeIcon(lane Lane, treeIcons map[string]string) string {
-	if lane.Path == "" {
-		return ""
-	}
-	if lane.IsDir {
-		return treeIcons["directory"]
-	}
-	return treeIcons["file"]
 }
 
 func (m Model) renderActivityFrame(lane Lane, styles widget.ActivityStyles) string {

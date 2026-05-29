@@ -1,11 +1,13 @@
 package layout_test
 
 import (
+	"fmt"
 	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/snivilised/jaywalk/src/prism/contract"
 	"github.com/snivilised/jaywalk/src/prism/layout"
 )
 
@@ -47,11 +49,11 @@ var _ = Describe("Row", func() {
 			row := layout.NewRow(20).Caps("│", "│").
 				Content("L").
 				RightContent("R").Gap(2)
-			got := row.Render()
-			runes := []rune(got)
+			result := row.Render()
+			runes := []rune(result)
 			Expect(len(runes)).To(Equal(22))
-			Expect(got).To(HavePrefix("│L"))
-			Expect(got).To(HaveSuffix("│"))
+			Expect(result).To(HavePrefix("│L"))
+			Expect(result).To(HaveSuffix("│"))
 		})
 	})
 
@@ -61,8 +63,8 @@ var _ = Describe("Row", func() {
 				Content("A").
 				Flex(false).
 				RightContent("Z")
-			row.SetFlexContent("...")
-			Expect(row.Render()).To(Equal("│A...                         Z│"))
+			row.SetFlexContent(contract.Ellipses)
+			Expect(row.Render()).To(Equal(fmt.Sprintf("│A%s%sZ│", contract.Ellipses, strings.Repeat(" ", 27))))
 		})
 
 		It("reports allocated width via FlexWidth", func() {
@@ -88,10 +90,10 @@ var _ = Describe("Row", func() {
 				Content("C").Gap(1).
 				RightContent("Z")
 			row.SetFlexContent("B")
-			got := row.Render()
+			result := row.Render()
 			// left-before=A(1), flex=B(1), gap=2, left-after=C(1)+gap(1)
 			// right=Z(1), total=1+1+2+2+1=7, filler=40-7=33
-			Expect(got).To(Equal("│AB  C " + strings.Repeat(" ", 33) + "Z│"))
+			Expect(result).To(Equal("│AB  C " + strings.Repeat(" ", 33) + "Z│"))
 		})
 	})
 
@@ -101,11 +103,11 @@ var _ = Describe("Row", func() {
 				Content("L").
 				Flex(true).
 				RightContent("R")
-			row.SetFlexContent("verylongcontentthatshouldbetruncated")
-			got := row.Render()
-			Expect(got).To(ContainSubstring("…"))
+			row.SetFlexContent("very-long-content-that-should-be-truncated")
+			result := row.Render()
+			Expect(result).To(ContainSubstring(contract.Ellipses))
 			// inner width between caps = 20 runes
-			inner := string([]rune(got)[1:21])
+			inner := string([]rune(result)[1:21])
 			Expect(len([]rune(inner))).To(Equal(20))
 		})
 
@@ -115,9 +117,9 @@ var _ = Describe("Row", func() {
 				Flex(false).
 				RightContent("R")
 			row.SetFlexContent("short")
-			got := row.Render()
-			Expect(got).To(ContainSubstring("short"))
-			Expect(got).To(HaveSuffix("│"))
+			result := row.Render()
+			Expect(result).To(ContainSubstring("short"))
+			Expect(result).To(HaveSuffix("│"))
 		})
 	})
 
@@ -134,11 +136,11 @@ var _ = Describe("Row", func() {
 				Content("A").
 				Flex(false).Gap(2).
 				RightContent("Z")
-			row.SetFlexContent("...")
-			got := row.Render()
+			row.SetFlexContent(contract.Ellipses)
+			result := row.Render()
 			// leftTotal=1, flexContent=3, flexGap=2, rightTotal=1
 			// filler=30-1-3-2-1=23
-			Expect(got).To(Equal("│A...                         Z│"))
+			Expect(result).To(Equal(fmt.Sprintf("│A%s%sZ│", contract.Ellipses, strings.Repeat(" ", 27))))
 		})
 	})
 
@@ -171,12 +173,12 @@ var _ = Describe("Row", func() {
 				RightContent("F")
 
 			row.SetFlexContent("/path")
-			got := row.Render()
+			result := row.Render()
 
-			Expect(got).To(HavePrefix("│ "))
-			Expect(got).To(HaveSuffix(" │"))
+			Expect(result).To(HavePrefix("│ "))
+			Expect(result).To(HaveSuffix(" │"))
 			// total rendered runes = caps(4) + inner(60) = 64
-			Expect(len([]rune(got))).To(Equal(64))
+			Expect(len([]rune(result))).To(Equal(64))
 		})
 	})
 

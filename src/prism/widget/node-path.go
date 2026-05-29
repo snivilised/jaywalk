@@ -7,10 +7,10 @@ import (
 )
 
 type NodePathStyles struct {
-	DirStyle  lipgloss.Style
-	FileStyle lipgloss.Style
+	DirStyle   lipgloss.Style
+	FileStyle  lipgloss.Style
 	MutedStyle lipgloss.Style
-	TreeIcons contract.TreeIcons
+	TreeIcons  contract.TreeIcons
 }
 
 type NodePathConfig struct {
@@ -20,26 +20,19 @@ type NodePathConfig struct {
 	MaxWidth int
 }
 
-func RenderNodePath(cfg NodePathConfig, styles NodePathStyles) (icon, styled string) {
-	if cfg.Path != "" {
-		icon = styles.TreeIcons[contract.TreeIconFile]
-		if cfg.IsDir {
-			icon = styles.TreeIcons[contract.TreeIconDirectory]
-		}
-	}
-
+func RenderNodePath(cfg NodePathConfig, styles NodePathStyles) string {
 	var displayPath string
 	if cfg.Path != "" {
 		displayPath = cfg.Path
 		if cfg.IsDir {
 			displayPath += "/"
 		}
-	} else {
+	} else if cfg.Label != "" {
 		displayPath = cfg.Label
 	}
 
 	pathWidth := lipgloss.Width(displayPath)
-	if pathWidth > cfg.MaxWidth {
+	if pathWidth > 0 && pathWidth > cfg.MaxWidth {
 		keepWidth := cfg.MaxWidth - 3
 		runes := []rune(displayPath)
 		width := 0
@@ -52,18 +45,29 @@ func RenderNodePath(cfg NodePathConfig, styles NodePathStyles) (icon, styled str
 			width += charWidth
 			start = i
 		}
-		displayPath = "..." + string(runes[start:])
+		displayPath = contract.Ellipses + string(runes[start:])
 	}
 
+	var icon string
 	if cfg.Path != "" {
 		if cfg.IsDir {
-			styled = styles.DirStyle.Render(displayPath)
+			icon = styles.TreeIcons[contract.TreeIconDirectory]
 		} else {
-			styled = styles.FileStyle.Render(displayPath)
+			icon = styles.TreeIcons[contract.TreeIconFile]
 		}
-	} else {
-		styled = styles.MutedStyle.Render(displayPath)
 	}
 
-	return icon, styled
+	// Combine plain strings first, then apply style once to the full result to preserve proper formatting
+	if icon != "" {
+		result := icon + " " + displayPath
+		if cfg.IsDir {
+			return styles.DirStyle.Render(result)
+		}
+		return styles.FileStyle.Render(result)
+	}
+
+	if cfg.Label != "" {
+		return styles.MutedStyle.Render(displayPath)
+	}
+	return displayPath
 }

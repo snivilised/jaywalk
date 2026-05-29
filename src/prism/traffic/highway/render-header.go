@@ -6,6 +6,7 @@ import (
 
 	"charm.land/lipgloss/v2"
 
+	"github.com/snivilised/jaywalk/src/prism/contract"
 	"github.com/snivilised/jaywalk/src/prism/layout"
 )
 
@@ -23,7 +24,7 @@ func (m Model) renderHeader(b *strings.Builder) {
 	maxPathWidth := m.width - 13
 	if pathWidth > maxPathWidth {
 		keep := max(0, maxPathWidth-3)
-		pathDisplay = "..." + pathDisplay[lipgloss.Width(pathDisplay)-keep:]
+		pathDisplay = contract.Ellipses + pathDisplay[lipgloss.Width(pathDisplay)-keep:]
 		pathWidth = maxPathWidth
 	}
 
@@ -51,11 +52,17 @@ func (m Model) renderHeader(b *strings.Builder) {
 		infoStr := fmt.Sprintf("  %s  -  %s", m.subscriptionLabel,
 			m.startedAt.Format(dateFmt))
 		infoPart = m.theme.SummaryValueStyle.Render(infoStr)
+
+		// NEW: cascade display (padlock or depth) for no-recurse/depth flags
+		cascadeWidget := renderCascadeDisplay(m)
+		if cascadeWidget != "" {
+			infoPart = infoPart + " │" + hStyle.Render(cascadeWidget)
+		}
 	}
 
 	middle := header + infoPart
 
-	row := layout.NewRow(m.width - 4).
+	row := layout.NewRow(m.width-4).
 		Caps(borderStyle.Render("│ "), borderStyle.Render(" │")).
 		Content(middle)
 
@@ -66,9 +73,56 @@ func (m Model) renderHeader(b *strings.Builder) {
 		row.RightContent(pipelineInd)
 	}
 
+	// NEW: filter info widget for glob/regex flags
+	filterWidget := renderFilterInfo(m)
+	if filterWidget != "" {
+		row.RightContent(filterWidget)
+	}
+
 	row.RenderTo(b)
 	b.WriteString("\n")
 
 	b.WriteString(borderStyle.Render("├" + dashes + "┤"))
 	b.WriteString("\n")
+}
+
+// renderCascadeDisplay renders either padlock emoji, depth value, or empty string
+// for the cascade behaviour indicator (no-recurse vs depth flags are mutually exclusive)
+func renderCascadeDisplay(m Model) string {
+	if m.CascadeDisplay == "" {
+		return ""
+	}
+	// NoRecuse takes precedence over depth display, but here we trust CascadeDisplay field
+	return m.CascadeDisplay
+}
+
+// renderFilterInfo renders active filter flags as [flag:value,...]
+// Only displays filters that have non-empty patterns, respecting glob/regex modes per flag type
+func renderFilterInfo(m Model) string {
+	if m.FilesGlob == "" && m.FilesRegex == "" &&
+		m.DirsGlob == "" && m.DirsRegex == "" {
+		return "" // no filters to display
+	}
+
+	var parts []string
+
+	// Files filter - show whichever is active (glob takes precedence over regex if both set)
+	if m.FilesGlob != "" {
+		parts = append(parts, fmt.Sprintf("files-glob:%s", m.FilesGlob))
+	} else if m.FilesRegex != "" {
+		parts = append(parts, fmt.Sprintf("files-regex:%s", m.FilesRegex))
+	}
+
+	// Dirs filter - same precedence logic
+	if m.DirsGlob != "" {
+		parts = append(parts, fmt.Sprintf("dirs-glob:%s", m.DirsGlob))
+	} else if m.DirsRegex != "" {
+		parts = append(parts, fmt.Sprintf("dirs-regex:%s", m.DirsRegex))
+	}
+
+	if len(parts) == 0 {
+		return ""
+	}
+
+	return " └─ [ " + strings.Join(parts, ", ") + " ]"
 }

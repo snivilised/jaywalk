@@ -14,6 +14,15 @@ type OvertureMsg struct {
 	DateFormat        string
 	ActionName        string
 	PipelineName      string
+
+	// NEW: header information for filter widgets and depth indicator
+	CascadeDisplay   string  // "🔒", "depth:<n>", or ""
+	FilesGlob        string  // pattern value when --files-glob or -f used
+	FilesRegex       string  // pattern value when --files-regex used
+	DirsGlob         string  // pattern value when --dirs-glob used
+	DirsRegex        string  // pattern value when --dirs-regex used
+	FileTypeMode     string  // "glob" or "regex" for files
+	DirTypeMode      string  // "glob" or "regex" for dirs
 }
 
 type MotifData struct {
