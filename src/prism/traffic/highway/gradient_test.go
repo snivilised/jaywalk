@@ -17,8 +17,8 @@ var _ = Describe("Highway Gradient Rendering", func() {
 			Expect(state.stepsArray).To(BeNil())
 
 			// Perform an interpolation with 4 steps
-			hi := color.RGBA{R: 255, G: 0, B: 0, A: 255}   // Red
-			lo := color.RGBA{R: 0, G: 0, B: 255, A: 255}   // Blue
+			hi := color.RGBA{R: 255, G: 0, B: 0, A: 255} // Red
+			lo := color.RGBA{R: 0, G: 0, B: 255, A: 255} // Blue
 			state.TotalSteps = 4
 
 			runs := ApplyGradient(hi, lo, "test", state)

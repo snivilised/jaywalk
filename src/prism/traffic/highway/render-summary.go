@@ -74,7 +74,7 @@ func (m Model) renderSummary(b *strings.Builder) {
 	elapsedValue := m.theme.SummaryValueStyle.Render(elapsedStr)
 	elapsedText := " " + elapsedLabel + " " + elapsedValue + " "
 
-	row := layout.NewRow(m.width - 4).
+	row := layout.NewRow(m.width-4).
 		Caps(borderStyle.Render("│ "), borderStyle.Render(" │")).
 		Content(seg1).
 		Content(borderStyle.Render("│")).

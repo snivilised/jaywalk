@@ -96,7 +96,7 @@ func (m Model) renderLanes(b *strings.Builder) {
 		}
 		row.
 			Fixed(SpinnerNameWidth, spinnerNameCol).
-			Flex(true).Gap(2).     // path: flex with gap(2) before
+			Flex(true).Gap(2). // path: flex with gap(2) before
 			Content(frame).Gap(1).
 			RightContent(landingStrip)
 
