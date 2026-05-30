@@ -58,14 +58,14 @@ type BeginEvent struct {
 	// (e.g., in response to a user interrupt like Ctrl-C in the TUI).
 	Cancel context.CancelFunc
 
-	// NEW: Header display fields for filter flags
-	CascadeDisplay string  // "🔒", "depth:<n>", or empty
-	FilesGlob      string  // Pattern when --files-glob or -f used  
-	FilesRegex     string  // Pattern when --files-regex used
-	DirsGlob       string  // Pattern when --dirs-glob used
-	DirsRegex      string  // Pattern when --dirs-regex used
-	FileTypeMode   string  // "glob" or "regex" for files
-	DirTypeMode    string  // "glob" or "regex" for dirs
+	// Header display fields for filter flags
+	CascadeDisplay string // "🔒", "depth:<n>", or empty
+	FilesGlob      string // Pattern when --files-glob or -f used
+	FilesRegex     string // Pattern when --files-regex used
+	DirsGlob       string // Pattern when --dirs-glob used
+	DirsRegex      string // Pattern when --dirs-regex used
+	FileTypeMode   string // "glob" or "regex" for files
+	DirTypeMode    string // "glob" or "regex" for dirs
 }
 
 // NeutralEvent is emitted per node visit when no action or pipeline is

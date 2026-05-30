@@ -264,16 +264,16 @@ func (b *Bootstrap) Root(options ...ConfigureAppOptionFn) *cobra.Command {
 					}
 				}
 
-		mgr, err := ui.New(mode, palette, ui.HighwayConfig{
-			WorkerPool:     highwayCfg.WorkerPool,
-			JobPool:        highwayCfg.JobPool,
-			Separator:      highwayCfg.Separator,
-			SpinnerNames:   highwayCfg.AnimationData.Spinners.Enabled,
-			AnimationGradient: b.themeLoader.NameFromPalette(palette, prism.GradientComponentActivity),
-			Overrides:      overrides,
-		})
+				mgr, err := ui.New(mode, palette, ui.HighwayConfig{
+					WorkerPool:        highwayCfg.WorkerPool,
+					JobPool:           highwayCfg.JobPool,
+					Separator:         highwayCfg.Separator,
+					SpinnerNames:      highwayCfg.AnimationData.Spinners.Enabled,
+					AnimationGradient: b.themeLoader.NameFromPalette(palette, prism.GradientComponentActivity),
+					Overrides:         overrides,
+				})
 
-	if err != nil {
+				if err != nil {
 					return err
 				}
 

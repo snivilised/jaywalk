@@ -28,7 +28,7 @@ var _ = Describe("ViewConfigLoader", Ordered, func() {
 		It("loads highway config section successfully", func() {
 			fS := luna.NewMemFS()
 			fS.MapFS[configHome+"/jay.ui.yaml"] = &fstest.MapFile{
-			Data: []byte(`
+				Data: []byte(`
 ui:
   highway:
     worker-emoji-pool: '😎 😄 👽 🤖 🦊 🐯 👻 🧙 🦄 🦁'
@@ -41,19 +41,19 @@ ui:
           wave:
             interval: 200
 `),
-		}
+			}
 
-		loader := bedrock.NewViewConfigLoaderWithFS(configHome, fS)
-		var cfg bedrock.HighwayConfig
-		err := loader.Load("highway", &cfg)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(cfg.WorkerPool).To(Equal("😎 😄 👽 🤖 🦊 🐯 👻 🧙 🦄 🦁"))
-		Expect(cfg.JobPool).To(Equal("🍎 🍊 🍋 🍇 🍓"))
-		Expect(cfg.Separator).To(Equal(" "))
-		Expect(cfg.AnimationData.Spinners.Enabled).To(ConsistOf("wave", "braille"))
-		Expect(cfg.AnimationData.Spinners.Override).NotTo(BeNil())
-		Expect(cfg.AnimationData.Spinners.Override["wave"]).NotTo(BeNil())
-		Expect(cfg.AnimationData.Spinners.Override["wave"].Interval).To(Equal(200))
+			loader := bedrock.NewViewConfigLoaderWithFS(configHome, fS)
+			var cfg bedrock.HighwayConfig
+			err := loader.Load("highway", &cfg)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(cfg.WorkerPool).To(Equal("😎 😄 👽 🤖 🦊 🐯 👻 🧙 🦄 🦁"))
+			Expect(cfg.JobPool).To(Equal("🍎 🍊 🍋 🍇 🍓"))
+			Expect(cfg.Separator).To(Equal(" "))
+			Expect(cfg.AnimationData.Spinners.Enabled).To(ConsistOf("wave", "braille"))
+			Expect(cfg.AnimationData.Spinners.Override).NotTo(BeNil())
+			Expect(cfg.AnimationData.Spinners.Override["wave"]).NotTo(BeNil())
+			Expect(cfg.AnimationData.Spinners.Override["wave"].Interval).To(Equal(200))
 		})
 
 		It("returns nil when config file does not exist", func() {

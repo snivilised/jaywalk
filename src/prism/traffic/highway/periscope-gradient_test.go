@@ -15,8 +15,8 @@ import (
 
 var _ = Describe("Periscope Gradient", func() {
 	var (
-		dummyStyle  lipgloss.Style
-		testStyles  widget.PeriscopeStyles
+		dummyStyle lipgloss.Style
+		testStyles widget.PeriscopeStyles
 	)
 
 	BeforeEach(func() {

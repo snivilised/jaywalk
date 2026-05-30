@@ -103,13 +103,13 @@ var _ = Describe("linear", Ordered, func() {
 			It("passes PrimeNavigation kind and root to renderer.Begin", func() {
 				now := core.Now()
 
-			presenter.OnBegin(&report.BeginEvent{
-				Root:       "/home/user/docs",
-				Caption:    "files and folders",
-				StartedAt:  now,
-				IsPrime:    true,
-				DateFormat: "Mon, 02 Jan 2006 15:04:05 MST",
-			})
+				presenter.OnBegin(&report.BeginEvent{
+					Root:       "/home/user/docs",
+					Caption:    "files and folders",
+					StartedAt:  now,
+					IsPrime:    true,
+					DateFormat: "Mon, 02 Jan 2006 15:04:05 MST",
+				})
 
 				Expect(spy.beginCalled).To(BeTrue())
 				Expect(spy.overture.Root).To(Equal("/home/user/docs"))
@@ -122,14 +122,14 @@ var _ = Describe("linear", Ordered, func() {
 
 		Context("for a resume traversal", func() {
 			It("passes ResumeNavigation kind and resume path to renderer.Begin", func() {
-			presenter.OnBegin(&report.BeginEvent{
-				Root:       "/home/user/docs",
-				Caption:    "files only",
-				StartedAt:  core.Now(),
-				IsPrime:    false,
-				ResumeFrom: "/home/user/docs/subdir",
-				DateFormat: "Mon, 02 Jan 2006 15:04:05 MST",
-			})
+				presenter.OnBegin(&report.BeginEvent{
+					Root:       "/home/user/docs",
+					Caption:    "files only",
+					StartedAt:  core.Now(),
+					IsPrime:    false,
+					ResumeFrom: "/home/user/docs/subdir",
+					DateFormat: "Mon, 02 Jan 2006 15:04:05 MST",
+				})
 
 				Expect(spy.overture.Kind).To(Equal(prism.ResumeNavigation))
 				Expect(spy.overture.ResumeFrom).To(Equal("/home/user/docs/subdir"))

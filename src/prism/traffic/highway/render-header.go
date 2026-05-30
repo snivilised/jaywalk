@@ -53,7 +53,7 @@ func (m Model) renderHeader(b *strings.Builder) {
 			m.startedAt.Format(dateFmt))
 		infoPart = m.theme.SummaryValueStyle.Render(infoStr)
 
-		// NEW: cascade display (padlock or depth) for no-recurse/depth flags
+		// cascade display (padlock or depth) for no-recurse/depth flags
 		cascadeWidget := renderCascadeDisplay(m)
 		if cascadeWidget != "" {
 			infoPart = infoPart + " │" + hStyle.Render(cascadeWidget)
@@ -73,7 +73,7 @@ func (m Model) renderHeader(b *strings.Builder) {
 		row.RightContent(pipelineInd)
 	}
 
-	// NEW: filter info widget for glob/regex flags
+	// filter info widget for glob/regex flags
 	filterWidget := renderFilterInfo(m)
 	if filterWidget != "" {
 		row.RightContent(filterWidget)

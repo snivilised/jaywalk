@@ -162,7 +162,6 @@ const (
 
 	// GradientComponentLandingStrip is the execution info at the lane end.
 	GradientComponentLandingStrip = "landing-strip-control"
-
 )
 
 // deriveDimmed returns a colour approximately halfway between the given

@@ -74,7 +74,6 @@ type actionResult struct {
 	Event        *report.ActionEvent
 }
 
-
 // executeAction expands the cmd string for the named action and returns
 // the result. If a placeholder breaches root the result is marked as
 // skipped and no shell execution is attempted.
@@ -111,8 +110,6 @@ func (c *Coordinator) executeAction(
 	}
 
 	if !dryRun {
-		// cmd := exec.Command("sh", "-c", result.Cmd) //nolint:gosec // this is expected to be a shell command string
-		// output, err := cmd.CombinedOutput()
 		output, err := c.exec(ctx, event.ExecutionString)
 		if err != nil {
 			event.Err = err

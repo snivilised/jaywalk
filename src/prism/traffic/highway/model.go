@@ -42,7 +42,7 @@ type Model struct {
 	counted           map[string]bool
 	errMsg            string
 
-	// NEW: header filter and cascade display info (populated by OvertureMsg)
+	// header filter and cascade display info (populated by OvertureMsg)
 	CascadeDisplay string // "🔒", "depth:<n>", or ""
 	FilesGlob      string // raw pattern value
 	FilesRegex     string // raw pattern value
@@ -181,7 +181,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.caption = msg.Caption
 		m.dateFormat = msg.DateFormat
 
-		// NEW: store header widgets info
+		// store header widgets info
 		m.CascadeDisplay = msg.CascadeDisplay
 		m.FilesGlob = msg.FilesGlob
 		m.FilesRegex = msg.FilesRegex

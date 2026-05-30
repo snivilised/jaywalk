@@ -39,19 +39,19 @@ const (
 )
 
 const (
-	PrimeNavigation   = contract.PrimeNavigation
-	ResumeNavigation  = contract.ResumeNavigation
+	PrimeNavigation  = contract.PrimeNavigation
+	ResumeNavigation = contract.ResumeNavigation
 )
 
 // Re-exported variables and functions.
 var (
-	InterpolateBetween      = contract.InterpolateBetween
-	InterpolateBetweenRGBA  = contract.InterpolateBetweenRGBA
-	DefaultStepCount        = contract.DefaultStepCount
-	ResolveANSI16           = contract.ResolveANSI16
-	SystemPalette           = contract.SystemPalette
-	NewTheme                = contract.NewTheme
-	RegisterFactory         = contract.RegisterFactory
+	InterpolateBetween     = contract.InterpolateBetween
+	InterpolateBetweenRGBA = contract.InterpolateBetweenRGBA
+	DefaultStepCount       = contract.DefaultStepCount
+	ResolveANSI16          = contract.ResolveANSI16
+	SystemPalette          = contract.SystemPalette
+	NewTheme               = contract.NewTheme
+	RegisterFactory        = contract.RegisterFactory
 )
 
 // Tree icon name constants.
@@ -69,12 +69,11 @@ const (
 )
 
 const (
-	GradientComponentActivity         = contract.GradientComponentActivity
-	GradientComponentPeriscope        = contract.GradientComponentPeriscope
-	GradientComponentAction           = contract.GradientComponentAction
-	GradientComponentNodePath         = contract.GradientComponentNodePath
-	GradientComponentLandingStrip     = contract.GradientComponentLandingStrip
-
+	GradientComponentActivity     = contract.GradientComponentActivity
+	GradientComponentPeriscope    = contract.GradientComponentPeriscope
+	GradientComponentAction       = contract.GradientComponentAction
+	GradientComponentNodePath     = contract.GradientComponentNodePath
+	GradientComponentLandingStrip = contract.GradientComponentLandingStrip
 )
 
 // New constructs a Renderer for the requested view kind. Delegates to
