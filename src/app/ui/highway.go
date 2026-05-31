@@ -12,8 +12,8 @@ import (
 	"github.com/snivilised/jaywalk/src/agenor/pref"
 	"github.com/snivilised/jaywalk/src/app/report"
 	"github.com/snivilised/jaywalk/src/prism"
+	"github.com/snivilised/jaywalk/src/prism/highway"
 	"github.com/snivilised/jaywalk/src/prism/movies"
-	"github.com/snivilised/jaywalk/src/prism/traffic/highway"
 )
 
 // HighwayConfig holds configuration for the highway bubbletea view.
@@ -28,8 +28,8 @@ type HighwayConfig struct {
 	Separator string
 
 	// SpinnerNames lists the spinner types to use for each lane, looked up
-	// Categories expand via traffic.SpinnerCategories; individual spinner names
-	// are registered in traffic.SpinnerNames.
+	// Categories expand via movies.SpinnerCategories; individual spinner names
+	// are registered in movies.SpinnerNames.
 	// When empty, buildHighwayLanes falls back to defaults.
 	SpinnerNames []string
 
