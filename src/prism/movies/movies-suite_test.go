@@ -1,4 +1,4 @@
-package traffic
+package movies
 
 import (
 	"testing"
@@ -9,5 +9,5 @@ import (
 
 func TestTraffic(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Traffic Suite")
+	RunSpecs(t, "Movies Suite")
 }

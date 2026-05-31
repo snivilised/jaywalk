@@ -12,7 +12,7 @@ import (
 	"github.com/snivilised/jaywalk/src/agenor/pref"
 	"github.com/snivilised/jaywalk/src/app/report"
 	"github.com/snivilised/jaywalk/src/prism"
-	"github.com/snivilised/jaywalk/src/prism/traffic"
+	"github.com/snivilised/jaywalk/src/prism/movies"
 	"github.com/snivilised/jaywalk/src/prism/traffic/highway"
 )
 
@@ -74,7 +74,7 @@ type highwayPresenter struct {
 }
 
 func newHighwayPresenter(palette prism.Palette, cfg HighwayConfig) (report.Presenter, error) {
-	traffic.RegisterAll()
+	movies.RegisterAll()
 	theme, err := prism.NewTheme(palette, os.Stdout)
 	if err != nil {
 		return nil, err
@@ -293,7 +293,7 @@ func BuildHighwayLanes(cfg HighwayConfig, now uint) []highway.Lane {
 		deck[i], deck[j] = deck[j], deck[i]
 	})
 
-	names := traffic.ExpandNames(cfg.SpinnerNames)
+	names := movies.ExpandNames(cfg.SpinnerNames)
 	labels := cfg.Labels
 
 	numLanes := int(now) //nolint:gosec // ok
@@ -317,9 +317,9 @@ func BuildHighwayLanes(cfg HighwayConfig, now uint) []highway.Lane {
 		} else {
 			label = fmt.Sprintf("Worker %d", i+1)
 		}
-		def, ok := traffic.Lookup(name)
+		def, ok := movies.Lookup(name)
 		if !ok {
-			def, _ = traffic.Lookup(traffic.SpinnerTypeDefault)
+			def, _ = movies.Lookup(movies.SpinnerTypeDefault)
 		}
 		interval := cfg.Overrides[name]
 		if interval < 1 {

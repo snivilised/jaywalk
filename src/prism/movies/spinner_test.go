@@ -1,4 +1,4 @@
-package traffic
+package movies
 
 import (
 	"github.com/charmbracelet/bubbles/spinner"

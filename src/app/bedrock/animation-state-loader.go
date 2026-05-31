@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/snivilised/jaywalk/src/prism/traffic"
+	"github.com/snivilised/jaywalk/src/prism/movies"
 )
 
 // AnimationState holds loaded animation data from config.
@@ -23,7 +23,7 @@ func LoadAnimationData(config *HighwayConfig) (*AnimationState, error) {
 			state.Data[name] = &SpinnerItemConfig{Interval: DefaultIntervalFor(name)}
 		}
 	} else {
-		for _, name := range traffic.ExpandNames(spinners.Enabled) {
+		for _, name := range movies.ExpandNames(spinners.Enabled) {
 			if override, ok := spinners.Override[name]; ok && override != nil {
 				state.Data[name] = &SpinnerItemConfig{
 					Interval: override.Interval,
