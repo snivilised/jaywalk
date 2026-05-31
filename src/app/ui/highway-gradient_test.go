@@ -9,41 +9,41 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/snivilised/jaywalk/src/prism"
+	"github.com/snivilised/jaywalk/src/prism/contract"
 )
 
 var _ = Describe("Highway Gradient API", func() {
 	var (
-		palette prism.Palette
+		palette contract.Palette
 		w       *bytes.Buffer
 		err     error
-		theme   prism.Theme
+		theme   contract.Theme
 	)
 
 	Describe("GradientFor component-based lookup", func() {
 		Context("with properly configured highlights", func() {
 			It("retrieves gradient using component name constant", func() {
-				highlights := prism.HighlightsConfig{
-					Gradients: map[string]prism.GradientDef{
+				highlights := contract.HighlightsConfig{
+					Gradients: map[string]contract.GradientDef{
 						"aurora-borealis": {
 							Steps: 8,
-							Hi:    &prism.SemanticColour{ANSI16: "cyan", TrueColor: "#00E5FF"},
-							Lo:    &prism.SemanticColour{ANSI16: "magenta", TrueColor: "#B388FF"},
+							Hi:    &contract.SemanticColour{ANSI16: "cyan", TrueColor: "#00E5FF"},
+							Lo:    &contract.SemanticColour{ANSI16: "magenta", TrueColor: "#B388FF"},
 						},
 					},
 					Components: map[string]string{
-						prism.GradientComponentActivity: "aurora-borealis",
+						contract.GradientComponentActivity: "aurora-borealis",
 					},
 				}
 
 				palette.Highlights = highlights
 				w = &bytes.Buffer{}
 
-				theme, err = prism.NewTheme(palette, w)
+				theme, err = contract.NewTheme(palette, w)
 				Expect(err).To(BeNil())
 				Expect(theme).NotTo(BeNil())
 
-				gGradient, has := theme.GradientFor(prism.GradientComponentActivity)
+				gGradient, has := theme.GradientFor(contract.GradientComponentActivity)
 				Expect(has).To(BeTrue())
 				Expect(gGradient.Steps).To(Equal(8))
 				Expect(gGradient.Hi).NotTo(BeNil())
@@ -57,17 +57,17 @@ var _ = Describe("Highway Gradient API", func() {
 			})
 
 			It("returns false when component is not configured", func() {
-				highlights := prism.HighlightsConfig{
+				highlights := contract.HighlightsConfig{
 					Components: map[string]string{}, // empty
 				}
 
 				palette.Highlights = highlights
 				w.Reset()
 
-				theme, err = prism.NewTheme(palette, w)
+				theme, err = contract.NewTheme(palette, w)
 				Expect(err).To(BeNil())
 
-				gGrad, has := theme.GradientFor(prism.GradientComponentActivity)
+				gGrad, has := theme.GradientFor(contract.GradientComponentActivity)
 				Expect(has).To(BeFalse())
 				Expect(gGrad.Steps).To(Equal(0))
 				Expect(gGrad.Hi).To(BeNil())
@@ -76,25 +76,25 @@ var _ = Describe("Highway Gradient API", func() {
 
 		Context("handles missing gradient definition", func() {
 			It("fails gracefully when component maps to non-existent gradient", func() {
-				highlights := prism.HighlightsConfig{
-					Gradients: map[string]prism.GradientDef{
+				highlights := contract.HighlightsConfig{
+					Gradients: map[string]contract.GradientDef{
 						"existing-gradient": {
-							Hi: &prism.SemanticColour{ANSI16: "red"},
-							Lo: &prism.SemanticColour{ANSI16: "blue"},
+							Hi: &contract.SemanticColour{ANSI16: "red"},
+							Lo: &contract.SemanticColour{ANSI16: "blue"},
 						},
 					},
 					Components: map[string]string{
-						prism.GradientComponentActivity: "nonexistent", // doesn't exist
+						contract.GradientComponentActivity: "nonexistent", // doesn't exist
 					},
 				}
 
 				palette.Highlights = highlights
 				w.Reset()
 
-				theme, err = prism.NewTheme(palette, w)
+				theme, err = contract.NewTheme(palette, w)
 				Expect(err).To(BeNil())
 
-				_, has := theme.GradientFor(prism.GradientComponentActivity)
+				_, has := theme.GradientFor(contract.GradientComponentActivity)
 				// Component exists but gradient doesn't → lookup fails gracefully
 				Expect(has).To(BeFalse())
 			})
@@ -102,11 +102,11 @@ var _ = Describe("Highway Gradient API", func() {
 
 		Context("handles missing component mapping", func() {
 			It("fails gracefully when no component entry exists", func() {
-				highlights := prism.HighlightsConfig{
-					Gradients: map[string]prism.GradientDef{
+				highlights := contract.HighlightsConfig{
+					Gradients: map[string]contract.GradientDef{
 						"some-gradient": {
-							Hi: &prism.SemanticColour{ANSI16: "cyan"},
-							Lo: &prism.SemanticColour{ANSI16: "magenta"},
+							Hi: &contract.SemanticColour{ANSI16: "cyan"},
+							Lo: &contract.SemanticColour{ANSI16: "magenta"},
 						},
 					},
 					// No Components mapping at all or no activity-control entry
@@ -115,35 +115,35 @@ var _ = Describe("Highway Gradient API", func() {
 				palette.Highlights = highlights
 				w.Reset()
 
-				theme, err = prism.NewTheme(palette, w)
+				theme, err = contract.NewTheme(palette, w)
 				Expect(err).To(BeNil())
 
-				_, has := theme.GradientFor(prism.GradientComponentActivity)
+				_, has := theme.GradientFor(contract.GradientComponentActivity)
 				Expect(has).To(BeFalse())
 			})
 		})
 
 		Context("works with partial gradient endpoints", func() {
 			It("loads gradient when only Hi specified (derives Lo)", func() {
-				highlights := prism.HighlightsConfig{
-					Gradients: map[string]prism.GradientDef{
+				highlights := contract.HighlightsConfig{
+					Gradients: map[string]contract.GradientDef{
 						"hi-only": {
-							Hi:    &prism.SemanticColour{ANSI16: "cyan", TrueColor: "#00FFFF"},
+							Hi:    &contract.SemanticColour{ANSI16: "cyan", TrueColor: "#00FFFF"},
 							Steps: 8,
 						},
 					},
 					Components: map[string]string{
-						prism.GradientComponentActivity: "hi-only",
+						contract.GradientComponentActivity: "hi-only",
 					},
 				}
 
 				palette.Highlights = highlights
 				w.Reset()
 
-				theme, err = prism.NewTheme(palette, w)
+				theme, err = contract.NewTheme(palette, w)
 				Expect(err).To(BeNil())
 
-				gGrad, has := theme.GradientFor(prism.GradientComponentActivity)
+				gGrad, has := theme.GradientFor(contract.GradientComponentActivity)
 				Expect(has).To(BeTrue())
 				Expect(gGrad.Steps).To(Equal(8))
 				Expect(gGrad.Hi).NotTo(BeNil())
@@ -151,25 +151,25 @@ var _ = Describe("Highway Gradient API", func() {
 			})
 
 			It("loads gradient when only Lo specified (derives Hi)", func() {
-				highlights := prism.HighlightsConfig{
-					Gradients: map[string]prism.GradientDef{
+				highlights := contract.HighlightsConfig{
+					Gradients: map[string]contract.GradientDef{
 						"lo-only": {
-							Lo:    &prism.SemanticColour{ANSI16: "magenta", TrueColor: "#FF1744"},
+							Lo:    &contract.SemanticColour{ANSI16: "magenta", TrueColor: "#FF1744"},
 							Steps: 6,
 						},
 					},
 					Components: map[string]string{
-						prism.GradientComponentActivity: "lo-only",
+						contract.GradientComponentActivity: "lo-only",
 					},
 				}
 
 				palette.Highlights = highlights
 				w.Reset()
 
-				theme, err = prism.NewTheme(palette, w)
+				theme, err = contract.NewTheme(palette, w)
 				Expect(err).To(BeNil())
 
-				gGrad, has := theme.GradientFor(prism.GradientComponentActivity)
+				gGrad, has := theme.GradientFor(contract.GradientComponentActivity)
 				Expect(has).To(BeTrue())
 				Expect(gGrad.Steps).To(Equal(6))
 				Expect(gGrad.Lo).NotTo(BeNil())
@@ -177,26 +177,26 @@ var _ = Describe("Highway Gradient API", func() {
 			})
 
 			It("uses default step count when steps=0", func() {
-				highlights := prism.HighlightsConfig{
-					Gradients: map[string]prism.GradientDef{
+				highlights := contract.HighlightsConfig{
+					Gradients: map[string]contract.GradientDef{
 						"zero-steps": {
 							Steps: 0, // triggers default
-							Hi:    &prism.SemanticColour{ANSI16: "cyan"},
-							Lo:    &prism.SemanticColour{ANSI16: "magenta"},
+							Hi:    &contract.SemanticColour{ANSI16: "cyan"},
+							Lo:    &contract.SemanticColour{ANSI16: "magenta"},
 						},
 					},
 					Components: map[string]string{
-						prism.GradientComponentActivity: "zero-steps",
+						contract.GradientComponentActivity: "zero-steps",
 					},
 				}
 
 				palette.Highlights = highlights
 				w.Reset()
 
-				theme, err = prism.NewTheme(palette, w)
+				theme, err = contract.NewTheme(palette, w)
 				Expect(err).To(BeNil())
 
-				gGrad, has := theme.GradientFor(prism.GradientComponentActivity)
+				gGrad, has := theme.GradientFor(contract.GradientComponentActivity)
 				Expect(has).To(BeTrue())
 				// Should default to 8 steps when not specified
 				Expect(gGrad.Steps).To(Equal(8))
@@ -205,29 +205,29 @@ var _ = Describe("Highway Gradient API", func() {
 
 		Context("handles multiple gradient definitions", func() {
 			It("looks up each independent gradient correctly", func() {
-				highlights := prism.HighlightsConfig{
-					Gradients: map[string]prism.GradientDef{
+				highlights := contract.HighlightsConfig{
+					Gradients: map[string]contract.GradientDef{
 						"gradient-alpha": {
-							Hi: &prism.SemanticColour{ANSI16: "red", TrueColor: "#FF4D6D"},
-							Lo: &prism.SemanticColour{ANSI16: "green", TrueColor: "#B9FBC0"},
+							Hi: &contract.SemanticColour{ANSI16: "red", TrueColor: "#FF4D6D"},
+							Lo: &contract.SemanticColour{ANSI16: "green", TrueColor: "#B9FBC0"},
 						},
 						"gradient-beta": {
-							Hi: &prism.SemanticColour{ANSI16: "blue", TrueColor: "#3D5AFE"},
-							Lo: &prism.SemanticColour{ANSI16: "yellow", TrueColor: "#FFEA00"},
+							Hi: &contract.SemanticColour{ANSI16: "blue", TrueColor: "#3D5AFE"},
+							Lo: &contract.SemanticColour{ANSI16: "yellow", TrueColor: "#FFEA00"},
 						},
 					},
 					Components: map[string]string{
-						prism.GradientComponentActivity: "gradient-alpha", // highway uses alpha only
+						contract.GradientComponentActivity: "gradient-alpha", // highway uses alpha only
 					},
 				}
 
 				palette.Highlights = highlights
 				w.Reset()
 
-				theme, err = prism.NewTheme(palette, w)
+				theme, err = contract.NewTheme(palette, w)
 				Expect(err).To(BeNil())
 
-				gAlpha, hasAlpha := theme.GradientFor(prism.GradientComponentActivity)
+				gAlpha, hasAlpha := theme.GradientFor(contract.GradientComponentActivity)
 				Expect(hasAlpha).To(BeTrue())
 				Expect(gAlpha.Steps).To(Equal(8)) // default steps from GradientDef when not specified
 
@@ -240,12 +240,12 @@ var _ = Describe("Highway Gradient API", func() {
 
 	Describe("Theme gradient map structure", func() {
 		It("populates HighlightGradients map when gradients defined", func() {
-			highlights := prism.HighlightsConfig{
-				Gradients: map[string]prism.GradientDef{
+			highlights := contract.HighlightsConfig{
+				Gradients: map[string]contract.GradientDef{
 					"test-gradient": {
 						Steps: 4,
-						Hi:    &prism.SemanticColour{ANSI16: "cyan"},
-						Lo:    &prism.SemanticColour{ANSI16: "magenta"},
+						Hi:    &contract.SemanticColour{ANSI16: "cyan"},
+						Lo:    &contract.SemanticColour{ANSI16: "magenta"},
 					},
 				},
 			}
@@ -253,7 +253,7 @@ var _ = Describe("Highway Gradient API", func() {
 			palette.Highlights = highlights
 			w.Reset()
 
-			theme, err = prism.NewTheme(palette, w)
+			theme, err = contract.NewTheme(palette, w)
 			Expect(err).To(BeNil())
 
 			Expect(theme.HighlightGradients).NotTo(BeNil())
@@ -262,21 +262,21 @@ var _ = Describe("Highway Gradient API", func() {
 		})
 
 		It("populates HighlightsComponents map when components defined", func() {
-			highlights := prism.HighlightsConfig{
+			highlights := contract.HighlightsConfig{
 				Components: map[string]string{
-					prism.GradientComponentActivity: "some-gradient",
+					contract.GradientComponentActivity: "some-gradient",
 				},
 			}
 
 			palette.Highlights = highlights
 			w.Reset()
 
-			theme, err = prism.NewTheme(palette, w)
+			theme, err = contract.NewTheme(palette, w)
 			Expect(err).To(BeNil())
 
 			Expect(theme.HighlightsComponents).NotTo(BeNil())
 			Expect(len(theme.HighlightsComponents)).To(Equal(1))
-			val, ok := theme.HighlightsComponents[prism.GradientComponentActivity]
+			val, ok := theme.HighlightsComponents[contract.GradientComponentActivity]
 			Expect(ok).To(BeTrue())
 			Expect(val).To(Equal("some-gradient"))
 		})
@@ -284,22 +284,22 @@ var _ = Describe("Highway Gradient API", func() {
 
 	Describe("Component-based vs direct gradient name lookup", func() {
 		It("fails when passing gradient name directly to GradientFor()", func() {
-			highlights := prism.HighlightsConfig{
-				Gradients: map[string]prism.GradientDef{
+			highlights := contract.HighlightsConfig{
+				Gradients: map[string]contract.GradientDef{
 					"aurora-borealis": {
-						Hi: &prism.SemanticColour{ANSI16: "cyan"},
-						Lo: &prism.SemanticColour{ANSI16: "magenta"},
+						Hi: &contract.SemanticColour{ANSI16: "cyan"},
+						Lo: &contract.SemanticColour{ANSI16: "magenta"},
 					},
 				},
 				Components: map[string]string{
-					prism.GradientComponentActivity: "aurora-borealis",
+					contract.GradientComponentActivity: "aurora-borealis",
 				},
 			}
 
 			palette.Highlights = highlights
 			w.Reset()
 
-			theme, err = prism.NewTheme(palette, w)
+			theme, err = contract.NewTheme(palette, w)
 			Expect(err).To(BeNil())
 
 			gGrad, has := theme.GradientFor("aurora-borealis")
@@ -307,7 +307,7 @@ var _ = Describe("Highway Gradient API", func() {
 			Expect(has).To(BeFalse()) // because HighlightsComponents["aurora-borealis"] doesn't exist!
 
 			// Correct way: use component-based lookup
-			gGrad, has = theme.GradientFor(prism.GradientComponentActivity)
+			gGrad, has = theme.GradientFor(contract.GradientComponentActivity)
 			Expect(has).To(BeTrue())
 			Expect(gGrad).NotTo(BeNil())
 		})
@@ -315,27 +315,27 @@ var _ = Describe("Highway Gradient API", func() {
 
 	Describe("sendMotif gradient resolution", func() {
 		It("resolves gradient via component name (sendMotif pattern), not gradient name", func() {
-			highlights := prism.HighlightsConfig{
-				Gradients: map[string]prism.GradientDef{
+			highlights := contract.HighlightsConfig{
+				Gradients: map[string]contract.GradientDef{
 					"aurora-borealis": {
 						Steps: 8,
-						Hi:    &prism.SemanticColour{ANSI16: "cyan"},
-						Lo:    &prism.SemanticColour{ANSI16: "magenta"},
+						Hi:    &contract.SemanticColour{ANSI16: "cyan"},
+						Lo:    &contract.SemanticColour{ANSI16: "magenta"},
 					},
 				},
 				Components: map[string]string{
-					prism.GradientComponentActivity: "aurora-borealis",
+					contract.GradientComponentActivity: "aurora-borealis",
 				},
 			}
 
 			palette.Highlights = highlights
 			w.Reset()
 
-			theme, err = prism.NewTheme(palette, w)
+			theme, err = contract.NewTheme(palette, w)
 			Expect(err).To(BeNil())
 
 			// Correct: resolve using component name (what sendMotif must do)
-			grad, has := theme.GradientFor(prism.GradientComponentActivity)
+			grad, has := theme.GradientFor(contract.GradientComponentActivity)
 			Expect(has).To(BeTrue())
 			Expect(grad.Steps).To(Equal(8))
 			Expect(grad.Hi).NotTo(BeNil())
@@ -351,10 +351,10 @@ var _ = Describe("Highway Gradient API", func() {
 
 	Describe("Empty highlights config", func() {
 		It("creates valid Theme with empty gradient maps", func() {
-			palette = prism.SystemPalette() // has no highlights
+			palette = contract.SystemPalette() // has no highlights
 			w.Reset()
 
-			theme, err = prism.NewTheme(palette, w)
+			theme, err = contract.NewTheme(palette, w)
 			Expect(err).To(BeNil())
 
 			Expect(theme.HighlightGradients).NotTo(BeNil())
@@ -363,7 +363,7 @@ var _ = Describe("Highway Gradient API", func() {
 			Expect(theme.HighlightsComponents).NotTo(BeNil())
 			Expect(len(theme.HighlightsComponents)).To(Equal(0))
 
-			gGrad, has := theme.GradientFor(prism.GradientComponentActivity)
+			gGrad, has := theme.GradientFor(contract.GradientComponentActivity)
 			Expect(has).To(BeFalse())
 			Expect(gGrad.Steps).To(Equal(0))
 		})
@@ -371,27 +371,27 @@ var _ = Describe("Highway Gradient API", func() {
 
 	Describe("Periscope component gradient", func() {
 		It("retrieves periscope gradient using component name constant", func() {
-			highlights := prism.HighlightsConfig{
-				Gradients: map[string]prism.GradientDef{
+			highlights := contract.HighlightsConfig{
+				Gradients: map[string]contract.GradientDef{
 					"aurora-borealis": {
 						Steps: 8,
-						Hi:    &prism.SemanticColour{ANSI16: "cyan", TrueColor: "#00E5FF"},
-						Lo:    &prism.SemanticColour{ANSI16: "magenta", TrueColor: "#B388FF"},
+						Hi:    &contract.SemanticColour{ANSI16: "cyan", TrueColor: "#00E5FF"},
+						Lo:    &contract.SemanticColour{ANSI16: "magenta", TrueColor: "#B388FF"},
 					},
 				},
 				Components: map[string]string{
-					prism.GradientComponentActivity:  "aurora-borealis",
-					prism.GradientComponentPeriscope: "aurora-borealis",
+					contract.GradientComponentActivity:  "aurora-borealis",
+					contract.GradientComponentPeriscope: "aurora-borealis",
 				},
 			}
 
 			palette.Highlights = highlights
 			w = &bytes.Buffer{}
 
-			theme, err = prism.NewTheme(palette, w)
+			theme, err = contract.NewTheme(palette, w)
 			Expect(err).To(BeNil())
 
-			pgGrad, has := theme.GradientFor(prism.GradientComponentPeriscope)
+			pgGrad, has := theme.GradientFor(contract.GradientComponentPeriscope)
 			Expect(has).To(BeTrue())
 			Expect(pgGrad.Steps).To(Equal(8))
 			Expect(pgGrad.Hi).NotTo(BeNil())
@@ -399,59 +399,59 @@ var _ = Describe("Highway Gradient API", func() {
 		})
 
 		It("returns false when periscope component is not configured", func() {
-			highlights := prism.HighlightsConfig{
-				Gradients: map[string]prism.GradientDef{
+			highlights := contract.HighlightsConfig{
+				Gradients: map[string]contract.GradientDef{
 					"aurora-borealis": {
 						Steps: 8,
-						Hi:    &prism.SemanticColour{ANSI16: "cyan"},
-						Lo:    &prism.SemanticColour{ANSI16: "magenta"},
+						Hi:    &contract.SemanticColour{ANSI16: "cyan"},
+						Lo:    &contract.SemanticColour{ANSI16: "magenta"},
 					},
 				},
 				Components: map[string]string{
-					prism.GradientComponentActivity: "aurora-borealis",
+					contract.GradientComponentActivity: "aurora-borealis",
 				},
 			}
 
 			palette.Highlights = highlights
 			w.Reset()
 
-			theme, err = prism.NewTheme(palette, w)
+			theme, err = contract.NewTheme(palette, w)
 			Expect(err).To(BeNil())
 
-			_, has := theme.GradientFor(prism.GradientComponentPeriscope)
+			_, has := theme.GradientFor(contract.GradientComponentPeriscope)
 			Expect(has).To(BeFalse())
 		})
 
 		It("independent from activity-control gradient", func() {
-			highlights := prism.HighlightsConfig{
-				Gradients: map[string]prism.GradientDef{
+			highlights := contract.HighlightsConfig{
+				Gradients: map[string]contract.GradientDef{
 					"aurora-borealis": {
 						Steps: 8,
-						Hi:    &prism.SemanticColour{ANSI16: "cyan", TrueColor: "#00E5FF"},
-						Lo:    &prism.SemanticColour{ANSI16: "magenta", TrueColor: "#B388FF"},
+						Hi:    &contract.SemanticColour{ANSI16: "cyan", TrueColor: "#00E5FF"},
+						Lo:    &contract.SemanticColour{ANSI16: "magenta", TrueColor: "#B388FF"},
 					},
 					"ember-glow": {
-						Hi: &prism.SemanticColour{ANSI16: "red", TrueColor: "#FF6F00"},
-						Lo: &prism.SemanticColour{ANSI16: "yellow", TrueColor: "#FFD54F"},
+						Hi: &contract.SemanticColour{ANSI16: "red", TrueColor: "#FF6F00"},
+						Lo: &contract.SemanticColour{ANSI16: "yellow", TrueColor: "#FFD54F"},
 					},
 				},
 				Components: map[string]string{
-					prism.GradientComponentActivity:  "aurora-borealis",
-					prism.GradientComponentPeriscope: "ember-glow",
+					contract.GradientComponentActivity:  "aurora-borealis",
+					contract.GradientComponentPeriscope: "ember-glow",
 				},
 			}
 
 			palette.Highlights = highlights
 			w.Reset()
 
-			theme, err = prism.NewTheme(palette, w)
+			theme, err = contract.NewTheme(palette, w)
 			Expect(err).To(BeNil())
 
-			aGrad, hasActivity := theme.GradientFor(prism.GradientComponentActivity)
+			aGrad, hasActivity := theme.GradientFor(contract.GradientComponentActivity)
 			Expect(hasActivity).To(BeTrue())
 			Expect(aGrad.Hi).NotTo(BeNil())
 
-			pGrad, hasPeriscope := theme.GradientFor(prism.GradientComponentPeriscope)
+			pGrad, hasPeriscope := theme.GradientFor(contract.GradientComponentPeriscope)
 			Expect(hasPeriscope).To(BeTrue())
 			Expect(pGrad.Hi).NotTo(BeNil())
 

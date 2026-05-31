@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/snivilised/jaywalk/src/app/report"
-	"github.com/snivilised/jaywalk/src/prism"
+	"github.com/snivilised/jaywalk/src/prism/contract"
 	"github.com/snivilised/jaywalk/src/prism/flow"
 )
 
@@ -37,7 +37,7 @@ const (
 // applies the palette's theme settings (colors, icons, styles). Custom
 // tree icons from the palette are explicitly applied via WithIcons to
 // ensure they override the defaults.
-func newLinearPresenter(palette prism.Palette) (report.Presenter, error) {
+func newLinearPresenter(palette contract.Palette) (report.Presenter, error) {
 	renderer, err := flow.New(
 		palette,
 		os.Stdout,
@@ -58,7 +58,7 @@ func newLinearPresenter(palette prism.Palette) (report.Presenter, error) {
 // the given palette. Only the selected view is instantiated; other views
 // are not created. Returns an error if the mode is unknown or if the
 // palette contains unrecognised colour names.
-func New(mode string, palette prism.Palette, hcfg HighwayConfig) (report.Presenter, error) {
+func New(mode string, palette contract.Palette, hCfg HighwayConfig) (report.Presenter, error) {
 	if mode == "" {
 		mode = ModeDefault
 	}
@@ -68,7 +68,7 @@ func New(mode string, palette prism.Palette, hcfg HighwayConfig) (report.Present
 		return newLinearPresenter(palette)
 
 	case ModeHighway:
-		return newHighwayPresenter(palette, hcfg)
+		return newHighwayPresenter(palette, hCfg)
 
 	default:
 		return nil, fmt.Errorf(

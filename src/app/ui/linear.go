@@ -8,21 +8,21 @@ import (
 	"github.com/snivilised/jaywalk/src/agenor/enums"
 	"github.com/snivilised/jaywalk/src/agenor/pref"
 	"github.com/snivilised/jaywalk/src/app/report"
-	"github.com/snivilised/jaywalk/src/prism"
+	"github.com/snivilised/jaywalk/src/prism/contract"
 	"github.com/snivilised/jaywalk/src/third/lo"
 )
 
 // linear is the linear-view display implementation. It translates
-// report events into prism.Motif calls and delegates all formatting
-// and output to the prism.Renderer. It contains no formatting logic.
+// report events into contract.Motif calls and delegates all formatting
+// and output to the contract.Renderer. It contains no formatting logic.
 //
 // Safe for concurrent use - all renderer calls are serialised through
 // a mutex so interleaved output from the sprint command's worker pool is
 // avoided.
 type linear struct {
 	mux          sync.Mutex
-	renderer     prism.Renderer
-	kind         prism.NavigationKind // remembered from OnBegin for use in OnComplete
+	renderer     contract.Renderer
+	kind         contract.NavigationKind // remembered from OnBegin for use in OnComplete
 	subscription enums.Subscription
 	lastParent   string
 	peerInfo     map[string]*core.PeerInfo
@@ -33,15 +33,15 @@ func (l *linear) OnTraversalOptions(o *pref.Options) {
 	o.View.Peer.IsActive = true
 }
 
-// OnBegin translates the BeginEvent into a prism.Overture and calls
+// OnBegin translates the BeginEvent into a contract.Overture and calls
 // renderer.Begin to render the opening banner.
 func (l *linear) OnBegin(e *report.BeginEvent) {
 	l.mux.Lock()
 	defer l.mux.Unlock()
 
 	kind := lo.Ternary(e.IsPrime,
-		prism.PrimeNavigation,
-		prism.ResumeNavigation,
+		contract.PrimeNavigation,
+		contract.ResumeNavigation,
 	)
 
 	l.kind = kind
@@ -49,7 +49,7 @@ func (l *linear) OnBegin(e *report.BeginEvent) {
 	l.lastParent = ""
 	l.renderedDirs = make(map[string]bool)
 
-	l.renderer.Begin(prism.Overture{
+	l.renderer.Begin(contract.Overture{
 		Root:       e.Root,
 		Caption:    e.Caption,
 		StartedAt:  e.StartedAt,
@@ -59,14 +59,14 @@ func (l *linear) OnBegin(e *report.BeginEvent) {
 	})
 }
 
-// OnNodeEvent translates a neutral node visit into a prism.Motif.
+// OnNodeEvent translates a neutral node visit into a contract.Motif.
 // Depth is sourced from node.Extension.Depth as provided by agenor.
 func (l *linear) OnNodeEvent(e *report.NeutralEvent) {
 	l.mux.Lock()
 	defer l.mux.Unlock()
 
 	l.ensureParentRendered(e.Node)
-	l.renderer.Show(prism.Motif{
+	l.renderer.Show(contract.Motif{
 		Path:        e.Node.Path,
 		Name:        e.Node.Extension.Name,
 		IsDir:       e.Node.IsDirectory(),
@@ -81,7 +81,7 @@ func (l *linear) OnActionEvent(e *report.ActionEvent) {
 	defer l.mux.Unlock()
 
 	l.ensureParentRendered(e.Node)
-	l.renderer.Show(prism.Motif{
+	l.renderer.Show(contract.Motif{
 		Path:            e.Node.Path,
 		Name:            e.Node.Extension.Name,
 		IsDir:           e.Node.IsDirectory(),
@@ -103,7 +103,7 @@ func (l *linear) OnPipelineEvent(e *report.PipelineEvent) {
 	defer l.mux.Unlock()
 
 	l.ensureParentRendered(e.Node)
-	l.renderer.Show(prism.Motif{
+	l.renderer.Show(contract.Motif{
 		Path:             e.Node.Path,
 		Name:             e.Node.Extension.Name,
 		IsDir:            e.Node.IsDirectory(),
@@ -119,14 +119,14 @@ func (l *linear) OnPipelineEvent(e *report.PipelineEvent) {
 	})
 }
 
-// OnSkipEvent translates a skip event into a prism.Motif flagged as
+// OnSkipEvent translates a skip event into a contract.Motif flagged as
 // skipped so the renderer can apply warning styling.
 func (l *linear) OnSkipEvent(e *report.SkipEvent) {
 	l.mux.Lock()
 	defer l.mux.Unlock()
 
 	l.ensureParentRendered(e.Node)
-	l.renderer.Show(prism.Motif{
+	l.renderer.Show(contract.Motif{
 		Path:           e.Node.Path,
 		Name:           e.Node.Extension.Name,
 		IsDir:          e.Node.IsDirectory(),
@@ -142,7 +142,7 @@ func (l *linear) OnSkipEvent(e *report.SkipEvent) {
 	})
 }
 
-// OnComplete translates the Traversal outcome into a prism.Summary and
+// OnComplete translates the Traversal outcome into a contract.Summary and
 // calls renderer.End to render the closing summary box. Kind is carried
 // from OnBegin so the summary labels correctly for resume traversals.
 func (l *linear) OnComplete(traversal *report.Traversal) {
@@ -154,7 +154,7 @@ func (l *linear) OnComplete(traversal *report.Traversal) {
 		errs = append(errs, traversal.Err)
 	}
 
-	l.renderer.End(prism.Summary{
+	l.renderer.End(contract.Summary{
 		FilesVisited: traversal.FilesVisited,
 		DirsVisited:  traversal.DirsVisited,
 		Skipped:      traversal.ActionsSkipped.Value(),
@@ -215,7 +215,7 @@ func (l *linear) ensureParentRendered(node *core.Node) {
 			}
 		}
 
-		l.renderer.Show(prism.Motif{
+		l.renderer.Show(contract.Motif{
 			Path:        p.Path,
 			Name:        p.Extension.Name,
 			IsDir:       true,
@@ -231,8 +231,8 @@ func (l *linear) ensureParentRendered(node *core.Node) {
 // NewLinearWithRenderer constructs a linear presenter backed by the
 // given renderer. Intended for use in tests only - production code
 // constructs linear via the ui registry using New(). This allows a
-// spy or stub renderer to be injected without going through prism.New
+// spy or stub renderer to be injected without going through contract.New
 // and without requiring a real terminal.
-func NewLinearWithRenderer(r prism.Renderer) report.Presenter {
+func NewLinearWithRenderer(r contract.Renderer) report.Presenter {
 	return &linear{renderer: r}
 }

@@ -11,7 +11,7 @@ import (
 	"github.com/snivilised/jaywalk/src/agenor/enums"
 	"github.com/snivilised/jaywalk/src/app/report"
 	"github.com/snivilised/jaywalk/src/app/ui"
-	"github.com/snivilised/jaywalk/src/prism"
+	"github.com/snivilised/jaywalk/src/prism/contract"
 
 	"reflect"
 	"unsafe"
@@ -25,24 +25,24 @@ import (
 // that tests can assert on the translated prism types without depending
 // on terminal output or lipgloss rendering.
 type spyRenderer struct {
-	overture prism.Overture
-	motifs   []prism.Motif
-	summary  prism.Summary
+	overture contract.Overture
+	motifs   []contract.Motif
+	summary  contract.Summary
 
 	beginCalled bool
 	endCalled   bool
 }
 
-func (s *spyRenderer) Begin(o prism.Overture) {
+func (s *spyRenderer) Begin(o contract.Overture) {
 	s.overture = o
 	s.beginCalled = true
 }
 
-func (s *spyRenderer) Show(m prism.Motif) {
+func (s *spyRenderer) Show(m contract.Motif) {
 	s.motifs = append(s.motifs, m)
 }
 
-func (s *spyRenderer) End(su prism.Summary) {
+func (s *spyRenderer) End(su contract.Summary) {
 	s.summary = su
 	s.endCalled = true
 }
@@ -55,7 +55,7 @@ func (s *spyRenderer) End(su prism.Summary) {
 // returns it as a report.Presenter. This uses the exported
 // ui.NewLinearWithRenderer constructor added specifically for testing
 // so that spies can be injected without going through the registry.
-func newLinearWithSpy(spy prism.Renderer) report.Presenter {
+func newLinearWithSpy(spy contract.Renderer) report.Presenter {
 	return ui.NewLinearWithRenderer(spy)
 }
 
@@ -115,7 +115,7 @@ var _ = Describe("linear", Ordered, func() {
 				Expect(spy.overture.Root).To(Equal("/home/user/docs"))
 				Expect(spy.overture.Caption).To(Equal("files and folders"))
 				Expect(spy.overture.StartedAt).To(Equal(now))
-				Expect(spy.overture.Kind).To(Equal(prism.PrimeNavigation))
+				Expect(spy.overture.Kind).To(Equal(contract.PrimeNavigation))
 				Expect(spy.overture.ResumeFrom).To(BeEmpty())
 			})
 		})
@@ -131,7 +131,7 @@ var _ = Describe("linear", Ordered, func() {
 					DateFormat: "Mon, 02 Jan 2006 15:04:05 MST",
 				})
 
-				Expect(spy.overture.Kind).To(Equal(prism.ResumeNavigation))
+				Expect(spy.overture.Kind).To(Equal(contract.ResumeNavigation))
 				Expect(spy.overture.ResumeFrom).To(Equal("/home/user/docs/subdir"))
 			})
 		})
@@ -376,7 +376,7 @@ var _ = Describe("linear", Ordered, func() {
 				Expect(s.DirsVisited).To(Equal(core.MetricValue(7)))
 				Expect(s.Elapsed).To(Equal(3 * time.Second))
 				Expect(s.Errors).To(BeEmpty())
-				Expect(s.Kind).To(Equal(prism.PrimeNavigation))
+				Expect(s.Kind).To(Equal(contract.PrimeNavigation))
 			})
 		})
 
@@ -411,7 +411,7 @@ var _ = Describe("linear", Ordered, func() {
 
 				presenter.OnComplete(&report.Traversal{})
 
-				Expect(spy.summary.Kind).To(Equal(prism.ResumeNavigation))
+				Expect(spy.summary.Kind).To(Equal(contract.ResumeNavigation))
 			})
 		})
 	})

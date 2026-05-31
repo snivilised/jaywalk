@@ -9,7 +9,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/snivilised/jaywalk/src/app/bedrock"
-	"github.com/snivilised/jaywalk/src/prism"
+	"github.com/snivilised/jaywalk/src/prism/contract"
 	"github.com/snivilised/nefilim/test/luna"
 )
 
@@ -119,7 +119,7 @@ var _ = Describe("ThemeLoader", Ordered, func() {
 				palette, err := loader.Load("")
 
 				Expect(err).To(BeNil())
-				Expect(palette).To(Equal(prism.SystemPalette()))
+				Expect(palette).To(Equal(contract.SystemPalette()))
 			})
 		})
 
@@ -130,7 +130,7 @@ var _ = Describe("ThemeLoader", Ordered, func() {
 				palette, err := loader.Load(bedrock.ThemeSystemName)
 
 				Expect(err).To(BeNil())
-				Expect(palette).To(Equal(prism.SystemPalette()))
+				Expect(palette).To(Equal(contract.SystemPalette()))
 			})
 		})
 

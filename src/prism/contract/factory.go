@@ -29,17 +29,17 @@ func New(kind ViewKind, palette Palette, writer io.Writer) (Renderer, error) {
 	case factory != nil:
 		renderer, err := factory(palette, writer)
 		if err != nil {
-			return nil, fmt.Errorf("prism.New: %w", err)
+			return nil, fmt.Errorf("contract.New: %w", err)
 		}
 		return renderer, nil
 	default:
 		fallback := factories[LinearView]
 		if fallback == nil {
-			return nil, fmt.Errorf("prism.New: no renderer factory registered for view %q", kind)
+			return nil, fmt.Errorf("contract.New: no renderer factory registered for view %q", kind)
 		}
 		renderer, err := fallback(palette, writer)
 		if err != nil {
-			return nil, fmt.Errorf("prism.New: %w", err)
+			return nil, fmt.Errorf("contract.New: %w", err)
 		}
 		return renderer, nil
 	}

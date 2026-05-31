@@ -2,7 +2,7 @@
 // view-specific options.
 //
 // Dependency rule: flow imports contract (shared types) and is imported
-// by prism root. Parent depends on child; no import cycles.
+// by prism root.
 package flow
 
 import (
@@ -14,7 +14,9 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/snivilised/jaywalk/src/agenor/core"
 	"github.com/snivilised/jaywalk/src/prism/contract"
-	"github.com/snivilised/jaywalk/src/prism/widget"
+	"github.com/snivilised/jaywalk/src/prism/widgets/clock"
+	"github.com/snivilised/jaywalk/src/prism/widgets/landing"
+	"github.com/snivilised/jaywalk/src/prism/widgets/summary"
 	"github.com/snivilised/jaywalk/src/third/lo"
 )
 
@@ -81,19 +83,19 @@ func (r *renderer) Show(motif contract.Motif) {
 		)
 
 	case motif.Skipped:
-		name = r.renderSkipped(motif)
+		name = r.skipped(motif)
 
 	case motif.IsPipelineStep:
-		name = r.renderStep(motif)
+		name = r.step(motif)
 
 	case motif.Depth == 0:
-		name = r.renderRoot(motif)
+		name = r.root(motif)
 
 	case motif.IsDir:
-		name = r.renderDir(motif)
+		name = r.dir(motif)
 
 	default:
-		name = r.renderFile(motif)
+		name = r.file(motif)
 	}
 
 	_, _ = lipgloss.Fprintf(r.writer, "%s%s\n", depth, name)
@@ -119,7 +121,7 @@ func (r *renderer) itemLabel(motif contract.Motif) string {
 	return label
 }
 
-func (r *renderer) renderSkipped(motif contract.Motif) string {
+func (r *renderer) skipped(motif contract.Motif) string {
 	var b strings.Builder
 
 	itemName := "~ " + motif.Name
@@ -139,7 +141,7 @@ func (r *renderer) renderSkipped(motif contract.Motif) string {
 	return b.String()
 }
 
-func (r *renderer) renderRoot(motif contract.Motif) string {
+func (r *renderer) root(motif contract.Motif) string {
 	var b strings.Builder
 
 	icon := r.treeIcons[contract.TreeIconRoot]
@@ -156,25 +158,25 @@ func (r *renderer) renderRoot(motif contract.Motif) string {
 	return r.theme.RootStyle.Render(b.String())
 }
 
-func (r *renderer) renderDir(motif contract.Motif) string {
+func (r *renderer) dir(motif contract.Motif) string {
 	var b strings.Builder
 
 	b.WriteString(r.theme.DirStyle.Render(r.itemLabel(motif)))
-	b.WriteString(r.renderActionOrPipeline(motif))
+	b.WriteString(r.task(motif))
 
 	return b.String()
 }
 
-func (r *renderer) renderFile(motif contract.Motif) string {
+func (r *renderer) file(motif contract.Motif) string {
 	var b strings.Builder
 
 	b.WriteString(r.theme.FileStyle.Render(r.itemLabel(motif)))
-	b.WriteString(r.renderActionOrPipeline(motif))
+	b.WriteString(r.task(motif))
 
 	return b.String()
 }
 
-func (r *renderer) renderStep(motif contract.Motif) string {
+func (r *renderer) step(motif contract.Motif) string {
 	var b strings.Builder
 
 	if motif.Err != nil {
@@ -190,37 +192,37 @@ func (r *renderer) renderStep(motif contract.Motif) string {
 		b.WriteString(r.theme.SkippedStyle.Render(skipReason))
 	} else {
 		b.WriteString(r.theme.ActionStyle.Render("  • via " + motif.ActionName))
-		b.WriteString(r.renderExecutionInfo(motif))
+		b.WriteString(r.execution(motif))
 	}
 
 	return b.String()
 }
 
-func (r *renderer) renderActionOrPipeline(motif contract.Motif) string {
+func (r *renderer) task(motif contract.Motif) string {
 	var b strings.Builder
 
 	if motif.ActionName != "" {
 		b.WriteString(r.theme.ActionStyle.Render("  • via " + motif.ActionName))
-		b.WriteString(r.renderExecutionInfo(motif))
+		b.WriteString(r.execution(motif))
 	} else if motif.PipelineName != "" {
 		b.WriteString(r.theme.PipelineStyle.Render("  • via " + motif.PipelineName))
-		b.WriteString(r.renderExecutionInfo(motif))
+		b.WriteString(r.execution(motif))
 	}
 
 	return b.String()
 }
 
-func (r *renderer) renderExecutionInfo(motif contract.Motif) string {
+func (r *renderer) execution(motif contract.Motif) string {
 	skippedIcon := ""
 	if motif.Skipped {
 		skippedIcon = r.treeIcons[contract.TreeIconSkipped]
 	}
-	return widget.RenderLandingStrip(widget.LandingStripConfig{
+	return landing.Render(landing.Config{
 		CommandOutput:   motif.CommandOutput,
 		ExecutionString: motif.ExecutionString,
 		DryRun:          motif.DryRun,
 		SkippedIcon:     skippedIcon,
-	}, widget.LandingStripStyles{
+	}, landing.Styles{
 		BranchStyle:       r.theme.BranchStyle,
 		LandingStripStyle: r.theme.LandingStripStyle,
 	})
@@ -284,29 +286,29 @@ func (r *renderer) updateBranchStack(motif contract.Motif) {
 }
 
 // End renders the closing summary box with traversal counts and elapsed time.
-func (r *renderer) End(summary contract.Summary) {
+func (r *renderer) End(summ contract.Summary) {
 	fileLabel := "Files"
 	dirLabel := "Directories"
 	skippedLabel := "Skipped"
 	elapsedLabel := "Elapsed"
 
-	if summary.Kind == contract.ResumeNavigation {
+	if summ.Kind == contract.ResumeNavigation {
 		fileLabel = "Files (resumed)"
 		dirLabel = "Dirs (resumed)"
 	}
 
-	errorCount := len(summary.Errors)
+	errorCount := len(summ.Errors)
 
-	rows := []widget.SummaryRow{
-		r.summaryRow(contract.TreeIconFile, fileLabel, fmt.Sprintf("%d", summary.FilesVisited)),
-		r.summaryRow(contract.TreeIconDirectory, dirLabel, fmt.Sprintf("%d", summary.DirsVisited)),
-		r.summaryRow(contract.TreeIconSkipped, skippedLabel, fmt.Sprintf("%d", summary.Skipped)),
-		r.summaryRow(contract.TreeIconError, "Errors", fmt.Sprintf("%d", errorCount)),
-		r.summaryRow(contract.TreeIconElapsed, elapsedLabel, widget.FormatDuration(summary.Elapsed)),
+	rows := []summary.Field{
+		r.summaryField(contract.TreeIconFile, fileLabel, fmt.Sprintf("%d", summ.FilesVisited)),
+		r.summaryField(contract.TreeIconDirectory, dirLabel, fmt.Sprintf("%d", summ.DirsVisited)),
+		r.summaryField(contract.TreeIconSkipped, skippedLabel, fmt.Sprintf("%d", summ.Skipped)),
+		r.summaryField(contract.TreeIconError, "Errors", fmt.Sprintf("%d", errorCount)),
+		r.summaryField(contract.TreeIconElapsed, elapsedLabel, clock.FormatDuration(summ.Elapsed)),
 	}
 
 	if errorCount > 0 {
-		errorStyles := widget.SummaryCellStyles{
+		errorStyles := summary.CellStyles{
 			Icon:  r.theme.ErrorStyle,
 			Label: r.theme.ErrorStyle,
 			Value: r.theme.ErrorStyle,
@@ -314,17 +316,17 @@ func (r *renderer) End(summary contract.Summary) {
 
 		rows[len(rows)-2].Styles = &errorStyles
 
-		for _, err := range summary.Errors {
-			rows = append(rows, widget.SummaryRow{
+		for _, err := range summ.Errors {
+			rows = append(rows, summary.Field{
 				Label:  err.Error(),
 				Styles: &errorStyles,
 			})
 		}
 	}
 
-	box := widget.RenderSummary(rows, widget.SummaryStyles{
+	box := summary.Render(rows, summary.Styles{
 		Box: r.theme.BoxStyle,
-		Default: widget.SummaryCellStyles{
+		Default: summary.CellStyles{
 			Icon:  r.theme.SummaryLabelStyle,
 			Label: r.theme.SummaryLabelStyle,
 			Value: r.theme.SummaryValueStyle,
@@ -333,8 +335,8 @@ func (r *renderer) End(summary contract.Summary) {
 	_, _ = lipgloss.Fprintln(r.writer, box)
 }
 
-func (r *renderer) summaryRow(iconKey, label, value string) widget.SummaryRow {
-	return widget.SummaryRow{
+func (r *renderer) summaryField(iconKey, label, value string) summary.Field {
+	return summary.Field{
 		Icon:  r.treeIcons[iconKey],
 		Label: label,
 		Value: value,

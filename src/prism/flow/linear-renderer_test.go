@@ -10,20 +10,20 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/snivilised/jaywalk/src/prism"
+	"github.com/snivilised/jaywalk/src/prism/contract"
 	"github.com/snivilised/jaywalk/src/prism/flow"
 )
 
 var _ = Describe("LinearRenderer", func() {
 	It("renders tree branches with default icons", func() {
 		w := &bytes.Buffer{}
-		palette := prism.Palette{}
+		palette := contract.Palette{}
 
 		renderer, err := flow.New(palette, w)
 		Expect(err).To(Succeed())
 		Expect(renderer).NotTo(BeNil())
 
-		renderer.Show(prism.Motif{
+		renderer.Show(contract.Motif{
 			Name:        "app",
 			IsDir:       true,
 			Depth:       0,
@@ -31,7 +31,7 @@ var _ = Describe("LinearRenderer", func() {
 			IsLast:      true,
 		})
 
-		renderer.Show(prism.Motif{
+		renderer.Show(contract.Motif{
 			Name:        "bedrock",
 			IsDir:       true,
 			Depth:       1,
@@ -39,7 +39,7 @@ var _ = Describe("LinearRenderer", func() {
 			IsLast:      false,
 		})
 
-		renderer.Show(prism.Motif{
+		renderer.Show(contract.Motif{
 			Name:        "bedrock_suite_test.go",
 			IsDir:       false,
 			Depth:       1,
@@ -55,21 +55,21 @@ var _ = Describe("LinearRenderer", func() {
 
 	It("applies WithIcons overrides", func() {
 		w := &bytes.Buffer{}
-		palette := prism.Palette{}
+		palette := contract.Palette{}
 
 		renderer, err := flow.New(palette, w, flow.WithIcons(map[string]string{
-			prism.TreeIconRoot:           "R",
-			prism.TreeIconDirectory:      "D",
-			prism.TreeIconFile:           "F",
-			prism.TreeIconElapsed:        "E",
-			prism.TreeIconBranchJoint:    "+-- ",
-			prism.TreeIconBranchLast:     "L-- ",
-			prism.TreeIconBranchVertical: "|",
-			prism.TreeIconBranchIndent:   "  ",
+			contract.TreeIconRoot:           "R",
+			contract.TreeIconDirectory:      "D",
+			contract.TreeIconFile:           "F",
+			contract.TreeIconElapsed:        "E",
+			contract.TreeIconBranchJoint:    "+-- ",
+			contract.TreeIconBranchLast:     "L-- ",
+			contract.TreeIconBranchVertical: "|",
+			contract.TreeIconBranchIndent:   "  ",
 		}))
 		Expect(err).To(Succeed())
 
-		renderer.Show(prism.Motif{
+		renderer.Show(contract.Motif{
 			Name:        "root",
 			IsDir:       true,
 			Depth:       0,
@@ -77,7 +77,7 @@ var _ = Describe("LinearRenderer", func() {
 			IsLast:      true,
 		})
 
-		renderer.Show(prism.Motif{
+		renderer.Show(contract.Motif{
 			Name:        "child",
 			IsDir:       false,
 			Depth:       1,
@@ -91,13 +91,13 @@ var _ = Describe("LinearRenderer", func() {
 
 	It("renders summary entries with tree icon prefixes", func() {
 		w := &bytes.Buffer{}
-		palette := prism.Palette{}
+		palette := contract.Palette{}
 
 		renderer, err := flow.New(palette, w)
 		Expect(err).To(Succeed())
 
-		renderer.End(prism.Summary{
-			Kind:         prism.PrimeNavigation,
+		renderer.End(contract.Summary{
+			Kind:         contract.PrimeNavigation,
 			FilesVisited: 12,
 			DirsVisited:  3,
 			Elapsed:      2 * time.Second,
@@ -111,18 +111,18 @@ var _ = Describe("LinearRenderer", func() {
 
 	It("aligns summary values when the elapsed icon has a different display width", func() {
 		w := &bytes.Buffer{}
-		palette := prism.Palette{}
+		palette := contract.Palette{}
 
 		// ⏱️ this emoji is 2 columns wide and breaks width calculation
 		// probably because some lipgloss internal processing is not performing
 		// correct rune width calculations
 		renderer, err := flow.New(palette, w, flow.WithIcons(map[string]string{
-			prism.TreeIconElapsed: "🦋",
+			contract.TreeIconElapsed: "🦋",
 		}))
 		Expect(err).To(Succeed())
 
-		renderer.End(prism.Summary{
-			Kind:         prism.PrimeNavigation,
+		renderer.End(contract.Summary{
+			Kind:         contract.PrimeNavigation,
 			FilesVisited: 55,
 			DirsVisited:  7,
 			Skipped:      0,
@@ -138,25 +138,25 @@ var _ = Describe("LinearRenderer", func() {
 
 	It("returns a renderer when options are provided", func() {
 		w := &bytes.Buffer{}
-		palette := prism.Palette{}
+		palette := contract.Palette{}
 
 		renderer, err := flow.New(palette, w, flow.WithIcons(nil))
 		Expect(err).To(Succeed())
 		Expect(renderer).NotTo(BeNil())
 		Expect(renderer).To(Not(BeNil()))
-		renderer.Show(prism.Motif{Name: "test", Depth: 0, VisualDepth: 0, IsDir: true, IsLast: true})
+		renderer.Show(contract.Motif{Name: "test", Depth: 0, VisualDepth: 0, IsDir: true, IsLast: true})
 		Expect(w.String()).To(ContainSubstring("✻ test/"))
 	})
 
 	It("renders the banner inside the summary border style", func() {
 		w := &bytes.Buffer{}
-		palette := prism.Palette{}
+		palette := contract.Palette{}
 
 		renderer, err := flow.New(palette, w)
 		Expect(err).To(Succeed())
 
-		renderer.Begin(prism.Overture{
-			Kind:      prism.PrimeNavigation,
+		renderer.Begin(contract.Overture{
+			Kind:      contract.PrimeNavigation,
 			Root:      "./src/app",
 			Caption:   "files and folders",
 			StartedAt: time.Date(2026, time.May, 10, 11, 31, 7, 0, time.UTC),
@@ -171,16 +171,16 @@ var _ = Describe("LinearRenderer", func() {
 
 	It("renders final directory children without vertical continuation", func() {
 		w := &bytes.Buffer{}
-		palette := prism.Palette{}
+		palette := contract.Palette{}
 
 		renderer, err := flow.New(palette, w)
 		Expect(err).To(Succeed())
 
-		renderer.Show(prism.Motif{Name: "src", IsDir: true, Depth: 0, VisualDepth: 0, IsLast: true})
-		renderer.Show(prism.Motif{Name: "app", IsDir: true, Depth: 1, VisualDepth: 1, IsLast: false})
-		renderer.Show(prism.Motif{Name: "main.go", IsDir: false, Depth: 2, VisualDepth: 2, IsLast: true})
-		renderer.Show(prism.Motif{Name: "ui", IsDir: true, Depth: 1, VisualDepth: 1, IsLast: true})
-		renderer.Show(prism.Motif{Name: "doc.go", IsDir: false, Depth: 2, VisualDepth: 2, IsLast: true})
+		renderer.Show(contract.Motif{Name: "src", IsDir: true, Depth: 0, VisualDepth: 0, IsLast: true})
+		renderer.Show(contract.Motif{Name: "app", IsDir: true, Depth: 1, VisualDepth: 1, IsLast: false})
+		renderer.Show(contract.Motif{Name: "main.go", IsDir: false, Depth: 2, VisualDepth: 2, IsLast: true})
+		renderer.Show(contract.Motif{Name: "ui", IsDir: true, Depth: 1, VisualDepth: 1, IsLast: true})
+		renderer.Show(contract.Motif{Name: "doc.go", IsDir: false, Depth: 2, VisualDepth: 2, IsLast: true})
 
 		output := w.String()
 		Expect(output).To(ContainSubstring("└── 📁 ui/"))
@@ -189,15 +189,15 @@ var _ = Describe("LinearRenderer", func() {
 
 	It("applies BranchStyle from theme to branch characters", func() {
 		w := &bytes.Buffer{}
-		palette := prism.SystemPalette()
-		palette.Branch = prism.SemanticColour{ANSI16: "green"}
+		palette := contract.SystemPalette()
+		palette.Branch = contract.SemanticColour{ANSI16: "green"}
 
 		renderer, err := flow.New(palette, w)
 		Expect(err).To(Succeed())
 		Expect(renderer).NotTo(BeNil())
 
-		renderer.Show(prism.Motif{Name: "root", IsDir: true, Depth: 0, VisualDepth: 0, IsLast: true})
-		renderer.Show(prism.Motif{Name: "child", IsDir: false, Depth: 1, VisualDepth: 1, IsLast: true})
+		renderer.Show(contract.Motif{Name: "root", IsDir: true, Depth: 0, VisualDepth: 0, IsLast: true})
+		renderer.Show(contract.Motif{Name: "child", IsDir: false, Depth: 1, VisualDepth: 1, IsLast: true})
 
 		output := w.String()
 		Expect(output).To(ContainSubstring("✻ root/\n"))

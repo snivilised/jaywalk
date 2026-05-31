@@ -10,18 +10,18 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/snivilised/jaywalk/src/prism/contract"
-	"github.com/snivilised/jaywalk/src/prism/widget"
+	"github.com/snivilised/jaywalk/src/prism/widgets/periscope"
 )
 
 var _ = Describe("Periscope Gradient", func() {
 	var (
 		dummyStyle lipgloss.Style
-		testStyles widget.PeriscopeStyles
+		testStyles periscope.Styles
 	)
 
 	BeforeEach(func() {
 		dummyStyle = lipgloss.NewStyle()
-		testStyles = widget.PeriscopeStyles{
+		testStyles = periscope.Styles{
 			Filled: dummyStyle,
 			Empty:  dummyStyle,
 		}
