@@ -20,7 +20,9 @@ func (b *Bootstrap) buildWalkCommand(container *assist.CobraContainer) {
 	}
 
 	b.bindNavFlags(walkCmd, &b.walk.navState)
-	b.bindExecFlags(walkCmd, &b.walk.execPs)
+
+	b.walk.execPs = assist.NewParamSet[ExecParameterSet](walkCmd)
+	b.bindExecFlags(walkCmd, b.walk.execPs)
 
 	container.MustRegisterParamSet(WalkNavPsName, b.walk.navPs)
 	container.MustRegisterParamSet(WalkExecPsName, b.walk.execPs)

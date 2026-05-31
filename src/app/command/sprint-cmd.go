@@ -23,7 +23,9 @@ func (b *Bootstrap) buildSprintCommand(container *assist.CobraContainer) {
 	}
 
 	b.bindNavFlags(sprintCmd, &b.sprint.navState)
-	b.bindExecFlags(sprintCmd, &b.sprint.execPs)
+
+	b.sprint.execPs = assist.NewParamSet[ExecParameterSet](sprintCmd)
+	b.bindExecFlags(sprintCmd, b.sprint.execPs)
 
 	// family: worker-pool [--cpu, --now] — sprint-exclusive, local flags only.
 	b.sprint.workerPoolFam = assist.NewParamSet[store.WorkerPoolParameterSet](sprintCmd)
