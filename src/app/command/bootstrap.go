@@ -514,18 +514,15 @@ func (b *Bootstrap) bindNavFlags(cmd *cobra.Command, ns *navState) {
 // bindExecFlags registers --resume onto the supplied command's local flag
 // set and populates the provided ParamSet pointer. Called only by walk and
 // sprint; query intentionally omits this since it cannot be resumed.
-func (b *Bootstrap) bindExecFlags(cmd *cobra.Command, ep **assist.ParamSet[ExecParameterSet]) {
-	// TODO: WTF **??
-	*ep = assist.NewParamSet[ExecParameterSet](cmd)
-
-	(*ep).BindString(
+func (b *Bootstrap) bindExecFlags(cmd *cobra.Command, ep *assist.ParamSet[ExecParameterSet]) {
+	ep.BindString(
 		assist.NewFlagInfoOnFlagSet(
 			li18ngo.Text(locale.ResumeFlagDescTemplData{}),
 			"r",
 			"",
 			cmd.Flags(),
 		),
-		&(*ep).Native.Resume,
+		&ep.Native.Resume,
 	)
 }
 
