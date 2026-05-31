@@ -11,7 +11,7 @@ import (
 
 	"github.com/snivilised/jaywalk/src/agenor/core"
 	"github.com/snivilised/jaywalk/src/prism/contract"
-	"github.com/snivilised/jaywalk/src/prism/traffic"
+	"github.com/snivilised/jaywalk/src/prism/movies"
 	"github.com/snivilised/jaywalk/src/prism/widget"
 )
 
@@ -109,9 +109,9 @@ var _ = Describe("NewModel", func() {
 
 var _ = Describe("RegisterAll smoke test", func() {
 	It("Lookup returns all spinner types after RegisterAll", func() {
-		traffic.RegisterAll()
-		for name := range traffic.SpinnerNames {
-			def, ok := traffic.Lookup(name)
+		movies.RegisterAll()
+		for name := range movies.SpinnerNames {
+			def, ok := movies.Lookup(name)
 			Expect(ok).To(BeTrue(), "Lookup(%q) should succeed", name)
 			Expect(def.Frames).NotTo(BeNil())
 			hasNonEmpty := def.Frames(0) != "" || def.Frames(1) != "" || def.Frames(2) != "" || def.Frames(3) != ""

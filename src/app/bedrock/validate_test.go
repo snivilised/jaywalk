@@ -5,7 +5,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/snivilised/jaywalk/src/app/bedrock"
 	"github.com/snivilised/jaywalk/src/locale"
-	"github.com/snivilised/jaywalk/src/prism/traffic"
+	"github.com/snivilised/jaywalk/src/prism/movies"
 	"github.com/snivilised/li18ngo"
 )
 
@@ -18,7 +18,7 @@ var _ = Describe("Validate", Ordered, func() {
 				}
 			},
 		)).To(Succeed())
-		traffic.RegisterAll()
+		movies.RegisterAll()
 	})
 
 	// -----------------------------------------------------------------------

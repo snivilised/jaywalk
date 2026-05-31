@@ -1,4 +1,4 @@
-package traffic
+package movies
 
 const (
 	SpinnerTypeDefault = "spinner"

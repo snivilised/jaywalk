@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/snivilised/jaywalk/src/prism/traffic"
+	"github.com/snivilised/jaywalk/src/prism/movies"
 )
 
 // ValidationError collects every validation failure in one pass so the
@@ -89,9 +89,9 @@ func (c HighwayConfig) Validate() error {
 	}
 
 	spinners := &c.AnimationData.Spinners
-	for _, name := range traffic.ExpandNames(spinners.Enabled) {
+	for _, name := range movies.ExpandNames(spinners.Enabled) {
 		cfg := spinners.Override[name]
-		if _, known := traffic.SpinnerNames[name]; !known {
+		if _, known := movies.SpinnerNames[name]; !known {
 			ve.addF("ui.highway.animation.spinners.enabled: unknown spinner type %q", name)
 			continue
 		}

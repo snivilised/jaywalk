@@ -1,4 +1,4 @@
-package traffic
+package movies
 
 import (
 	"strings"
@@ -13,7 +13,7 @@ func newClassicWaveform() contract.FrameFunc {
 	return func(tick int) string {
 		phase := tick % 16
 		var out strings.Builder
-		for i := 0; i < 7; i++ {
+		for i := range 7 {
 			val := (phase + i) % len(chars)
 			out.WriteString(chars[val])
 		}
@@ -26,7 +26,7 @@ func newParticleDrift() contract.FrameFunc {
 	return func(tick int) string {
 		seed := tick % 20
 		var out strings.Builder
-		for i := 0; i < 7; i++ {
+		for i := range 7 {
 			idx := (seed + i*3) % len(particles)
 			out.WriteString(particles[idx])
 		}
@@ -39,7 +39,7 @@ func newPulsingRings() contract.FrameFunc {
 	return func(tick int) string {
 		pos := tick % 10
 		var out strings.Builder
-		for i := 0; i < 5; i++ {
+		for i := range 5 {
 			idx := (pos + i*2) % len(rings)
 			out.WriteString(rings[idx])
 		}
@@ -52,7 +52,7 @@ func newASCIILandscape() contract.FrameFunc {
 	return func(tick int) string {
 		offset := tick % 32
 		var out strings.Builder
-		for i := 0; i < 8; i++ {
+		for i := range 8 {
 			idx := (offset + i*4) % len(terrain)
 			out.WriteString(terrain[idx])
 		}
@@ -65,7 +65,7 @@ func newMatrixRain() contract.FrameFunc {
 	return func(tick int) string {
 		pos := tick % 12
 		var out strings.Builder
-		for i := 0; i < 6; i++ {
+		for i := range 6 {
 			idx := (pos + i*2) % len(chars)
 			out.WriteString(chars[idx])
 		}
@@ -77,7 +77,7 @@ func newGradientFlow() contract.FrameFunc {
 	return func(tick int) string {
 		pos := tick % 20
 		var out strings.Builder
-		for i := 0; i < 8; i++ {
+		for i := range 8 {
 			idx := (pos + i*3) % len(intensityChars)
 			out.WriteString(intensityChars[idx])
 		}
@@ -90,7 +90,7 @@ func newBreathingCircles() contract.FrameFunc {
 	return func(tick int) string {
 		pos := tick % 12
 		var out strings.Builder
-		for i := 0; i < 5; i++ {
+		for i := range 5 {
 			idx := (pos + i*2) % len(cycle)
 			out.WriteString(cycle[idx])
 		}
@@ -103,7 +103,7 @@ func newNetworkGraph() contract.FrameFunc {
 	return func(tick int) string {
 		pos := tick % 16
 		var out strings.Builder
-		for i := 0; i < 7; i++ {
+		for i := range 7 {
 			idx := (pos + i*3) % len(nodes)
 			out.WriteString(nodes[idx])
 			if i < 6 {

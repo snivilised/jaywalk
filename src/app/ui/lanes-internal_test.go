@@ -6,12 +6,12 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/snivilised/jaywalk/src/app/ui"
-	"github.com/snivilised/jaywalk/src/prism/traffic"
+	"github.com/snivilised/jaywalk/src/prism/movies"
 )
 
 var _ = Describe("BuildHighwayLanes", func() {
 	BeforeEach(func() {
-		traffic.RegisterAll()
+		movies.RegisterAll()
 	})
 
 	It("lane count is driven by now parameter, not spinner names", func() {
