@@ -13,7 +13,7 @@ import (
 	nef "github.com/snivilised/nefilim"
 
 	"github.com/snivilised/jaywalk/src/agenor/core"
-	"github.com/snivilised/jaywalk/src/prism"
+	"github.com/snivilised/jaywalk/src/prism/contract"
 )
 
 const (
@@ -97,14 +97,14 @@ func (tl *ThemeLoader) readFile(v *viper.Viper, path string) error {
 	return v.ReadInConfig()
 }
 
-// Load returns the prism.Palette for the named theme. The name
+// Load returns the contract.Palette for the named theme. The name
 // "system" returns SystemPalette() without reading any file.
 // Any other name is resolved to <themesDir>/<name>.<ext> for each
 // registered extension and decoded via mapstructure. Returns an
 // error if no file is found or the file cannot be decoded.
-func (tl *ThemeLoader) Load(name string) (prism.Palette, error) {
+func (tl *ThemeLoader) Load(name string) (contract.Palette, error) {
 	if name == "" || name == ThemeSystemName {
-		return prism.SystemPalette(), nil
+		return contract.SystemPalette(), nil
 	}
 
 	var lastErr error
@@ -120,7 +120,7 @@ func (tl *ThemeLoader) Load(name string) (prism.Palette, error) {
 				continue
 			}
 
-			return prism.Palette{}, fmt.Errorf(
+			return contract.Palette{}, fmt.Errorf(
 				"reading theme %q at %s: %w",
 				name,
 				path,
@@ -130,17 +130,17 @@ func (tl *ThemeLoader) Load(name string) (prism.Palette, error) {
 
 		raw := v.Sub("palette")
 		if raw == nil {
-			return prism.Palette{}, fmt.Errorf(
+			return contract.Palette{}, fmt.Errorf(
 				"theme %q: missing required 'palette' key in %s",
 				name,
 				path,
 			)
 		}
 
-		var palette prism.Palette
+		var palette contract.Palette
 
 		if err := raw.Unmarshal(&palette, mapstructureTagOption()); err != nil {
-			return prism.Palette{}, fmt.Errorf(
+			return contract.Palette{}, fmt.Errorf(
 				"theme %q: decoding palette from %s: %w",
 				name,
 				path,
@@ -155,7 +155,7 @@ func (tl *ThemeLoader) Load(name string) (prism.Palette, error) {
 	// for clarity.
 	first := filepath.Join(tl.themesDir, name+themeExtensions[0])
 	if os.IsNotExist(lastErr) {
-		return prism.Palette{}, fmt.Errorf(
+		return contract.Palette{}, fmt.Errorf(
 			"theme %q not found — tried %s/.%s{.yaml,.yml}",
 			name,
 			tl.themesDir,
@@ -163,7 +163,7 @@ func (tl *ThemeLoader) Load(name string) (prism.Palette, error) {
 		)
 	}
 
-	return prism.Palette{}, fmt.Errorf(
+	return contract.Palette{}, fmt.Errorf(
 		"theme %q not found - expected file at %s",
 		name,
 		first,
@@ -171,7 +171,7 @@ func (tl *ThemeLoader) Load(name string) (prism.Palette, error) {
 }
 
 // NameFromPalette extracts the component's gradient name or empty string.
-func (tl *ThemeLoader) NameFromPalette(p prism.Palette, componentName string) string {
+func (tl *ThemeLoader) NameFromPalette(p contract.Palette, componentName string) string {
 	components := p.Highlights.Components
 	if len(components) == 0 {
 		return ""

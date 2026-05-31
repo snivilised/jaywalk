@@ -7,7 +7,7 @@ import (
 
 	"github.com/snivilised/jaywalk/src/prism/contract"
 	"github.com/snivilised/jaywalk/src/prism/layout"
-	"github.com/snivilised/jaywalk/src/prism/widget"
+	"github.com/snivilised/jaywalk/src/prism/widgets/clock"
 )
 
 func (m Model) renderSummary(b *strings.Builder) {
@@ -70,7 +70,7 @@ func (m Model) renderSummary(b *strings.Builder) {
 
 	elapsedIcon := m.theme.TreeIcons[contract.TreeIconElapsed]
 	elapsedLabel := m.theme.SummaryLabelStyle.Render(elapsedIcon + " elapsed:")
-	elapsedStr := widget.FormatDuration(elapsed)
+	elapsedStr := clock.FormatDuration(elapsed)
 	elapsedValue := m.theme.SummaryValueStyle.Render(elapsedStr)
 	elapsedText := " " + elapsedLabel + " " + elapsedValue + " "
 

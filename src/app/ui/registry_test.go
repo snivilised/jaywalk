@@ -10,7 +10,7 @@ import (
 	"github.com/snivilised/jaywalk/src/agenor/core"
 	"github.com/snivilised/jaywalk/src/app/report"
 	"github.com/snivilised/jaywalk/src/app/ui"
-	"github.com/snivilised/jaywalk/src/prism"
+	"github.com/snivilised/jaywalk/src/prism/contract"
 )
 
 var _ = Describe("Registry", func() {
@@ -22,7 +22,7 @@ var _ = Describe("Registry", func() {
 	Describe("New", func() {
 		DescribeTable("returns a Presenter for known modes",
 			func(mode string) {
-				palette := prism.SystemPalette()
+				palette := contract.SystemPalette()
 
 				presenter, err := ui.New(mode, palette, ui.HighwayConfig{})
 
@@ -35,7 +35,7 @@ var _ = Describe("Registry", func() {
 
 		Context("when the mode is not registered", func() {
 			It("returns an error containing the unknown mode name", func() {
-				palette := prism.SystemPalette()
+				palette := contract.SystemPalette()
 
 				_, err := ui.New("nonexistent-mode", palette, ui.HighwayConfig{})
 
@@ -46,8 +46,8 @@ var _ = Describe("Registry", func() {
 
 		Context("when the palette contains an invalid ansi16 name", func() {
 			It("returns an error propagated from prism", func() {
-				palette := prism.SystemPalette()
-				palette.Directory = prism.SemanticColour{ANSI16: "notacolour"}
+				palette := contract.SystemPalette()
+				palette.Directory = contract.SemanticColour{ANSI16: "notacolour"}
 
 				_, err := ui.New(ui.ModeLinear, palette, ui.HighwayConfig{})
 
@@ -58,17 +58,17 @@ var _ = Describe("Registry", func() {
 
 		Context("when the palette contains custom tree icons", func() {
 			It("renders the custom icons via the selected view", func() {
-				palette := prism.SystemPalette()
+				palette := contract.SystemPalette()
 				palette.TreeIcons = map[string]string{
-					prism.TreeIconRoot:           "*",
-					prism.TreeIconDirectory:      "D",
-					prism.TreeIconFile:           "F",
-					prism.TreeIconElapsed:        "E",
-					prism.TreeIconSkipped:        "S",
-					prism.TreeIconBranchVertical: "|",
-					prism.TreeIconBranchJoint:    "+-- ",
-					prism.TreeIconBranchLast:     "L-- ",
-					prism.TreeIconBranchIndent:   "  ",
+					contract.TreeIconRoot:           "*",
+					contract.TreeIconDirectory:      "D",
+					contract.TreeIconFile:           "F",
+					contract.TreeIconElapsed:        "E",
+					contract.TreeIconSkipped:        "S",
+					contract.TreeIconBranchVertical: "|",
+					contract.TreeIconBranchJoint:    "+-- ",
+					contract.TreeIconBranchLast:     "L-- ",
+					contract.TreeIconBranchIndent:   "  ",
 				}
 
 				origStdout := os.Stdout

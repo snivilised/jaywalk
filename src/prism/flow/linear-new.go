@@ -28,7 +28,7 @@ func New(palette contract.Palette, writer io.Writer, opts ...LinearOption) (cont
 }
 
 // Register installs the linear view factory into contract's shared factory map.
-// Call this explicitly during application bootstrap before invoking prism.New.
+// Call this explicitly during application bootstrap before invoking contract.New.
 func Register() {
 	contract.RegisterFactory(contract.LinearView, func(palette contract.Palette, writer io.Writer) (contract.Renderer, error) {
 		return New(palette, writer)

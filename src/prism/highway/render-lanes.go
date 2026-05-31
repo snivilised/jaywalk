@@ -6,12 +6,16 @@ import (
 
 	"charm.land/lipgloss/v2"
 	"github.com/snivilised/jaywalk/src/prism/layout"
-	"github.com/snivilised/jaywalk/src/prism/widget"
+	"github.com/snivilised/jaywalk/src/prism/widgets/action"
+	"github.com/snivilised/jaywalk/src/prism/widgets/activity"
+	"github.com/snivilised/jaywalk/src/prism/widgets/landing"
+	"github.com/snivilised/jaywalk/src/prism/widgets/node"
+	"github.com/snivilised/jaywalk/src/prism/widgets/periscope"
 )
 
 // renderLanes renders each highway lane with animation frames and event data.
 // Rendering order per lane (left to right inside one frame):
-// | 🤖  ◼◻◻◻◻◻◻◻◻◻  🍎  📁  • via boo  braillewave       <Path>  ⠁⠂⠄⡀                                    [👾 sleep 1.0s] |
+// | 🤖  ◼◻◻◻◻◻◻◻◻◻  🍎  📁  • via boo  braillewave       <Path>  ⠁⠂⠄⡀        [👾 sleep 1.0s] |
 //
 //  1. Left border segment │
 //  2. Worker emoji indicator (changes per job arrival)
@@ -29,25 +33,25 @@ import (
 func (m Model) renderLanes(b *strings.Builder) {
 	laneBarWidth := LaneBarWidth
 
-	periscopeStyles := widget.PeriscopeStyles{
+	periscopeStyles := periscope.Styles{
 		Filled: m.theme.BarFilledStyle,
 		Empty:  m.theme.BarEmptyStyle,
 	}
-	actionStyles := widget.ActionStyles{
+	actionStyles := action.Styles{
 		ErrorStyle:    m.theme.ErrorStyle,
 		ActionStyle:   m.theme.ActionStyle,
 		PipelineStyle: m.theme.PipelineStyle,
 	}
-	nodePathStyles := widget.NodePathStyles{
+	nodePathStyles := node.Styles{
 		DirStyle:   m.theme.DirStyle,
 		FileStyle:  m.theme.FileStyle,
 		MutedStyle: m.theme.MutedStyle,
 		TreeIcons:  m.theme.TreeIcons,
 	}
-	activityStyles := widget.ActivityStyles{
+	activityStyles := activity.Styles{
 		FrameStyle: m.theme.FrameStyle,
 	}
-	landingStripStyles := widget.LandingStripStyles{
+	landingStripStyles := landing.Styles{
 		BranchStyle:       m.theme.BranchStyle,
 		LandingStripStyle: m.theme.LandingStripStyle,
 	}
@@ -62,7 +66,7 @@ func (m Model) renderLanes(b *strings.Builder) {
 		laneBar := m.renderPeriscopeBar(lane, i, laneBarWidth, periscopeStyles)
 
 		// Action info (error / action name / pipeline name)
-		actionInfo := widget.RenderAction(widget.ActionConfig{
+		actionContent := action.Render(action.Config{
 			Error:        lane.Err,
 			ActionName:   lane.ActionName,
 			PipelineName: lane.PipelineName,
@@ -76,7 +80,7 @@ func (m Model) renderLanes(b *strings.Builder) {
 		frame := m.renderActivityFrame(lane, activityStyles)
 
 		// Landing strip (execution info)
-		landingStrip := widget.RenderLandingStrip(widget.LandingStripConfig{
+		landingStripContent := landing.Render(landing.Config{
 			CommandOutput:   lane.CommandOutput,
 			ExecutionString: lane.ExecutionString,
 			DryRun:          lane.DryRun,
@@ -91,17 +95,17 @@ func (m Model) renderLanes(b *strings.Builder) {
 		if lane.JobEmoji != "" {
 			row.Content(lane.JobEmoji).Gap(2)
 		}
-		if actionInfo != "" {
-			row.Content(actionInfo).Gap(2)
+		if actionContent != "" {
+			row.Content(actionContent).Gap(2)
 		}
 		row.
 			Fixed(SpinnerNameWidth, spinnerNameCol).
 			Flex(true).Gap(2). // path: flex with gap(2) before
 			Content(frame).Gap(1).
-			RightContent(landingStrip)
+			RightContent(landingStripContent)
 
 		// Render the path content - returns complete formatted string with icon
-		pathContent := widget.RenderNodePath(widget.NodePathConfig{
+		pathContent := node.Render(node.Config{
 			Path:     lane.Path,
 			IsDir:    lane.IsDir,
 			Label:    lane.Label,
@@ -119,7 +123,7 @@ func (m Model) renderLanes(b *strings.Builder) {
 	}
 }
 
-func (m Model) renderPeriscopeBar(lane Lane, idx int, laneBarWidth int, styles widget.PeriscopeStyles) string {
+func (m Model) renderPeriscopeBar(lane Lane, idx int, laneBarWidth int, styles periscope.Styles) string {
 	if m.noRecurse {
 		return styles.Filled.Render("◼")
 	}
@@ -161,14 +165,14 @@ func (m Model) renderPeriscopeBar(lane Lane, idx int, laneBarWidth int, styles w
 		}
 	}
 
-	return widget.RenderPeriscope(widget.PeriscopeConfig{
+	return periscope.Render(periscope.Config{
 		Width:  laneBarWidth,
 		Fill:   fill,
 		Styles: styles,
 	})
 }
 
-func (m Model) renderActivityFrame(lane Lane, styles widget.ActivityStyles) string {
+func (m Model) renderActivityFrame(lane Lane, styles activity.Styles) string {
 	var frameContent string
 	if lane.FrameFn != nil {
 		frameContent = lane.FrameFn(lane.tick)
@@ -201,7 +205,10 @@ func (m Model) renderActivityFrame(lane Lane, styles widget.ActivityStyles) stri
 			return m.theme.FrameStyle.Render(styledFrame)
 		}
 	}
-	return widget.RenderActivity(widget.ActivityConfig{Content: frameContent}, styles)
+
+	return activity.Render(activity.Config{
+		Content: frameContent,
+	}, styles)
 }
 
 // stripOuterBars checks if content is wrapped in ┃...┃ and returns the

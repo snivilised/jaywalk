@@ -11,7 +11,7 @@ import (
 	"github.com/snivilised/jaywalk/src/agenor/enums"
 	"github.com/snivilised/jaywalk/src/agenor/pref"
 	"github.com/snivilised/jaywalk/src/app/report"
-	"github.com/snivilised/jaywalk/src/prism"
+	"github.com/snivilised/jaywalk/src/prism/contract"
 	"github.com/snivilised/jaywalk/src/prism/highway"
 	"github.com/snivilised/jaywalk/src/prism/movies"
 )
@@ -57,7 +57,7 @@ type highwayPresenter struct {
 	maxDepth   uint
 	totalFiles uint
 	totalDirs  uint
-	theme      prism.Theme
+	theme      contract.Theme
 	noRecurse  bool
 
 	// Header info fields for OvertureMsg
@@ -73,13 +73,13 @@ type highwayPresenter struct {
 	jobEmojiPool []string
 }
 
-func newHighwayPresenter(palette prism.Palette, cfg HighwayConfig) (report.Presenter, error) {
+func newHighwayPresenter(palette contract.Palette, hCfg HighwayConfig) (report.Presenter, error) {
 	movies.RegisterAll()
-	theme, err := prism.NewTheme(palette, os.Stdout)
+	theme, err := contract.NewTheme(palette, os.Stdout)
 	if err != nil {
 		return nil, err
 	}
-	return &highwayPresenter{cfg: cfg, theme: theme}, nil
+	return &highwayPresenter{cfg: hCfg, theme: theme}, nil
 }
 
 func (h *highwayPresenter) OnTraversalOptions(o *pref.Options) {
@@ -225,17 +225,17 @@ func (h *highwayPresenter) sendMotif(path, name string, isDir bool, depth uint,
 	// Pick a random job emoji from the pool for each job arrival.
 	jobEmoji := h.jobEmojiPool[rand.IntN(len(h.jobEmojiPool))] //nolint:gosec // non-security random
 
-	var grad *prism.ResolvedGradient
+	var grad *contract.ResolvedGradient
 	// Retrieve gradient by component name lookup (not direct gradient name).
-	g, has := h.theme.GradientFor(prism.GradientComponentActivity)
+	g, has := h.theme.GradientFor(contract.GradientComponentActivity)
 	if has && g.Steps > 0 {
-		grad = &prism.ResolvedGradient{Steps: g.Steps, Hi: g.Hi, Lo: g.Lo}
+		grad = &contract.ResolvedGradient{Steps: g.Steps, Hi: g.Hi, Lo: g.Lo}
 	}
 
-	var periscopeGrad *prism.ResolvedGradient
-	pg, hasPG := h.theme.GradientFor(prism.GradientComponentPeriscope)
+	var periscopeGrad *contract.ResolvedGradient
+	pg, hasPG := h.theme.GradientFor(contract.GradientComponentPeriscope)
 	if hasPG && pg.Steps > 0 {
-		periscopeGrad = &prism.ResolvedGradient{Steps: pg.Steps, Hi: pg.Hi, Lo: pg.Lo}
+		periscopeGrad = &contract.ResolvedGradient{Steps: pg.Steps, Hi: pg.Hi, Lo: pg.Lo}
 	}
 
 	h.program.Send(highway.MotifMsg{

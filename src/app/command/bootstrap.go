@@ -24,7 +24,7 @@ import (
 	"github.com/snivilised/jaywalk/src/app/report"
 	"github.com/snivilised/jaywalk/src/app/shell"
 	"github.com/snivilised/jaywalk/src/app/ui"
-	"github.com/snivilised/jaywalk/src/prism"
+	"github.com/snivilised/jaywalk/src/prism/contract"
 	"github.com/snivilised/jaywalk/src/prism/flow"
 )
 
@@ -269,7 +269,7 @@ func (b *Bootstrap) Root(options ...ConfigureAppOptionFn) *cobra.Command {
 					JobPool:           highwayCfg.JobPool,
 					Separator:         highwayCfg.Separator,
 					SpinnerNames:      highwayCfg.AnimationData.Spinners.Enabled,
-					AnimationGradient: b.themeLoader.NameFromPalette(palette, prism.GradientComponentActivity),
+					AnimationGradient: b.themeLoader.NameFromPalette(palette, contract.GradientComponentActivity),
 					Overrides:         overrides,
 				})
 
