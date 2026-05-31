@@ -9,6 +9,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/snivilised/jaywalk/src/agenor/core"
 	"github.com/snivilised/jaywalk/src/prism/contract"
 	"github.com/snivilised/jaywalk/src/prism/traffic"
 	"github.com/snivilised/jaywalk/src/prism/widget"
@@ -244,7 +245,7 @@ var _ = Describe("Model.Update — tickMsg", func() {
 		Expect(m.lanes[0].tick).To(Equal(0))
 		Expect(m.lanes[1].tick).To(Equal(0))
 
-		updated, cmd := update(m, tickMsg(time.Now()))
+		updated, cmd := update(m, tickMsg(core.Now()))
 		Expect(updated.lanes[0].tick).To(Equal(1))
 		Expect(updated.lanes[1].tick).To(Equal(1))
 		_ = cmd
@@ -252,7 +253,7 @@ var _ = Describe("Model.Update — tickMsg", func() {
 
 	It("reschedules the next tick when not done", func() {
 		m := baseModel(1)
-		_, cmd := update(m, tickMsg(time.Now()))
+		_, cmd := update(m, tickMsg(core.Now()))
 		Expect(cmd).NotTo(BeNil())
 
 		msg := invokeCmd(cmd)
@@ -263,14 +264,14 @@ var _ = Describe("Model.Update — tickMsg", func() {
 	It("does not reschedule when done", func() {
 		m := baseModel(1)
 		m.done = true
-		_, cmd := update(m, tickMsg(time.Now()))
+		_, cmd := update(m, tickMsg(core.Now()))
 		Expect(cmd).To(BeNil())
 	})
 
 	It("does not start the timer in realMode when start is zero", func() {
 		m := baseModel(1)
 		m.realMode = true
-		updated, cmd := update(m, tickMsg(time.Now()))
+		updated, cmd := update(m, tickMsg(core.Now()))
 		Expect(updated.start.IsZero()).To(BeTrue())
 		_ = cmd
 	})
@@ -280,7 +281,7 @@ var _ = Describe("Model.Update — tickMsg", func() {
 		m.realMode = false
 		Expect(m.start.IsZero()).To(BeTrue())
 
-		updated, cmd := update(m, tickMsg(time.Now()))
+		updated, cmd := update(m, tickMsg(core.Now()))
 		Expect(updated.start.IsZero()).To(BeFalse())
 		_ = cmd
 	})
@@ -295,7 +296,7 @@ var _ = Describe("Model.Update — tickMsg", func() {
 		//   fast (skip=0) → tick = 10
 		//   slow (IntervalMs=500, skip=10) → tick = 1 (every 10th tick)
 		for range 10 {
-			m, _ = update(m, tickMsg(time.Now()))
+			m, _ = update(m, tickMsg(core.Now()))
 		}
 		Expect(m.lanes[0].tick).To(Equal(10), "fast lane should advance every tick")
 		Expect(m.lanes[1].tick).To(Equal(1), "slow lane should advance every 10th tick")
@@ -309,7 +310,7 @@ var _ = Describe("Model.Update — tickMsg", func() {
 		m := NewModel(lanes, 50*time.Millisecond, "/root", 5, testTheme(), false)
 
 		for range 100 {
-			m, _ = update(m, tickMsg(time.Now()))
+			m, _ = update(m, tickMsg(core.Now()))
 		}
 		Expect(m.lanes[0].tick).To(Equal(100), "fast: every tick")
 		Expect(m.lanes[1].tick).To(Equal(25), "medium: 200/50=4, 100/4=25")
