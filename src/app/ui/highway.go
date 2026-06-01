@@ -31,14 +31,11 @@ type highwayPresenter struct {
 	theme      contract.Theme
 	noRecurse  bool
 
-	// Header info fields for OvertureMsg
-	cascadeDisplay string // "🔒", "depth:N", or ""
-	filesGlob      string // raw pattern when --files-glob used
-	filesRegex     string // raw pattern when --files-regex used
-	dirsGlob       string // raw pattern when --dirs-glob used
-	dirsRegex      string // raw pattern when --dirs-regex used
-	fileTypeMode   string // "glob" or "regex" for files, default "glob"
-	dirTypeMode    string // "glob" or "regex" for dirs, default "glob"
+	// header is the supplementary flag info carried on the BeginEvent.
+	// Stored on the presenter so tests and lifecycle hooks can introspect
+	// it, and read here when building the OvertureMsg. See
+	// contract.HeaderInfo for field semantics.
+	header contract.HeaderInfo
 
 	// Job emoji pool state — populated from config, random emoji picked per job arrival.
 	jobEmojiPool []string
@@ -94,7 +91,14 @@ func (h *highwayPresenter) SetMaxDepth(maxDepth uint) {
 func (h *highwayPresenter) OnBegin(e *report.BeginEvent) {
 	h.initJobEmojiPool()
 
-	// todo: derive noRecurse from e.CascadeDisplay in OnBegin or pass via options
+	// Cache the header info for introspection and for use below when
+	// building the OvertureMsg.
+	h.header = e.Header
+
+	// Derive noRecurse from cascade display. The two are mutually exclusive
+	// at the flag-binding layer, so only one of 🔒/depth can be present.
+	h.noRecurse = strings.Contains(h.header.CascadeDisplay, "🔒")
+
 	lanes := BuildHighwayLanes(h.cfg, h.noW)
 	model := highway.NewModel(lanes, highwayTickRate, e.Root, h.maxDepth, h.theme, h.noRecurse)
 	h.program = tea.NewProgram(model)
@@ -129,14 +133,11 @@ func (h *highwayPresenter) OnBegin(e *report.BeginEvent) {
 		ActionName:        e.ActionName,
 		PipelineName:      e.PipelineName,
 
-		// Header info for filter widgets and cascade display
-		CascadeDisplay: h.cascadeDisplay,
-		FilesGlob:      h.filesGlob,
-		FilesRegex:     h.filesRegex,
-		DirsGlob:       h.dirsGlob,
-		DirsRegex:      h.dirsRegex,
-		FileTypeMode:   h.fileTypeMode,
-		DirTypeMode:    h.dirTypeMode,
+		// Header info for filter widgets, cascade display and sampler
+		Header: h.header,
+
+		// Position of the flags row
+		FlagsRowPosition: h.cfg.FlagsRowPosition,
 	})
 
 	if h.totalFiles > 0 || h.totalDirs > 0 {

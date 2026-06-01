@@ -15,14 +15,14 @@ type OvertureMsg struct {
 	ActionName        string
 	PipelineName      string
 
-	// header information for filter widgets and depth indicator
-	CascadeDisplay string // "🔒", "depth:<n>", or ""
-	FilesGlob      string // pattern value when --files-glob or -f used
-	FilesRegex     string // pattern value when --files-regex used
-	DirsGlob       string // pattern value when --dirs-glob used
-	DirsRegex      string // pattern value when --dirs-regex used
-	FileTypeMode   string // "glob" or "regex" for files
-	DirTypeMode    string // "glob" or "regex" for dirs
+	// Header groups the supplementary flag values for the flags row
+	// renderer. See contract.HeaderInfo for the field semantics.
+	Header contract.HeaderInfo
+
+	// FlagsRowPosition selects where the flags row is rendered. Allowed
+	// values are "top" and "bottom"; any other value is treated as
+	// "bottom" (the default).
+	FlagsRowPosition string
 }
 
 type MotifData struct {

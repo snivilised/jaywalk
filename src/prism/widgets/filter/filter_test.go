@@ -8,45 +8,71 @@ import (
 )
 
 var _ = Describe("Filter.Render", func() {
+	noStyles := Styles{
+		LabelStyle: lipgloss.NewStyle(),
+		ValueStyle: lipgloss.NewStyle(),
+	}
+
 	It("returns empty when no filters active", func() {
-		styles := Styles{InfoStyle: lipgloss.NewStyle()}
-		result := Render("", "", "", "", "", "", styles)
+		result := Render("", "", "", "", "", "", noStyles)
 		Expect(result).To(Equal(""))
 	})
 
 	It("shows files glob before files regex", func() {
-		styles := Styles{InfoStyle: lipgloss.NewStyle()}
 		filesGlob := "*.go"
 		filesRegex := `.*\.go`
-		expect := " └─ [ files-glob:*.go ]"
-		result := Render(filesGlob, filesRegex, "", "", "", "", styles)
+		expect := "files glob: *.go"
+		result := Render(filesGlob, filesRegex, "", "", "", "", noStyles)
 		Expect(result).To(Equal(expect))
 	})
 
 	It("shows dirs glob before dirs regex", func() {
-		styles := Styles{InfoStyle: lipgloss.NewStyle()}
 		dirsGlob := "src/*"
 		dirsRegex := "src/.*"
-		expect := " └─ [ dirs-glob:src/* ]"
-		result := Render("", "", dirsGlob, dirsRegex, "", "", styles)
+		expect := "dirs glob: src/*"
+		result := Render("", "", dirsGlob, dirsRegex, "", "", noStyles)
 		Expect(result).To(Equal(expect))
 	})
 
 	It("handles multiple filter types", func() {
-		styles := Styles{InfoStyle: lipgloss.NewStyle()}
 		filesGlob := "*.go"
 		dirsRegex := "src/.*"
-		expect := " └─ [ files-glob:*.go, dirs-regex:src/.* ]"
-		result := Render(filesGlob, "", "", dirsRegex, "", "", styles)
+		expect := "files glob: *.go | dirs regex: src/.*"
+		result := Render(filesGlob, "", "", dirsRegex, "", "", noStyles)
 		Expect(result).To(Equal(expect))
 	})
 
-	It("applies InfoStyle", func() {
-		infoStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("6"))
-		styles := Styles{InfoStyle: infoStyle}
+	It("uses spaces in labels (not CLI dash form)", func() {
 		filesGlob := "*.js"
-		expect := " └─ [ files-glob:*.js ]"
+		result := Render(filesGlob, "", "", "", "", "", noStyles)
+		Expect(result).To(Equal("files glob: *.js"))
+		Expect(result).NotTo(ContainSubstring("files-glob"))
+		Expect(result).NotTo(ContainSubstring("dirs-glob"))
+	})
+
+	It("applies LabelStyle to labels and ValueStyle to values", func() {
+		labelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("4"))
+		valueStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("7"))
+		styles := Styles{
+			LabelStyle: labelStyle,
+			ValueStyle: valueStyle,
+		}
+		filesGlob := "*.js"
+		expect := labelStyle.Render("files glob") + ": " + valueStyle.Render("*.js")
 		result := Render(filesGlob, "", "", "", "", "", styles)
-		Expect(result).To(Equal(infoStyle.Render(expect)))
+		Expect(result).To(Equal(expect))
+	})
+
+	It("preserves the separator between label and value (uncoloured)", func() {
+		labelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("4"))
+		valueStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("7"))
+		styles := Styles{
+			LabelStyle: labelStyle,
+			ValueStyle: valueStyle,
+		}
+		result := Render("*.js", "", "", "", "", "", styles)
+		Expect(result).To(ContainSubstring(": "))
+		// The ": " between label and value is intentionally uncoloured
+		// so that the boundary between them is visually clean.
 	})
 })

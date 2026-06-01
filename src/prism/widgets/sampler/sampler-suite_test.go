@@ -1,4 +1,4 @@
-package filter
+package sampler
 
 import (
 	"testing"
@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestAction(t *testing.T) {
+func TestSampler(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Filter Suite")
+	RunSpecs(t, "Sampler Suite")
 }

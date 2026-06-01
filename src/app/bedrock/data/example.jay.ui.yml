@@ -23,6 +23,12 @@ ui:
     # Character between emoji and content info (default: single space)
     separator: ' '
 
+    # Position of the supplementary flags row within the highway view.
+    # Allowed: 'top' (after the top border, before the first lane) or
+    # 'bottom' (above the status line, below the last lane). Defaults to
+    # 'bottom' when omitted or set to an unrecognised value.
+    flags-row-position: 'bottom'
+
     # Animation data configuration for Highway view lanes
     animation:
       # List of animation types to load on demand

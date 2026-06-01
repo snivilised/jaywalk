@@ -146,6 +146,13 @@ type HighwayConfig struct {
 	// Must match a key in palette.highlights.gradients (e.g., "aurora-borealis").
 	// When empty, no gradient is applied and default styling is used.
 	AnimationGradient string `mapstructure:"animation-gradient,omitempty"`
+
+	// FlagsRowPosition controls where the supplementary flags row is rendered
+	// within the highway view. Allowed values: "top" (between the top border
+	// and the first lane) or "bottom" (between the last lane and the status
+	// line). Empty or invalid values default to "bottom" and a warning is
+	// logged at load time.
+	FlagsRowPosition string `mapstructure:"flags-row-position,omitempty"`
 }
 
 // HighwayAnimationConfig holds animation data configuration for Highway view.

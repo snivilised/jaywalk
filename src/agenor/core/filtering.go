@@ -155,3 +155,12 @@ var BenignNodeFilterDef = FilterDef{
 	Pattern:     ".",
 	Scope:       enums.ScopeTree,
 }
+
+// IsBenign reports whether the filter is the BenignNodeFilterDef (the
+// "allow everything" default used as a placeholder when the user has
+// not supplied a filter of the relevant kind). The display layer uses
+// this to distinguish a user-specified filter from a placeholder that
+// happens to be active because the user only set the other one.
+func (f FilterDef) IsBenign() bool {
+	return f == BenignNodeFilterDef
+}
