@@ -16,7 +16,7 @@ import (
 var _ = Describe("Registry", func() {
 
 	// ------------------------------------------------------------------
-	// New
+	// New - takes the polymorphic ViewConfig returned by LoadConfig
 	// ------------------------------------------------------------------
 
 	Describe("New", func() {
@@ -24,7 +24,10 @@ var _ = Describe("Registry", func() {
 			func(mode string) {
 				palette := contract.SystemPalette()
 
-				presenter, err := ui.New(mode, palette, ui.HighwayConfig{})
+				cfg, err := ui.LoadConfig(mode, nil, palette)
+				Expect(err).To(BeNil())
+
+				presenter, err := ui.New(mode, palette, cfg)
 
 				Expect(err).To(BeNil())
 				Expect(presenter).NotTo(BeNil())
@@ -37,10 +40,21 @@ var _ = Describe("Registry", func() {
 			It("returns an error containing the unknown mode name", func() {
 				palette := contract.SystemPalette()
 
-				_, err := ui.New("nonexistent-mode", palette, ui.HighwayConfig{})
+				_, err := ui.New("nonexistent-mode", palette, ui.LinearConfig{})
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("nonexistent-mode"))
+			})
+		})
+
+		Context("when highway is requested with the wrong config type", func() {
+			It("returns a type-mismatch error", func() {
+				palette := contract.SystemPalette()
+
+				_, err := ui.New(ui.ModeHighway, palette, ui.LinearConfig{})
+
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("HighwayConfig"))
 			})
 		})
 
@@ -49,7 +63,10 @@ var _ = Describe("Registry", func() {
 				palette := contract.SystemPalette()
 				palette.Directory = contract.SemanticColour{ANSI16: "notacolour"}
 
-				_, err := ui.New(ui.ModeLinear, palette, ui.HighwayConfig{})
+				cfg, err := ui.LoadConfig(ui.ModeLinear, nil, palette)
+				Expect(err).To(BeNil())
+
+				_, err = ui.New(ui.ModeLinear, palette, cfg)
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("notacolour"))
@@ -76,7 +93,10 @@ var _ = Describe("Registry", func() {
 				Expect(err).To(BeNil())
 				os.Stdout = w
 
-				presenter, err := ui.New(ui.ModeLinear, palette, ui.HighwayConfig{})
+				cfg, err := ui.LoadConfig(ui.ModeLinear, nil, palette)
+				Expect(err).To(BeNil())
+
+				presenter, err := ui.New(ui.ModeLinear, palette, cfg)
 				Expect(err).To(BeNil())
 				Expect(presenter).NotTo(BeNil())
 
@@ -102,6 +122,63 @@ var _ = Describe("Registry", func() {
 				Expect(err).To(BeNil())
 				Expect(string(output)).To(ContainSubstring("L-- F file.txt"))
 			})
+		})
+	})
+
+	// ------------------------------------------------------------------
+	// LoadConfig - returns the polymorphic ViewConfig for the mode
+	// ------------------------------------------------------------------
+
+	Describe("LoadConfig", func() {
+		Context("given: linear mode", func() {
+			It("returns a LinearConfig without touching the source", func() {
+				palette := contract.SystemPalette()
+				cfg, err := ui.LoadConfig(ui.ModeLinear, nil, palette)
+				Expect(err).To(BeNil())
+				_, ok := cfg.(ui.LinearConfig)
+				Expect(ok).To(BeTrue())
+			})
+		})
+
+		Context("given: highway mode", func() {
+			It("returns a HighwayConfig", func() {
+				palette := contract.SystemPalette()
+				cfg, err := ui.LoadConfig(ui.ModeHighway, nil, palette)
+				Expect(err).To(BeNil())
+				_, ok := cfg.(ui.HighwayConfig)
+				Expect(ok).To(BeTrue())
+			})
+		})
+
+		Context("given: empty mode", func() {
+			It("defaults to linear", func() {
+				palette := contract.SystemPalette()
+				cfg, err := ui.LoadConfig("", nil, palette)
+				Expect(err).To(BeNil())
+				_, ok := cfg.(ui.LinearConfig)
+				Expect(ok).To(BeTrue())
+			})
+		})
+
+		Context("given: unknown mode", func() {
+			It("returns an error naming the bad mode", func() {
+				palette := contract.SystemPalette()
+				_, err := ui.LoadConfig("orbiter", nil, palette)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("orbiter"))
+			})
+		})
+	})
+
+	// ------------------------------------------------------------------
+	// Sealed ViewConfig - the marker method prevents external
+	// implementations.
+	// ------------------------------------------------------------------
+
+	Describe("ViewConfig marker", func() {
+		It("linear and highway configs both satisfy ViewConfig", func() {
+			var _ ui.ViewConfig = ui.LinearConfig{}
+			var _ ui.ViewConfig = ui.HighwayConfig{}
 		})
 	})
 })

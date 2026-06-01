@@ -24,8 +24,6 @@ import (
 	"github.com/snivilised/jaywalk/src/app/report"
 	"github.com/snivilised/jaywalk/src/app/shell"
 	"github.com/snivilised/jaywalk/src/app/ui"
-	"github.com/snivilised/jaywalk/src/prism/contract"
-	"github.com/snivilised/jaywalk/src/prism/flow"
 )
 
 // ---------------------------------------------------------------------------
@@ -238,47 +236,27 @@ func (b *Bootstrap) Root(options ...ConfigureAppOptionFn) *cobra.Command {
 					}
 				}
 
-				var highwayCfg bedrock.HighwayConfig
-
-				// Register only the selected view factory; avoid registering
-				// all known views when only one will be used.
-				switch mode {
-				case ui.ModeLinear:
-					flow.Register()
-
-				case ui.ModeHighway:
-					if err := b.viewConfigLoader.Load("highway", &highwayCfg); err != nil {
-						return err
-					}
-				}
-
+				// Bootstrap is view-agnostic. The polymorphic
+				// ui.LoadConfig returns the ViewConfig that
+				// corresponds to the selected mode; ui.New consumes
+				// it. The two calls together replace the per-view
+				// branching that used to live here.
 				palette, err := b.themeLoader.Load(b.rootPs.Native.Theme)
 				if err != nil {
 					return err
 				}
 
-				overrides := make(map[string]int)
-				for name, cfg := range highwayCfg.AnimationData.Spinners.Override {
-					if cfg != nil && cfg.Interval > 0 {
-						overrides[name] = cfg.Interval
-					}
+				cfg, err := ui.LoadConfig(mode, b.viewConfigLoader, palette)
+				if err != nil {
+					return err
 				}
 
-				mgr, err := ui.New(mode, palette, ui.HighwayConfig{
-					WorkerPool:        highwayCfg.WorkerPool,
-					JobPool:           highwayCfg.JobPool,
-					Separator:         highwayCfg.Separator,
-					SpinnerNames:      highwayCfg.AnimationData.Spinners.Enabled,
-					AnimationGradient: b.themeLoader.NameFromPalette(palette, contract.GradientComponentActivity),
-					Overrides:         overrides,
-				})
-
+				mgr, err := ui.New(mode, palette, cfg)
 				if err != nil {
 					return err
 				}
 
 				b.UI = mgr
-
 				return nil
 			},
 
