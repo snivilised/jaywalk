@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/snivilised/jaywalk/src/prism/contract"
+	"github.com/snivilised/jaywalk/src/prism/effects"
 	"github.com/snivilised/jaywalk/src/prism/widgets/periscope"
 )
 
@@ -29,7 +30,7 @@ var _ = Describe("Periscope Gradient", func() {
 
 	Context("GradientState lazy initialization", func() {
 		It("initializes periscope gradient state correctly", func() {
-			state := NewGradientState()
+			state := effects.NewGradientState()
 			Expect(state.Offset).To(Equal(0))
 			Expect(state.Direction).To(Equal(1))
 			Expect(state.TotalSteps).To(Equal(0))
@@ -40,7 +41,7 @@ var _ = Describe("Periscope Gradient", func() {
 		It("applies gradient across content by position", func() {
 			hi := color.RGBA{R: 255, G: 0, B: 0, A: 255}
 			lo := color.RGBA{R: 0, G: 0, B: 255, A: 255}
-			runs := ApplyGradientStatic(hi, lo, "◼◼◼◼◼", 5)
+			runs := effects.ApplyGradientStatic(hi, lo, "◼◼◼◼◼", 5)
 			Expect(runs).To(HaveLen(5))
 			// First char should be close to Hi (red)
 			Expect(runs[0].Colour.R).To(BeNumerically(">", runs[4].Colour.R))
@@ -51,7 +52,7 @@ var _ = Describe("Periscope Gradient", func() {
 		It("returns nil for empty content", func() {
 			hi := color.RGBA{R: 255, G: 0, B: 0, A: 255}
 			lo := color.RGBA{R: 0, G: 0, B: 255, A: 255}
-			runs := ApplyGradientStatic(hi, lo, "", 5)
+			runs := effects.ApplyGradientStatic(hi, lo, "", 5)
 			Expect(runs).To(HaveLen(0))
 		})
 	})
@@ -71,7 +72,7 @@ var _ = Describe("Periscope Gradient", func() {
 					Lo:      lo,
 					Animate: true,
 				},
-				PeriscopeGradientState: NewGradientState(),
+				PeriscopeGradientState: effects.NewGradientState(),
 			}
 			lane.PeriscopeGradientState.TotalSteps = 4
 
@@ -174,11 +175,11 @@ var _ = Describe("Periscope Gradient", func() {
 					Hi:    color.RGBA{R: 255, G: 0, B: 0, A: 255},
 					Lo:    color.RGBA{R: 0, G: 0, B: 255, A: 255},
 				},
-				PeriscopeGradientState: NewGradientState(),
+				PeriscopeGradientState: effects.NewGradientState(),
 			}
 			lane.PeriscopeGradientState.TotalSteps = 4
 
-			ApplyGradient(
+			effects.ApplyGradient(
 				lane.PeriscopeGradient.Hi,
 				lane.PeriscopeGradient.Lo,
 				"◼◼◼",

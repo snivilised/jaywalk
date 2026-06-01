@@ -8,6 +8,7 @@ import (
 
 	"github.com/snivilised/jaywalk/src/agenor/core"
 	"github.com/snivilised/jaywalk/src/prism/contract"
+	"github.com/snivilised/jaywalk/src/prism/effects"
 )
 
 type tickMsg time.Time
@@ -228,7 +229,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.lanes[m.currentLaneIdx].HighlightGradient = msg.Data.Gradient
 				// Also ensure GradientState exists and is configured with steps.
 				if m.lanes[m.currentLaneIdx].GradientState == nil {
-					m.lanes[m.currentLaneIdx].GradientState = NewGradientState()
+					m.lanes[m.currentLaneIdx].GradientState = effects.NewGradientState()
 				}
 				m.lanes[m.currentLaneIdx].GradientState.TotalSteps = msg.Data.Gradient.Steps
 			}
@@ -236,7 +237,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if msg.Data.PeriscopeGradient != nil {
 				m.lanes[m.currentLaneIdx].PeriscopeGradient = msg.Data.PeriscopeGradient
 				if m.lanes[m.currentLaneIdx].PeriscopeGradientState == nil {
-					m.lanes[m.currentLaneIdx].PeriscopeGradientState = NewGradientState()
+					m.lanes[m.currentLaneIdx].PeriscopeGradientState = effects.NewGradientState()
 				}
 				m.lanes[m.currentLaneIdx].PeriscopeGradientState.TotalSteps = msg.Data.PeriscopeGradient.Steps
 			}

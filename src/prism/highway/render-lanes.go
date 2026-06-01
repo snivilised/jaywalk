@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"charm.land/lipgloss/v2"
+	"github.com/snivilised/jaywalk/src/prism/effects"
 	"github.com/snivilised/jaywalk/src/prism/layout"
 	"github.com/snivilised/jaywalk/src/prism/widgets/action"
 	"github.com/snivilised/jaywalk/src/prism/widgets/activity"
@@ -142,25 +143,25 @@ func (m Model) renderPeriscopeBar(lane Lane, idx int, laneBarWidth int, styles p
 
 		if lane.PeriscopeGradient.Animate {
 			if lane.PeriscopeGradientState != nil && fill > 0 {
-				runs := ApplyGradient(
+				runs := effects.ApplyGradient(
 					lane.PeriscopeGradient.Hi,
 					lane.PeriscopeGradient.Lo,
 					barContent,
 					lane.PeriscopeGradientState,
 				)
 				if runs != nil {
-					return ApplyGradientStyled(runs)
+					return effects.ApplyGradientStyled(runs)
 				}
 			}
 		} else {
-			runs := ApplyGradientStatic(
+			runs := effects.ApplyGradientStatic(
 				lane.PeriscopeGradient.Hi,
 				lane.PeriscopeGradient.Lo,
 				barContent,
 				lane.PeriscopeGradient.Steps,
 			)
 			if runs != nil {
-				return ApplyGradientStyled(runs)
+				return effects.ApplyGradientStyled(runs)
 			}
 		}
 	}
@@ -187,14 +188,14 @@ func (m Model) renderActivityFrame(lane Lane, styles activity.Styles) string {
 		// with the gradient's Hi (left) and Lo (right) colours.
 		inner, hasBars := stripOuterBars(frameContent)
 
-		gradientRuns := ApplyGradient(
+		gradientRuns := effects.ApplyGradient(
 			lane.HighlightGradient.Hi,
 			lane.HighlightGradient.Lo,
 			inner,
 			lane.GradientState,
 		)
 		if gradientRuns != nil {
-			styledFrame := ApplyGradientStyled(gradientRuns)
+			styledFrame := effects.ApplyGradientStyled(gradientRuns)
 			if hasBars {
 				leftBarStyle := lipgloss.NewStyle().Foreground(lane.HighlightGradient.Hi)
 				rightBarStyle := lipgloss.NewStyle().Foreground(lane.HighlightGradient.Lo)

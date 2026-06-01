@@ -1,6 +1,6 @@
 //go:build !race
 
-package highway
+package effects
 
 import (
 	"fmt"
