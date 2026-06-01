@@ -1,10 +1,14 @@
 package command_test
 
 import (
+	"reflect"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/snivilised/jaywalk/src/agenor/test/hanno"
 	"github.com/snivilised/jaywalk/src/app/command"
+	"github.com/snivilised/jaywalk/src/app/report"
+	"github.com/snivilised/jaywalk/src/prism/movies"
 	"github.com/snivilised/li18ngo"
 	nef "github.com/snivilised/nefilim"
 	"github.com/spf13/cobra"
@@ -303,6 +307,180 @@ var _ = Describe("Bootstrap", Ordered, func() {
 				Expect(err).To(BeNil())
 				Expect(themeCmd.Flags().Lookup("resume")).To(BeNil())
 				Expect(themeCmd.InheritedFlags().Lookup("resume")).To(BeNil())
+			})
+		})
+
+		// ---------------------------------------------------------------
+		// Lazy view bootstrap (issue 583): PersistentPreRunE must
+		// construct the selected view on-demand without any pre-registration
+		// step. The concrete presenter type reflects the --tui mode.
+		// ---------------------------------------------------------------
+
+		Context("lazy view bootstrap - issue 583", Label("issue-583"), func() {
+			// presenterType returns the reflect-qualified name of the
+			// concrete presenter so we can distinguish linear from
+			// highway without exposing the unexported ui types.
+			presenterType := func(p report.Presenter) string {
+				if p == nil {
+					return "<nil>"
+				}
+				return reflect.TypeOf(p).String()
+			}
+
+			Context("given: --tui linear on walk", func() {
+				It("🧪 should: build the linear presenter on-demand", func() {
+					bootstrap := command.Bootstrap{}
+					tester := hanno.CommandTester{
+						// walk requires 1 arg + --action/--pipeline. We
+						// supply a dummy directory and a noop action so
+						// PersistentPreRunE runs and b.UI is populated
+						// before any traversal error.
+						Args: []string{
+							"--tui", "linear",
+							"walk", ".",
+							"--action", "noop",
+							"--theme", "system",
+						},
+						Root: bootstrap.Root(applyTestConfig),
+					}
+					_, _ = tester.Execute()
+
+					Expect(bootstrap.UI).NotTo(BeNil(),
+						"PersistentPreRunE should have populated b.UI")
+					Expect(presenterType(bootstrap.UI)).To(Equal("*ui.linear"))
+				})
+			})
+
+			Context("given: --tui highway on walk", func() {
+				It("🧪 should: build the highway presenter on-demand", func() {
+					bootstrap := command.Bootstrap{}
+					tester := hanno.CommandTester{
+						Args: []string{
+							"--tui", "highway",
+							"walk", ".",
+							"--action", "noop",
+							"--theme", "system",
+						},
+						Root: bootstrap.Root(applyTestConfig),
+					}
+					_, _ = tester.Execute()
+
+					Expect(bootstrap.UI).NotTo(BeNil())
+					Expect(presenterType(bootstrap.UI)).To(Equal("*ui.highwayPresenter"))
+				})
+			})
+
+			Context("given: default mode (no --tui) on walk", func() {
+				It("🧪 should: fall through to the linear presenter", func() {
+					bootstrap := command.Bootstrap{}
+					tester := hanno.CommandTester{
+						Args: []string{
+							"walk", ".",
+							"--action", "noop",
+							"--theme", "system",
+						},
+						Root: bootstrap.Root(applyTestConfig),
+					}
+					_, _ = tester.Execute()
+
+					Expect(bootstrap.UI).NotTo(BeNil())
+					Expect(presenterType(bootstrap.UI)).To(Equal("*ui.linear"))
+				})
+			})
+
+			Context("given: default mode on sprint", func() {
+				It("🧪 should: override the default to highway", func() {
+					bootstrap := command.Bootstrap{}
+					tester := hanno.CommandTester{
+						Args: []string{
+							"sprint", ".",
+							"--action", "noop",
+							"--theme", "system",
+						},
+						Root: bootstrap.Root(applyTestConfig),
+					}
+					_, _ = tester.Execute()
+
+					Expect(bootstrap.UI).NotTo(BeNil())
+					Expect(presenterType(bootstrap.UI)).To(Equal("*ui.highwayPresenter"))
+				})
+			})
+
+			Context("given: highway presenter construction", func() {
+				It("🧪 should: invoke movies.RegisterAll() before building", func() {
+					// newHighwayPresenter calls movies.RegisterAll() as
+					// its first action. We verify the registration
+					// occurred indirectly: a known spinner name must be
+					// resolvable. We trigger the presenter via the
+					// command tester, then query the movies package
+					// directly.
+					bootstrap := command.Bootstrap{}
+					tester := hanno.CommandTester{
+						Args: []string{
+							"--tui", "highway",
+							"walk", ".",
+							"--action", "noop",
+							"--theme", "system",
+						},
+						Root: bootstrap.Root(applyTestConfig),
+					}
+					_, _ = tester.Execute()
+
+					Expect(bootstrap.UI).NotTo(BeNil())
+					def, ok := movies.Lookup(movies.SpinnerTypeDefault)
+					Expect(ok).To(BeTrue(),
+						"movies.RegisterAll() should have populated the default spinner")
+					Expect(def.Frames).NotTo(BeNil())
+					// And a frame can be produced:
+					frame := def.Frames(0)
+					Expect(frame).NotTo(BeEmpty())
+				})
+			})
+
+			// ---------------------------------------------------------------
+			// Polymorphic view config (issue 583 follow-up): the
+			// presenter must be constructable via the polymorphic
+			// ViewConfig returned by ui.LoadConfig, not by a
+			// view-specific path. The highway view must use a
+			// HighwayConfig even when no jay.ui.yml is present
+			// (zero-value config is still a valid HighwayConfig).
+			// ---------------------------------------------------------------
+
+			Context("polymorphic view config", func() {
+				It("🧪 should: build highway presenter via zero-value HighwayConfig when jay.ui.yml is absent", func() {
+					bootstrap := command.Bootstrap{}
+					tester := hanno.CommandTester{
+						Args: []string{
+							"--tui", "highway",
+							"walk", ".",
+							"--action", "noop",
+							"--theme", "system",
+						},
+						Root: bootstrap.Root(applyTestConfig),
+					}
+					_, _ = tester.Execute()
+
+					Expect(bootstrap.UI).NotTo(BeNil())
+					Expect(presenterType(bootstrap.UI)).To(Equal("*ui.highwayPresenter"),
+						"highway mode should produce highwayPresenter even without jay.ui.yml")
+				})
+
+				It("🧪 should: build linear presenter without consuming any view config", func() {
+					bootstrap := command.Bootstrap{}
+					tester := hanno.CommandTester{
+						Args: []string{
+							"--tui", "linear",
+							"walk", ".",
+							"--action", "noop",
+							"--theme", "system",
+						},
+						Root: bootstrap.Root(applyTestConfig),
+					}
+					_, _ = tester.Execute()
+
+					Expect(bootstrap.UI).NotTo(BeNil())
+					Expect(presenterType(bootstrap.UI)).To(Equal("*ui.linear"))
+				})
 			})
 		})
 	})

@@ -16,38 +16,9 @@ import (
 	"github.com/snivilised/jaywalk/src/prism/movies"
 )
 
-// HighwayConfig holds configuration for the highway bubbletea view.
-type HighwayConfig struct {
-	// WorkerPool is a space-separated list of emoji runes for worker/lane decoration.
-	WorkerPool string
-
-	// JobPool is a space-separated list of emoji runes for job decoration.
-	JobPool string
-
-	// Separator between emoji and content info (default: " ").
-	Separator string
-
-	// SpinnerNames lists the spinner types to use for each lane, looked up
-	// Categories expand via movies.SpinnerCategories; individual spinner names
-	// are registered in movies.SpinnerNames.
-	// When empty, buildHighwayLanes falls back to defaults.
-	SpinnerNames []string
-
-	// Labels for each lane, paired with SpinnerNames. When empty, defaults
-	// are used.
-	Labels []string
-
-	// Overrides maps spinner name to interval in milliseconds.
-	// When set, the lane's animation advances at this rate instead of the
-	// global tick rate. Multiple lanes sharing the same spinner name each
-	// get the same interval behaviour.
-	Overrides map[string]int
-
-	// AnimationGradient specifies the gradient to apply to frame animations.
-	// Optional; nil or empty means use default styling without gradients.
-	// When set, uses highlights.gradients configuration from palette (hi/lo endpoints).
-	AnimationGradient string // name of gradient defined in theme palette (DEPRECATED - unused)
-}
+// HighwayConfig is declared in registry.go alongside the other view
+// configs. The definition lives there so all ViewConfig
+// implementations are co-located with LoadConfig and New.
 
 type highwayPresenter struct {
 	program    *tea.Program
