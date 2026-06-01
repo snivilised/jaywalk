@@ -2,6 +2,7 @@ package highway
 
 import (
 	"github.com/snivilised/jaywalk/src/prism/contract"
+	"github.com/snivilised/jaywalk/src/prism/effects"
 )
 
 // Lane
@@ -38,14 +39,14 @@ type Lane struct {
 	HighlightGradient *contract.ResolvedGradient
 
 	// GradientState holds in-memory state for this lane's activity gradient animation.
-	GradientState *GradientState
+	GradientState *effects.GradientState
 
 	// PeriscopeGradient is the animation gradient for this lane's periscope bar.
 	// nil means no gradient configured - use default styling.
 	PeriscopeGradient *contract.ResolvedGradient
 
 	// PeriscopeGradientState holds in-memory state for this lane's periscope gradient animation.
-	PeriscopeGradientState *GradientState
+	PeriscopeGradientState *effects.GradientState
 }
 
 func (l *Lane) WindowSize() int {
@@ -60,7 +61,7 @@ func (l *Lane) WindowSize() int {
 
 func (l *Lane) ResetGradient() {
 	if l.GradientState == nil {
-		l.GradientState = NewGradientState()
+		l.GradientState = effects.NewGradientState()
 	}
 	l.GradientState.Reset()
 }

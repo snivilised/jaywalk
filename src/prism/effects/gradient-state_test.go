@@ -1,4 +1,4 @@
-package highway
+package effects
 
 import (
 	"image/color"
