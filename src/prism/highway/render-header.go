@@ -5,8 +5,6 @@ import (
 
 	"github.com/snivilised/jaywalk/src/prism/layout"
 	"github.com/snivilised/jaywalk/src/prism/widgets/border"
-	"github.com/snivilised/jaywalk/src/prism/widgets/cascade"
-	"github.com/snivilised/jaywalk/src/prism/widgets/filter"
 	"github.com/snivilised/jaywalk/src/prism/widgets/intro"
 	"github.com/snivilised/jaywalk/src/prism/widgets/pipeline"
 )
@@ -27,27 +25,17 @@ func (m Model) renderHeader(b *strings.Builder) {
 	})
 	b.WriteString(topBorderContent)
 
-	// Render Date/Time and Cascade
+	// Render the intro line. The intro contains primary flags only
+	// (subscription, date/time) - the cascade (lock/depth) and filter
+	// information have been moved to the flags row renderer to keep all
+	// supplementary flag presentation in one place.
 	introContent := intro.Render(m.subscriptionLabel, m.startedAt, m.dateFormat, intro.Styles{
 		InfoStyle: summaryValueStyle,
 	})
-	cascadeWidget := cascade.Render(m.CascadeDisplay, cascade.Styles{
-		HeaderStyle: headerStyle,
-	})
-
-	var infoPart string
-	if introContent != "" {
-		infoPart = introContent
-		if cascadeWidget != "" {
-			infoPart = infoPart + " │" + cascadeWidget
-		}
-	} else if cascadeWidget != "" {
-		infoPart = cascadeWidget
-	}
 
 	// Render header text
 	header := headerStyle.Render("Processing")
-	middle := header + infoPart
+	middle := header + introContent
 
 	row := layout.NewRow(m.width-4).
 		Caps(borderStyle.Render("│ "), borderStyle.Render(" │")).
@@ -59,15 +47,6 @@ func (m Model) renderHeader(b *strings.Builder) {
 	})
 	if pipelineContent != "" {
 		row.RightContent(pipelineContent)
-	}
-
-	// Render Filter Info
-	filterContent := filter.Render(m.FilesGlob, m.FilesRegex, m.DirsGlob, m.DirsRegex,
-		m.FileTypeMode, m.DirTypeMode, filter.Styles{
-			InfoStyle: summaryValueStyle,
-		})
-	if filterContent != "" {
-		row.RightContent(filterContent)
 	}
 
 	row.RenderTo(b)

@@ -18,6 +18,7 @@ import (
 	"github.com/snivilised/jaywalk/src/app/bedrock"
 	"github.com/snivilised/jaywalk/src/app/report"
 	"github.com/snivilised/jaywalk/src/app/shell"
+	"github.com/snivilised/jaywalk/src/prism/contract"
 )
 
 // Coordinator coordinates the layers between the command adapters and
@@ -283,8 +284,7 @@ func (c *Coordinator) execute(
 	defer closeExec()
 
 	// Extract header info before creating BeginEvent for consistency with highway model
-	cascadeDisplay, filesGlob, filesRegex, dirsGlob, dirsRegex, fileTypeMode, dirTypeMode :=
-		extractHeaderInfo(req)
+	headerInfo := extractHeaderInfo(req)
 
 	req.UI.OnBegin(&report.BeginEvent{
 		Root:         req.Root,
@@ -298,14 +298,12 @@ func (c *Coordinator) execute(
 		DateFormat:   c.config.Mapped.Interaction.DateFormat,
 		Cancel:       cancel,
 
-		// Header info fields
-		CascadeDisplay: cascadeDisplay,
-		FilesGlob:      filesGlob,
-		FilesRegex:     filesRegex,
-		DirsGlob:       dirsGlob,
-		DirsRegex:      dirsRegex,
-		FileTypeMode:   fileTypeMode,
-		DirTypeMode:    dirTypeMode,
+		// Header info: supplementary flag values extracted from
+		// resolved traversal options for display in the highway view.
+		Header: headerInfo,
+
+		// Position of the flags row within the highway view
+		FlagsRowPosition: c.config.Mapped.Highway.FlagsRowPosition,
 	})
 
 	result, err := req.Scenario(facade, req.Settings...).Navigate(ctx)
@@ -383,10 +381,14 @@ func (c *Coordinator) useShellPoolExec(
 	}, nil
 }
 
-// extractHeaderInfo extracts cascade display (padlock or depth) and filter flag info from the Options
-// that were passed through BuildTraversalSettings. This preserves display information
-// even though the pref.Options struct doesn't directly expose the original flags.
-func extractHeaderInfo(req *Request) (cascade, filesGlob, filesRegex, dirsGlob, dirsRegex string, fileType, dirType string) {
+// extractHeaderInfo extracts cascade display (padlock or depth), filter
+// flag info and sampler info from the Options that were passed through
+// BuildTraversalSettings. This preserves display information even
+// though the pref.Options struct doesn't directly expose the original
+// flags. The returned HeaderInfo is then embedded in the BeginEvent
+// sent to the UI presenter (see contract.HeaderInfo for field semantics).
+func extractHeaderInfo(req *Request) contract.HeaderInfo {
+	var info contract.HeaderInfo
 	options := &pref.Options{}
 
 	// Extract options from settings by running all option functions
@@ -395,15 +397,15 @@ func extractHeaderInfo(req *Request) (cascade, filesGlob, filesRegex, dirsGlob, 
 			continue
 		}
 		if err := setting(options); err != nil {
-			return "", "", "", "", "", "", "" // error case - return empty
+			return contract.HeaderInfo{} // error case - return empty
 		}
 	}
 
 	// Extract cascade display (no-recurse or depth) from behaviours
 	if options.Behaviours.Cascade.NoRecurse {
-		cascade = "🔒"
+		info.CascadeDisplay = "🔒"
 	} else if options.Behaviours.Cascade.Depth > 0 {
-		cascade = fmt.Sprintf("depth:%d", options.Behaviours.Cascade.Depth)
+		info.CascadeDisplay = fmt.Sprintf("depth:%d", options.Behaviours.Cascade.Depth)
 	}
 
 	// Extract filter info from poly filter definitions
@@ -411,35 +413,77 @@ func extractHeaderInfo(req *Request) (cascade, filesGlob, filesRegex, dirsGlob, 
 		fileDef := options.Filter.Node.Poly.File
 		dirDef := options.Filter.Node.Poly.Directory
 
+		// TranslateFilterIntent places BenignNodeFilterDef into the slot
+		// the user did not specify (e.g. when the user only sets
+		// --files, the directory slot is filled with the benign default
+		// "match anything" filter). We must skip those placeholders here
+		// so they don't appear in the flags row as if the user had
+		// specified them (e.g. "dirs regex: .").
+		fileActive := !fileDef.IsBenign() && fileDef.Pattern != ""
+		dirActive := !dirDef.IsBenign() && dirDef.Pattern != ""
+
 		// Determine file pattern and type
-		if fileDef.Type == enums.FilterTypeGlobEx && fileDef.Pattern != "" {
-			filesGlob = fileDef.Pattern
-		} else if fileDef.Type == enums.FilterTypeRegex && fileDef.Pattern != "" {
-			filesRegex = fileDef.Pattern
+		if fileActive {
+			//nolint:staticcheck // QF1003: if/else chain intentionally
+			// avoids a switch because the `exhaustive` linter requires
+			// every FilterType enum value to be listed.
+			if fileDef.Type == enums.FilterTypeGlobEx {
+				info.FilesGlob = fileDef.Pattern
+			} else if fileDef.Type == enums.FilterTypeRegex {
+				info.FilesRegex = fileDef.Pattern
+			}
 		}
 
 		// Determine directory pattern and type
-		if dirDef.Type == enums.FilterTypeGlob && dirDef.Pattern != "" {
-			dirsGlob = dirDef.Pattern
-		} else if dirDef.Type == enums.FilterTypeRegex && dirDef.Pattern != "" {
-			dirsRegex = dirDef.Pattern
+		if dirActive {
+			//nolint:staticcheck // QF1003: see comment above.
+			if dirDef.Type == enums.FilterTypeGlob {
+				info.DirsGlob = dirDef.Pattern
+			} else if dirDef.Type == enums.FilterTypeRegex {
+				info.DirsRegex = dirDef.Pattern
+			}
 		}
 
-		// Determine filter types based on precedence (regex takes priority when both exist)
-		fileType = determineFileType(fileDef.Type, fileDef.Pattern != "")
-		dirType = determineFileType(dirDef.Type, dirDef.Pattern != "")
+		// Determine filter types based on precedence (regex takes priority
+		// when both exist). Defaults to "glob" when the slot is benign
+		// (no user-specified filter).
+		if fileActive {
+			info.FileTypeMode = determineFileType(fileDef.Type)
+		} else {
+			info.FileTypeMode = filterModeGlob
+		}
+		if dirActive {
+			info.DirTypeMode = determineFileType(dirDef.Type)
+		} else {
+			info.DirTypeMode = filterModeGlob
+		}
 	}
 
-	return cascade, filesGlob, filesRegex, dirsGlob, dirsRegex, fileType, dirType
+	// Extract sampler info (only meaningful when sampling is active)
+	if options.Sampling.IsSamplingActive() {
+		info.NumFiles = options.Sampling.NoOf.Files
+		info.NumFolders = options.Sampling.NoOf.Directories
+		info.SampleLast = options.Sampling.InReverse
+	}
+
+	return info
 }
 
-// determineFileType returns "regex" if pattern is a regex, otherwise "glob".
-// This helps distinguish display format but defaults to glob for backwards compatibility.
-func determineFileType(filterType enums.FilterType, hasPattern bool) string {
-	if filterType == enums.FilterTypeRegex && hasPattern {
-		return "regex"
+// filter mode labels used by HeaderInfo.FileTypeMode / HeaderInfo.DirTypeMode
+const (
+	filterModeGlob  = "glob"
+	filterModeRegex = "regex"
+)
+
+// determineFileType returns "regex" if the filter is a regex type,
+// otherwise "glob". The caller must have already established that the
+// filter is user-supplied and not the benign default; this helper only
+// inspects the type.
+func determineFileType(filterType enums.FilterType) string {
+	if filterType == enums.FilterTypeRegex {
+		return filterModeRegex
 	}
-	return "glob" // default
+	return filterModeGlob
 }
 func (c *Coordinator) captionFor(req *Request) string {
 	subscription := ""

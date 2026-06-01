@@ -9,24 +9,24 @@ import (
 
 var _ = Describe("Cascade.Render", func() {
 	It("returns empty string for empty cascade", func() {
-		styles := Styles{HeaderStyle: lipgloss.NewStyle()}
+		styles := Styles{ValueStyle: lipgloss.NewStyle()}
 		result := Render("", styles)
 		Expect(result).To(Equal(""))
 	})
 
 	It("returns styled cascade value", func() {
-		headerStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("3"))
-		styles := Styles{HeaderStyle: headerStyle}
+		valueStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("3"))
+		styles := Styles{ValueStyle: valueStyle}
 		cascade := "🔒"
 		result := Render(cascade, styles)
-		Expect(result).To(Equal(headerStyle.Render(cascade)))
+		Expect(result).To(Equal(valueStyle.Render(cascade)))
 	})
 
 	It("returns styled depth value", func() {
-		headerStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("3"))
-		styles := Styles{HeaderStyle: headerStyle}
+		valueStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("3"))
+		styles := Styles{ValueStyle: valueStyle}
 		cascade := "depth:5"
 		result := Render(cascade, styles)
-		Expect(result).To(Equal(headerStyle.Render(cascade)))
+		Expect(result).To(Equal(valueStyle.Render(cascade)))
 	})
 })

@@ -30,6 +30,24 @@ const (
 )
 
 // ---------------------------------------------------------------------------
+// Flags row placement
+// ---------------------------------------------------------------------------
+
+const (
+	// FlagsRowPositionTop places the flags row immediately after the top
+	// border and before the first highway lane.
+	FlagsRowPositionTop = "top"
+
+	// FlagsRowPositionBottom places the flags row immediately above the
+	// status line and below the last highway lane (the default).
+	FlagsRowPositionBottom = "bottom"
+
+	// flagsRowPositionDefault is the value used when the configured value
+	// is empty or unrecognised.
+	flagsRowPositionDefault = FlagsRowPositionBottom
+)
+
+// ---------------------------------------------------------------------------
 // Polymorphic view configuration
 // ---------------------------------------------------------------------------
 //
@@ -95,6 +113,12 @@ type HighwayConfig struct {
 	// by LoadConfig; carried on the value so the presenter does not
 	// have to look it up again.
 	AnimationGradient string
+
+	// FlagsRowPosition is the placement of the supplementary flags row
+	// within the highway view. Allowed values are "top" and "bottom";
+	// an unrecognised value is normalised to "bottom" at load time
+	// (see loadHighwayConfig).
+	FlagsRowPosition string
 }
 
 // isViewConfig seals the implementation set.
@@ -156,6 +180,8 @@ func loadHighwayConfig(source ViewConfigSource, palette contract.Palette) (ViewC
 		}
 	}
 
+	flagsRowPosition := normaliseFlagsRowPosition(raw.FlagsRowPosition)
+
 	return HighwayConfig{
 		WorkerPool:        raw.WorkerPool,
 		JobPool:           raw.JobPool,
@@ -163,7 +189,29 @@ func loadHighwayConfig(source ViewConfigSource, palette contract.Palette) (ViewC
 		SpinnerNames:      raw.AnimationData.Spinners.Enabled,
 		AnimationGradient: nameFromPalette(palette, contract.GradientComponentActivity),
 		Overrides:         overrides,
+		FlagsRowPosition:  flagsRowPosition,
 	}, nil
+}
+
+// normaliseFlagsRowPosition validates the configured flags row position.
+// Empty values are treated as unset (use default). Unrecognised values
+// also resolve to the default; a warning is written to stderr so the
+// user is informed but the application is not aborted.
+func normaliseFlagsRowPosition(raw string) string {
+	if raw == "" {
+		return flagsRowPositionDefault
+	}
+
+	switch raw {
+	case FlagsRowPositionTop, FlagsRowPositionBottom:
+		return raw
+	default:
+		fmt.Fprintf(os.Stderr,
+			"warning: ui.highway.flags-row-position: unrecognised value %q, defaulting to %q\n",
+			raw, flagsRowPositionDefault,
+		)
+		return flagsRowPositionDefault
+	}
 }
 
 // nameFromPalette looks up the gradient name for a named component

@@ -43,14 +43,17 @@ type Model struct {
 	counted           map[string]bool
 	errMsg            string
 
-	// header filter and cascade display info (populated by OvertureMsg)
-	CascadeDisplay string // "🔒", "depth:<n>", or ""
-	FilesGlob      string // raw pattern value
-	FilesRegex     string // raw pattern value
-	DirsGlob       string // raw pattern value
-	DirsRegex      string // raw pattern value
-	FileTypeMode   string // "glob" or "regex" for files
-	DirTypeMode    string // "glob" or "regex" for dirs
+	// header is the supplementary flag info carried on the OvertureMsg.
+	// Stored on the model so renderFlagsRow and other renderers can
+	// access it without further plumbing. See contract.HeaderInfo for
+	// the field semantics.
+	header contract.HeaderInfo
+
+	// FlagsRowPosition controls where the flags row is rendered. See
+	// contract/... or the theme config; "top" places it after the top
+	// border, "bottom" places it above the status line. The default
+	// applied by the loader is "bottom".
+	FlagsRowPosition string
 }
 
 // initLaneSkip computes the per-lane skip factor from each lane's
@@ -182,14 +185,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.caption = msg.Caption
 		m.dateFormat = msg.DateFormat
 
-		// store header widgets info
-		m.CascadeDisplay = msg.CascadeDisplay
-		m.FilesGlob = msg.FilesGlob
-		m.FilesRegex = msg.FilesRegex
-		m.DirsGlob = msg.DirsGlob
-		m.DirsRegex = msg.DirsRegex
-		m.FileTypeMode = msg.FileTypeMode
-		m.DirTypeMode = msg.DirTypeMode
+		// Cache the header info for renderers.
+		m.header = msg.Header
+
+		// store flags row position; default to "bottom" for empty/invalid
+		m.FlagsRowPosition = msg.FlagsRowPosition
+		if m.FlagsRowPosition != FlagsRowPositionTop && m.FlagsRowPosition != FlagsRowPositionBottom {
+			m.FlagsRowPosition = FlagsRowPositionBottom
+		}
 
 		return m, nil
 

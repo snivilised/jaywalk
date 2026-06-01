@@ -6,6 +6,7 @@ import (
 
 	"github.com/snivilised/jaywalk/src/agenor/core"
 	"github.com/snivilised/jaywalk/src/agenor/enums"
+	"github.com/snivilised/jaywalk/src/prism/contract"
 )
 
 // DisplayEvent is the base event embedded into all UI events. It carries
@@ -58,14 +59,16 @@ type BeginEvent struct {
 	// (e.g., in response to a user interrupt like Ctrl-C in the TUI).
 	Cancel context.CancelFunc
 
-	// Header display fields for filter flags
-	CascadeDisplay string // "🔒", "depth:<n>", or empty
-	FilesGlob      string // Pattern when --files-glob or -f used
-	FilesRegex     string // Pattern when --files-regex used
-	DirsGlob       string // Pattern when --dirs-glob used
-	DirsRegex      string // Pattern when --dirs-regex used
-	FileTypeMode   string // "glob" or "regex" for files
-	DirTypeMode    string // "glob" or "regex" for dirs
+	// Header groups the supplementary flag values extracted from the
+	// resolved traversal options for display in the highway view's
+	// header and flags row. See contract.HeaderInfo for the field
+	// semantics.
+	Header contract.HeaderInfo
+
+	// FlagsRowPosition selects the position of the supplementary flags
+	// row within the highway view ("top" or "bottom"). An empty or
+	// invalid value is normalised to "bottom" before the event is sent.
+	FlagsRowPosition string
 }
 
 // NeutralEvent is emitted per node visit when no action or pipeline is
