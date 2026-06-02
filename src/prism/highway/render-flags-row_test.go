@@ -7,17 +7,13 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/snivilised/jaywalk/src/prism/contract"
+	lab "github.com/snivilised/jaywalk/test/laboratory"
 )
 
 const (
-	// padlockRune is the cascade widget value used across the
-	// flags-row specs. Lifted into a constant to satisfy the
-	// goconst linter check for repeated string literals.
-	padlockRune = "🔒"
-
 	// filesGlobPattern is the --files-glob value used in the
 	// flags-row specs. Lifted into a constant for the same reason
-	// as padlockRune.
+	// as contract.Static.Emoji.Padlock.
 	filesGlobPattern = "*.go"
 )
 
@@ -85,10 +81,10 @@ var _ = Describe("composeFlagsRowEntries", func() {
 	})
 
 	It("emits a single entry for the cascade widget", func() {
-		m := modelWith(padlockRune, "", "", 0, 0, false)
+		m := modelWith(contract.Static.Emoji.Padlock, "", "", 0, 0, false)
 		entries := m.composeFlagsRowEntries(testTheme().HeaderStyle, testTheme().SummaryValueStyle)
 		Expect(entries).To(HaveLen(1))
-		Expect(entries[0]).To(ContainSubstring(padlockRune))
+		Expect(entries[0]).To(ContainSubstring(contract.Static.Emoji.Padlock))
 	})
 
 	It("emits one entry per active filter", func() {
@@ -103,19 +99,19 @@ var _ = Describe("composeFlagsRowEntries", func() {
 		m := modelWith("", "", "", 0, 0, true)
 		entries := m.composeFlagsRowEntries(testTheme().HeaderStyle, testTheme().SummaryValueStyle)
 		Expect(entries).To(HaveLen(1))
-		Expect(entries[0]).To(ContainSubstring("🐌"))
+		Expect(entries[0]).To(ContainSubstring(contract.Static.Emoji.Snail))
 	})
 
 	It("emits all three widget entries in spec order", func() {
-		m := modelWith(padlockRune, filesGlobPattern, "", 10, 5, true)
+		m := modelWith(contract.Static.Emoji.Padlock, filesGlobPattern, "", 10, 5, true)
 		entries := m.composeFlagsRowEntries(testTheme().HeaderStyle, testTheme().SummaryValueStyle)
 		Expect(entries).To(HaveLen(3))
 		// First entry is the cascade
-		Expect(entries[0]).To(ContainSubstring(padlockRune))
+		Expect(entries[0]).To(ContainSubstring(contract.Static.Emoji.Padlock))
 		// Second is the filter
 		Expect(entries[1]).To(ContainSubstring("files glob"))
 		// Third is the sampler
-		Expect(entries[2]).To(ContainSubstring("🐌"))
+		Expect(entries[2]).To(ContainSubstring(contract.Static.Emoji.Snail))
 		Expect(entries[2]).To(ContainSubstring("#files"))
 		Expect(entries[2]).To(ContainSubstring("#dirs"))
 	})
@@ -133,11 +129,11 @@ var _ = Describe("renderFlagsRow", func() {
 	It("emits a separator border when at least one flag is active", func() {
 		m := baseModel(1)
 		m.FlagsRowPosition = FlagsRowPositionBottom
-		m.header.CascadeDisplay = padlockRune
+		m.header.CascadeDisplay = contract.Static.Emoji.Padlock
 		var b strings.Builder
 		m.renderFlagsRow(&b)
 		out := b.String()
-		Expect(out).To(ContainSubstring(padlockRune))
+		Expect(out).To(ContainSubstring(contract.Static.Emoji.Padlock))
 		Expect(out).To(ContainSubstring("├"))
 		Expect(out).To(ContainSubstring("┤"))
 	})
@@ -145,12 +141,12 @@ var _ = Describe("renderFlagsRow", func() {
 	It("composes multiple widgets into a single line with the pipe separator", func() {
 		m := baseModel(1)
 		m.FlagsRowPosition = FlagsRowPositionBottom
-		m.header.CascadeDisplay = padlockRune
+		m.header.CascadeDisplay = contract.Static.Emoji.Padlock
 		m.header.FilesGlob = filesGlobPattern
 		var b strings.Builder
 		m.renderFlagsRow(&b)
 		out := b.String()
-		Expect(out).To(ContainSubstring(padlockRune))
+		Expect(out).To(ContainSubstring(contract.Static.Emoji.Padlock))
 		Expect(out).To(ContainSubstring("|"))
 		Expect(out).To(ContainSubstring("files glob"))
 	})
@@ -169,14 +165,14 @@ var _ = Describe("renderFlagsRow", func() {
 		// We strip ANSI escape codes before substring matching, because
 		// the styled label injects reset codes that interrupt a literal
 		// "files glob:" match.
-		Expect(stripANSI(out)).To(ContainSubstring("files glob:"))
-		Expect(stripANSI(out)).NotTo(ContainSubstring("files glob      :"))
+		Expect(lab.StripANSI(out)).To(ContainSubstring("files glob:"))
+		Expect(lab.StripANSI(out)).NotTo(ContainSubstring("files glob      :"))
 	})
 
 	It("places the pipe separator between entries with surrounding spaces", func() {
 		m := baseModel(1)
 		m.FlagsRowPosition = FlagsRowPositionBottom
-		m.header.CascadeDisplay = padlockRune
+		m.header.CascadeDisplay = contract.Static.Emoji.Padlock
 		m.header.FilesGlob = filesGlobPattern
 		m.header.NumFiles = 10
 		var b strings.Builder
@@ -202,12 +198,12 @@ var _ = Describe("renderFlagsRow", func() {
 		m.header.SampleLast = true
 		var b strings.Builder
 		m.renderFlagsRow(&b)
-		out := stripANSI(b.String())
+		out := lab.StripANSI(b.String())
 		// spec example shape: `depth: 3 | files glob: *.go | ... | dirs regex: ^\. | 🐌 | #files: 100 | #dirs: 10`
 		Expect(out).To(ContainSubstring("depth:3"))
 		Expect(out).To(ContainSubstring("files glob: *.go"))
 		Expect(out).To(ContainSubstring("dirs regex: ^\\."))
-		Expect(out).To(ContainSubstring("🐌"))
+		Expect(out).To(ContainSubstring(contract.Static.Emoji.Snail))
 		Expect(out).To(ContainSubstring("#files: 100"))
 		Expect(out).To(ContainSubstring("#dirs: 10"))
 		// Every flag should be joined with " | " - cascade + filter +
@@ -228,7 +224,7 @@ var _ = Describe("renderFlagsRow", func() {
 		m.header.FilesGlob = "*|.go"
 		var b strings.Builder
 		m.renderFlagsRow(&b)
-		out := stripANSI(b.String())
+		out := lab.StripANSI(b.String())
 		Expect(out).To(ContainSubstring("files glob: *|.go"))
 		Expect(out).NotTo(ContainSubstring("dirs regex"))
 		Expect(out).NotTo(ContainSubstring("dirs glob"))
@@ -239,7 +235,7 @@ var _ = Describe("renderFlagsRow", func() {
 		m := baseModel(1)
 		m.width = 30 // narrow
 		m.FlagsRowPosition = FlagsRowPositionBottom
-		m.header.CascadeDisplay = padlockRune
+		m.header.CascadeDisplay = contract.Static.Emoji.Padlock
 		m.header.FilesGlob = filesGlobPattern
 		m.header.DirsGlob = "src/*"
 		m.header.NumFiles = 100

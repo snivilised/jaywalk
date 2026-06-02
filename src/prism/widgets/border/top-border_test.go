@@ -14,7 +14,7 @@ import (
 var _ = Describe("TopBorder", func() {
 	It("renders correct border with root path", func() {
 		theme, _ := contract.NewTheme(contract.SystemPalette(), nil)
-		styles := TopStyles{
+		styles := Styles{
 			BorderStyle: theme.BorderStyle,
 			PathStyle:   theme.RootStyle,
 			CornerStyle: theme.BorderStyle,
@@ -34,9 +34,9 @@ var _ = Describe("TopBorder", func() {
 		L := avail / 2
 		R := avail - L
 
-		expect := theme.BorderStyle.Render("╭"+strings.Repeat("─", L)+"[ ") +
+		expect := theme.BorderStyle.Render(contract.Static.Borders.TopLeftCorner+strings.Repeat("─", L)+"[ ") +
 			theme.RootStyle.Render(rootPath) +
-			theme.BorderStyle.Render(" ]"+strings.Repeat("─", R)+".★..─╮") + "\n"
+			theme.BorderStyle.Render(" ]"+strings.Repeat("─", R)+contract.Static.Borders.TopRight) + "\n"
 
 		result := RenderTop(rootPath, width, styles)
 		Expect(result).To(Equal(expect))
@@ -44,7 +44,7 @@ var _ = Describe("TopBorder", func() {
 
 	It("truncates root path if too long", func() {
 		theme, _ := contract.NewTheme(contract.SystemPalette(), nil)
-		styles := TopStyles{
+		styles := Styles{
 			BorderStyle: theme.BorderStyle,
 			PathStyle:   theme.RootStyle,
 			CornerStyle: theme.BorderStyle,
@@ -68,9 +68,9 @@ var _ = Describe("TopBorder", func() {
 		L := avail / 2
 		R := avail - L
 
-		expect := theme.BorderStyle.Render("╭"+strings.Repeat("─", L)+"[ ") +
+		expect := theme.BorderStyle.Render(contract.Static.Borders.TopLeftCorner+strings.Repeat("─", L)+"[ ") +
 			theme.RootStyle.Render(truncatedPath) +
-			theme.BorderStyle.Render(" ]"+strings.Repeat("─", R)+".★..─╮") + "\n"
+			theme.BorderStyle.Render(" ]"+strings.Repeat("─", R)+contract.Static.Borders.TopRight) + "\n"
 
 		result := RenderTop(rootPath, width, styles)
 		Expect(result).To(Equal(expect))

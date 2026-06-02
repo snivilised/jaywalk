@@ -5,6 +5,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/snivilised/jaywalk/src/prism/contract"
 )
 
 var _ = Describe("Highway Gradient Rendering", func() {
@@ -41,7 +42,7 @@ var _ = Describe("Highway Gradient Rendering", func() {
 
 		It("advances offset and reverses direction on Update", func() {
 			state := NewGradientState()
-			steps := []Colour{
+			steps := []contract.Colour{
 				{R: 255, G: 0, B: 0},
 				{R: 170, G: 0, B: 85},
 				{R: 85, G: 0, B: 170},
@@ -75,15 +76,15 @@ var _ = Describe("Highway Gradient Rendering", func() {
 			runs := []RunWithColour{
 				{
 					Rune:   'A',
-					Colour: Colour{R: 255, G: 128, B: 64},
+					Colour: contract.Colour{R: 255, G: 128, B: 64},
 				},
 				{
 					Rune:   ' ',
-					Colour: Colour{R: 0, G: 0, B: 0},
+					Colour: contract.Colour{R: 0, G: 0, B: 0},
 				},
 				{
 					Rune:   'B',
-					Colour: Colour{R: 0, G: 255, B: 0},
+					Colour: contract.Colour{R: 0, G: 255, B: 0},
 				},
 			}
 

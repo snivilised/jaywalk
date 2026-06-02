@@ -163,10 +163,10 @@ var _ = Describe("LinearRenderer", func() {
 		})
 
 		output := w.String()
-		Expect(output).To(ContainSubstring("╭"))
+		Expect(output).To(ContainSubstring(contract.Static.Borders.TopLeftCorner))
 		Expect(output).To(ContainSubstring("jay  ./src/app"))
 		Expect(output).To(ContainSubstring("files and folders  -"))
-		Expect(output).To(ContainSubstring("╰"))
+		Expect(output).To(ContainSubstring(contract.Static.Borders.BottomLeftCorner))
 	})
 
 	It("renders final directory children without vertical continuation", func() {

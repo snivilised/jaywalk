@@ -11,24 +11,12 @@ import (
 	"github.com/snivilised/jaywalk/src/prism/contract"
 )
 
-// Colour is a simple RGBA colour type for in-package gradient interpolation.
-// This mirrors image/color.RGBA but without alpha support (alpha always 255).
-type Colour struct {
-	R, G, B uint8
-}
-
-// DefaultStepCount returns the default number of gradient steps.
-// Delegates to contract.DefaultStepCount to avoid duplication.
-func DefaultStepCount() int {
-	return contract.DefaultStepCount()
-}
-
 // GradientState holds in-memory state for a single lane's gradient animation.
 type GradientState struct {
 	Offset     int // Current position in gradient steps array (0 to len-1)
 	Direction  int // 1 = forward, -1 = backward; starts as 1
 	TotalSteps int // Length of gradient steps array
-	stepsArray []Colour
+	stepsArray []contract.Colour
 }
 
 // NewGradientState creates a new gradient state for a lane.
@@ -41,11 +29,11 @@ func NewGradientState() *GradientState {
 }
 
 // SetSteps configures the gradient steps array for this state.
-func (s *GradientState) SetSteps(steps []Colour) {
+func (s *GradientState) SetSteps(steps []contract.Colour) {
 	s.stepsArray = steps
 	s.TotalSteps = len(steps)
 	if s.TotalSteps == 0 {
-		s.TotalSteps = DefaultStepCount()
+		s.TotalSteps = contract.DefaultStepCount()
 	}
 }
 
@@ -136,7 +124,7 @@ func ApplyGradient(hiCol, loCol color.Color, frameContent string, state *Gradien
 
 		result = append(result, RunWithColour{
 			Rune: r,
-			Colour: Colour{
+			Colour: contract.Colour{
 				R: steps[stepIdx].R,
 				G: steps[stepIdx].G,
 				B: steps[stepIdx].B,
@@ -183,7 +171,7 @@ func ApplyGradientStatic(hiCol, loCol color.Color, content string, totalSteps in
 		}
 		result[i] = RunWithColour{
 			Rune: r,
-			Colour: Colour{
+			Colour: contract.Colour{
 				R: steps[idx].R,
 				G: steps[idx].G,
 				B: steps[idx].B,
@@ -197,7 +185,7 @@ func ApplyGradientStatic(hiCol, loCol color.Color, content string, totalSteps in
 // RunWithColour represents a rune with its gradient-interpolated colour.
 type RunWithColour struct {
 	Rune   rune
-	Colour Colour
+	Colour contract.Colour
 }
 
 // ApplyGradientStyled converts the gradient run slice into a lipgloss-compatible string.
@@ -232,10 +220,10 @@ func ApplyGradientStyled(runs []RunWithColour) string {
 
 // InterpolateBetweenRGBA creates a gradient of 'steps' colours between hi and lo RGB values.
 // Returns nil if steps <= 0. Each colour has alpha=255 (opaque).
-func InterpolateBetweenRGBA(hiR, hiG, hiB, loR, loG, loB uint8, steps int) []Colour {
+func InterpolateBetweenRGBA(hiR, hiG, hiB, loR, loG, loB uint8, steps int) []contract.Colour {
 	steps = max(steps, 2)
 
-	gradient := make([]Colour, steps)
+	gradient := make([]contract.Colour, steps)
 	for i := 0; i < steps; i++ {
 		t := float64(i) / float64(steps-1)
 
@@ -243,7 +231,7 @@ func InterpolateBetweenRGBA(hiR, hiG, hiB, loR, loG, loB uint8, steps int) []Col
 		g := uint8(math.Max(0, math.Min(255, float64(hiG)+(float64(loG)-float64(hiG))*t)))
 		b := uint8(math.Max(0, math.Min(255, float64(hiB)+(float64(loB)-float64(hiB))*t)))
 
-		gradient[i] = Colour{R: r, G: g, B: b}
+		gradient[i] = contract.Colour{R: r, G: g, B: b}
 	}
 
 	return gradient

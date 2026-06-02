@@ -403,7 +403,7 @@ func extractHeaderInfo(req *Request) contract.HeaderInfo {
 
 	// Extract cascade display (no-recurse or depth) from behaviours
 	if options.Behaviours.Cascade.NoRecurse {
-		info.CascadeDisplay = "🔒"
+		info.CascadeDisplay = contract.Static.Emoji.Padlock
 	} else if options.Behaviours.Cascade.Depth > 0 {
 		info.CascadeDisplay = fmt.Sprintf("depth:%d", options.Behaviours.Cascade.Depth)
 	}

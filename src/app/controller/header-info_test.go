@@ -8,6 +8,7 @@ import (
 	"github.com/snivilised/jaywalk/src/agenor/core"
 	"github.com/snivilised/jaywalk/src/agenor/enums"
 	"github.com/snivilised/jaywalk/src/agenor/pref"
+	"github.com/snivilised/jaywalk/src/prism/contract"
 )
 
 // extractHeaderInfo is exercised indirectly via Coordinator.coordinate
@@ -27,7 +28,7 @@ var _ = Describe("extractHeaderInfo", func() {
 			Node: &core.FilterDef{
 				Type: enums.FilterTypePoly,
 				Poly: &core.PolyFilterDef{
-					File:      core.BenignNodeFilterDef, // placeholder
+					File: core.BenignNodeFilterDef, // placeholder
 					Directory: core.FilterDef{
 						Type:        enums.FilterTypeRegex,
 						Pattern:     "src/.*",
@@ -94,6 +95,6 @@ var _ = Describe("extractHeaderInfo", func() {
 	It("surfaces the cascade display when --no-recurse is set", func() {
 		req := buildRequest(agenor.WithNoRecurse())
 		got := extractHeaderInfo(req)
-		Expect(got.CascadeDisplay).To(Equal("🔒"))
+		Expect(got.CascadeDisplay).To(Equal(contract.Static.Emoji.Padlock))
 	})
 })
