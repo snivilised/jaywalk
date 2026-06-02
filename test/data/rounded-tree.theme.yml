@@ -175,6 +175,7 @@ palette:
     components:
       activity-control: aurora-borealis
       periscope-control: aurora-borealis
+      banner-control: aurora-borealis
 
 # TreeIcons holds optional glyph configuration used by tree-style
 # stream renderers such as the linear view.

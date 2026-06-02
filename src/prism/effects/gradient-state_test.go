@@ -69,6 +69,47 @@ var _ = Describe("Highway Gradient Rendering", func() {
 			Expect(idx).To(BeNumerically("<=", 3))
 			Expect(idx).To(BeNumerically(">=", 0))
 		})
+
+		It("GetEffectiveIndex produces a smooth ping-pong (no wrap-around sharp jumps)", func() {
+			state := NewGradientState()
+			steps := []contract.Colour{
+				{R: 255, G: 0, B: 0},   // 0: Hi (red)
+				{R: 170, G: 0, B: 85},  // 1
+				{R: 85, G: 0, B: 170},  // 2
+				{R: 0, G: 0, B: 255},   // 3: Lo (blue)
+			}
+			state.SetSteps(steps)
+
+			// For pos=0, the phase is just the offset (0,1,2,3,2,1,0,1,2,3,...)
+			// so the index sequence is 0,1,2,3,2,1,0,1,2,3,...
+			// Each transition is between adjacent gradient steps; the
+			// wrap from step[3] back to step[0] does NOT occur at
+			// pos=0 because the triangle wave handles it.
+			pos := 0
+			got := []int{}
+			for tick := 0; tick < 8; tick++ {
+				got = append(got, state.GetEffectiveIndex(pos))
+				state.Update(1)
+			}
+			Expect(got).To(Equal([]int{0, 1, 2, 3, 2, 1, 0, 1}))
+
+			// For pos=1, the phase is offset+1 (1,2,3,4,3,2,1,2,...).
+			// Mapped through the triangle wave:
+			//   phase 1→1, 2→2, 3→3, 4→2 (period-phase=2),
+			//   3→3, 2→2, 1→1, 2→2
+			// So the index sequence is 1,2,3,2,3,2,1,2.
+			// Critically, the transition from 3→2 is adjacent (no
+			// wrap to 0) and 2→3 is adjacent.
+			state = NewGradientState()
+			state.SetSteps(steps)
+			pos = 1
+			got = []int{}
+			for tick := 0; tick < 8; tick++ {
+				got = append(got, state.GetEffectiveIndex(pos))
+				state.Update(1)
+			}
+			Expect(got).To(Equal([]int{1, 2, 3, 2, 3, 2, 1, 2}))
+		})
 	})
 
 	Context("ANSI Formatting", func() {

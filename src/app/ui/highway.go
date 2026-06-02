@@ -5,6 +5,7 @@ import (
 	"math/rand/v2"
 	"os"
 	"strings"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/snivilised/jaywalk/src/agenor/core"
@@ -12,8 +13,10 @@ import (
 	"github.com/snivilised/jaywalk/src/agenor/pref"
 	"github.com/snivilised/jaywalk/src/app/report"
 	"github.com/snivilised/jaywalk/src/prism/contract"
+	"github.com/snivilised/jaywalk/src/prism/effects"
 	"github.com/snivilised/jaywalk/src/prism/highway"
 	"github.com/snivilised/jaywalk/src/prism/movies"
+	"github.com/snivilised/jaywalk/src/prism/widgets/banner"
 )
 
 // HighwayConfig is declared in registry.go alongside the other view
@@ -39,6 +42,11 @@ type highwayPresenter struct {
 
 	// Job emoji pool state - populated from config, random emoji picked per job arrival.
 	jobEmojiPool []string
+
+	// bannerInfo is built once in OnBegin and sent to the model via
+	// OvertureMsg. It carries the random aspects and gradient
+	// endpoints resolved from the theme.
+	bannerInfo highway.BannerInfo
 }
 
 func newHighwayPresenter(palette contract.Palette, hCfg HighwayConfig) (report.Presenter, error) {
@@ -99,6 +107,10 @@ func (h *highwayPresenter) OnBegin(e *report.BeginEvent) {
 	// at the flag-binding layer, so only one of 🔒/depth can be present.
 	h.noRecurse = strings.Contains(h.header.CascadeDisplay, contract.Static.Emoji.Padlock)
 
+	// Build the banner info once at startup. The random aspects are
+	// frozen here so the banner reads the same on every render.
+	h.bannerInfo = h.buildBannerInfo()
+
 	lanes := BuildHighwayLanes(h.cfg, h.noW)
 	model := highway.NewModel(lanes, highwayTickRate, e.Root, h.maxDepth, h.theme, h.noRecurse)
 	h.program = tea.NewProgram(model)
@@ -138,6 +150,11 @@ func (h *highwayPresenter) OnBegin(e *report.BeginEvent) {
 
 		// Position of the flags row
 		FlagsRowPosition: h.cfg.FlagsRowPosition,
+
+		// Banner info populated once in OnBegin. The model receives
+		// the gradient state pointer and advances it on every banner
+		// tick.
+		Banner: h.bannerInfo,
 	})
 
 	if h.totalFiles > 0 || h.totalDirs > 0 {
@@ -309,4 +326,74 @@ func BuildHighwayLanes(cfg HighwayConfig, now uint) []highway.Lane {
 		}
 	}
 	return lanes
+}
+
+// buildBannerInfo assembles the per-session BannerInfo for the highway
+// model. The random aspect selection is performed exactly once here
+// (math/rand/v2, package-level source) so the aspects are frozen for
+// the duration of the process. The gradient endpoints are resolved
+// from the theme's "banner-control" component, falling back to no
+// gradient (which causes the widget to render as plain text) when
+// the binding is absent.
+//
+// When the user has disabled the banner, the returned BannerInfo has
+// Disable=true and the gradient/state pointers are nil. The highway
+// model treats this as "do not render".
+func (h *highwayPresenter) buildBannerInfo() highway.BannerInfo {
+	info := highway.BannerInfo{
+		Disable:  h.cfg.Banner.Disable,
+		Position: h.cfg.Banner.Position,
+		Justify:  h.cfg.Banner.Justify,
+	}
+
+	if h.cfg.Banner.Disable {
+		return info
+	}
+
+	// Resolve the gradient from the theme. The "banner-control"
+	// component must be bound to a gradient in the theme YAML;
+	// when missing the banner renders as plain text.
+	//
+	// StepsOverride (from ui.highway.banner.steps) lets the user
+	// keep sharing the gradient's colour endpoints with other
+	// widgets (so the colour scheme stays consistent) but tune
+	// the banner's sweep smoothness independently. Zero means
+	// "use the gradient's own steps".
+	var grad *contract.ResolvedGradient
+	if g, ok := h.theme.GradientFor(contract.GradientComponentBanner); ok && g.Steps > 0 {
+		steps := g.Steps
+		if h.cfg.Banner.StepsOverride > 0 {
+			steps = h.cfg.Banner.StepsOverride
+		}
+		grad = &contract.ResolvedGradient{Steps: steps, Hi: g.Hi, Lo: g.Lo}
+	}
+	info.Gradient = grad
+
+	if grad != nil {
+		st := effects.NewGradientState()
+		st.TotalSteps = grad.Steps
+		info.State = st
+	}
+
+	// Pick the random aspects ONCE here, not per-render. Use the
+	// package-level random source (math/rand/v2) which is fine for
+	// non-security purposes.
+	rng := rand.New(rand.NewPCG(uint64(os.Getpid()), uint64(core.Now().UnixNano()))) //nolint:gosec // non-security
+	aspects := banner.RandomiseAspects(rng)
+	info.Aspects = highway.BannerAspects{
+		Orientation: int(aspects.Orientation),
+		Banding:     int(aspects.Banding),
+		Unity:       int(aspects.Unity),
+		FixedEnd:    int(aspects.FixedEnd),
+	}
+
+	// Resolve the per-tick interval. Tick in the config is in
+	// milliseconds; the model uses a time.Duration.
+	tick := h.cfg.Banner.Tick
+	if tick <= 0 {
+		tick = bannerDefaultTickMs
+	}
+	info.Tick = time.Duration(tick) * time.Millisecond
+
+	return info
 }

@@ -48,6 +48,50 @@ const (
 )
 
 // ---------------------------------------------------------------------------
+// Banner position / justify / tick
+//
+// The banner is rendered OUTSIDE the bordered region of the highway
+// view, so it does not interact with the flags row placement.
+// ---------------------------------------------------------------------------
+
+const (
+	// bannerPositionTop places the banner above the top border.
+	bannerPositionTop = "top"
+
+	// bannerPositionBottom places the banner below the bottom border
+	// (after the summary).
+	bannerPositionBottom = "bottom"
+
+	// bannerPositionDefault is the value used when the configured
+	// value is empty or unrecognised.
+	bannerPositionDefault = bannerPositionTop
+)
+
+const (
+	// bannerJustifyRight aligns the right edge of every banner line
+	// with the right edge of the terminal.
+	bannerJustifyRight = "right"
+
+	// bannerJustifyLeft renders the banner flush against the left
+	// edge of the host view.
+	bannerJustifyLeft = "left"
+
+	// bannerJustifyCenter centres every banner line within the
+	// terminal.
+	bannerJustifyCenter = "center"
+
+	// bannerJustifyDefault is the value used when the configured
+	// value is empty or unrecognised.
+	bannerJustifyDefault = bannerJustifyRight
+)
+
+// bannerTickDefaultMs is the fallback per-tick interval for the
+// banner's gradient animation when the user has not configured one.
+// It deliberately matches banner.DefaultBannerTick (500ms) so the
+// hot-path here does not import the widget package.
+const bannerTickDefaultMs = 500
+
+// ---------------------------------------------------------------------------
 // Polymorphic view configuration
 // ---------------------------------------------------------------------------
 //
@@ -119,6 +163,48 @@ type HighwayConfig struct {
 	// an unrecognised value is normalised to "bottom" at load time
 	// (see loadHighwayConfig).
 	FlagsRowPosition string
+
+	// Banner controls the ANSI shadow banner rendered outside the
+	// highway view's bordered region. The colour sweep is resolved
+	// from the theme via highlights.components["banner-control"].
+	Banner BannerConfig
+}
+
+// BannerConfig is the resolved (palette-aware) shape of the banner
+// settings. The raw, on-disk shape is bedrock.BannerSubConfig; the
+// loader translates between the two.
+type BannerConfig struct {
+	// Disable hides the banner when true. Defaults to false.
+	Disable bool
+
+	// Position is the normalised banner position relative to the
+	// bordered region: "top" (above top border) or "bottom" (below
+	// bottom border). Always one of the two - the loader
+	// normalises empty/unknown values to "top".
+	Position string
+
+	// Tick is the per-tick interval in milliseconds for the
+	// banner's gradient animation. Zero resolves to
+	// banner.DefaultBannerTick (500ms).
+	Tick int
+
+	// Justify is the normalised horizontal alignment of the banner:
+	// "right" (default), "left" or "center". The loader normalises
+	// empty/unknown values to "right".
+	Justify string
+
+	// GradientName is the name of the gradient (from
+	// palette.highlights.gradients) bound to the
+	// "banner-control" component. Empty when no binding exists; the
+	// banner will then render as plain text.
+	GradientName string
+
+	// StepsOverride replaces the steps count of the gradient bound
+	// to the banner. Zero means "use the gradient's own steps". This
+	// lets the user share a gradient definition with other widgets
+	// (so they keep a common colour scheme) but tune the banner's
+	// smoothness/abruptness of the colour sweep independently.
+	StepsOverride int
 }
 
 // isViewConfig seals the implementation set.
@@ -181,6 +267,7 @@ func loadHighwayConfig(source ViewConfigSource, palette contract.Palette) (ViewC
 	}
 
 	flagsRowPosition := normaliseFlagsRowPosition(raw.FlagsRowPosition)
+	bannerCfg := resolveBannerConfig(raw.Banner, palette)
 
 	return HighwayConfig{
 		WorkerPool:        raw.WorkerPool,
@@ -190,6 +277,7 @@ func loadHighwayConfig(source ViewConfigSource, palette contract.Palette) (ViewC
 		AnimationGradient: nameFromPalette(palette, contract.GradientComponentActivity),
 		Overrides:         overrides,
 		FlagsRowPosition:  flagsRowPosition,
+		Banner:            bannerCfg,
 	}, nil
 }
 
@@ -211,6 +299,84 @@ func normaliseFlagsRowPosition(raw string) string {
 			raw, flagsRowPositionDefault,
 		)
 		return flagsRowPositionDefault
+	}
+}
+
+// resolveBannerConfig translates the raw banner sub-config (from
+// jay.ui.yml) into a resolved BannerConfig with normalised values and
+// a palette-derived gradient name. Unrecognised values are tolerated
+// with a stderr warning - the application never aborts because of a
+// banner misconfiguration, since the banner is a decorative element.
+func resolveBannerConfig(raw bedrock.BannerSubConfig, palette contract.Palette) BannerConfig {
+	return BannerConfig{
+		Disable:       raw.Disable,
+		Position:      normaliseBannerPosition(raw.Position),
+		Tick:          normaliseBannerTick(raw.Tick),
+		Justify:       normaliseBannerJustify(raw.Justify),
+		GradientName:  nameFromPalette(palette, contract.GradientComponentBanner),
+		StepsOverride: normaliseBannerSteps(raw.Steps),
+	}
+}
+
+// normaliseBannerPosition validates the configured banner position.
+// Empty values default to "top". Unrecognised values also default to
+// "top" with a warning to stderr.
+func normaliseBannerPosition(raw string) string {
+	if raw == "" {
+		return bannerPositionDefault
+	}
+
+	switch raw {
+	case bannerPositionTop, bannerPositionBottom:
+		return raw
+	default:
+		fmt.Fprintf(os.Stderr,
+			"warning: ui.highway.banner.position: unrecognised value %q, defaulting to %q\n",
+			raw, bannerPositionDefault,
+		)
+		return bannerPositionDefault
+	}
+}
+
+// normaliseBannerTick substitutes the package default when the
+// configured value is zero. Negative values are treated as zero.
+func normaliseBannerTick(raw int) int {
+	if raw <= 0 {
+		return bannerTickDefaultMs
+	}
+	return raw
+}
+
+// normaliseBannerSteps passes through the user-supplied steps count
+// after clamping non-positive values to zero. Zero is the sentinel
+// meaning "no override; use the gradient's own steps" (see
+// BannerConfig.StepsOverride). The interpolation routine enforces a
+// minimum of 2 internally, so a stray value of 1 will resolve to 2
+// steps at render time without surfacing as a configuration error.
+func normaliseBannerSteps(raw int) int {
+	if raw <= 0 {
+		return 0
+	}
+	return raw
+}
+
+// normaliseBannerJustify validates the configured justify value. Empty
+// values default to "right". Unrecognised values also default to
+// "right" with a warning to stderr.
+func normaliseBannerJustify(raw string) string {
+	if raw == "" {
+		return bannerJustifyDefault
+	}
+
+	switch raw {
+	case bannerJustifyRight, bannerJustifyLeft, bannerJustifyCenter:
+		return raw
+	default:
+		fmt.Fprintf(os.Stderr,
+			"warning: ui.highway.banner.justify: unrecognised value %q, defaulting to %q\n",
+			raw, bannerJustifyDefault,
+		)
+		return bannerJustifyDefault
 	}
 }
 

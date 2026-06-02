@@ -64,20 +64,37 @@ func (s *GradientState) Reset() {
 }
 
 // GetEffectiveIndex returns the gradient index for character at position pos.
-// Uses modular wrapping so the gradient scrolls through the content rather
-// than clamping to the last colour. The Offset acts as a phase shift that
-// advances each tick via Update(), creating a pulsing sweep effect.
+//
+// The offset is treated as the phase of a triangle wave whose period
+// is 2 * (n - 1). The phase for this rune is (offset + pos); mapped
+// into the gradient index space this means:
+//
+//	phase 0..n-1        → index 0..n-1       (forward sweep)
+//	phase n..2*(n-1)    → index n-2..0       (reverse sweep)
+//
+// This produces a smooth Hi → Lo → Hi ping-pong with no sharp
+// wrap-around at the boundary (which would otherwise be a hard
+// jump from step[n-1] back to step[0]). The pos argument is a
+// per-rune phase shift that lets the gradient scroll across the
+// content while preserving the bounce.
 func (s *GradientState) GetEffectiveIndex(pos int) int {
-	if len(s.stepsArray) == 0 {
+	n := len(s.stepsArray)
+	if n == 0 {
 		return -1
 	}
-
-	idx := (s.Offset + pos) % len(s.stepsArray)
-	if idx < 0 {
-		idx += len(s.stepsArray)
+	if n == 1 {
+		return 0
 	}
 
-	return idx
+	period := 2 * (n - 1)
+	phase := (s.Offset + pos) % period
+	if phase < 0 {
+		phase += period
+	}
+	if phase < n {
+		return phase
+	}
+	return period - phase
 }
 
 // ApplyGradient applies a colour gradient from Hi to Lo across an animation frame.

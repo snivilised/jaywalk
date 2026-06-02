@@ -29,6 +29,21 @@ ui:
     # 'bottom' when omitted or set to an unrecognised value.
     flags-row-position: 'bottom'
 
+    # Banner settings. The banner is an ANSI-styled ASCII art rendered
+    # OUTSIDE the bordered region of the highway view, so its placement
+    # is independent of the flags row position above.
+    banner:
+      # When true, the banner is hidden. Defaults to false (shown).
+      disable: false
+      # 'top' = above the top border; 'bottom' = below the summary.
+      # Defaults to 'top' when omitted or unrecognised.
+      position: 'top'
+      # Per-tick interval (ms) for the banner's gradient animation.
+      # Larger values produce a slower, warmer glow. Defaults to 500.
+      tick: 500
+      # Horizontal alignment: 'right' (default), 'left' or 'center'.
+      justify: 'right'
+
     # Animation data configuration for Highway view lanes
     animation:
       # List of animation types to load on demand
