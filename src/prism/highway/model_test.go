@@ -137,10 +137,10 @@ var _ = Describe("Model.Init", func() {
 })
 
 // ---------------------------------------------------------------------------
-// Model.Update — WindowSizeMsg
+// Model.Update - WindowSizeMsg
 // ---------------------------------------------------------------------------
 
-var _ = Describe("Model.Update — WindowSizeMsg", func() {
+var _ = Describe("Model.Update - WindowSizeMsg", func() {
 	It("updates the width", func() {
 		m := baseModel(1)
 		updated, cmd := update(m, tea.WindowSizeMsg{Width: 120})
@@ -150,10 +150,10 @@ var _ = Describe("Model.Update — WindowSizeMsg", func() {
 })
 
 // ---------------------------------------------------------------------------
-// Model.Update — KeyMsg
+// Model.Update - KeyMsg
 // ---------------------------------------------------------------------------
 
-var _ = Describe("Model.Update — KeyMsg", func() {
+var _ = Describe("Model.Update - KeyMsg", func() {
 	It("ignores any key before done", func() {
 		m := baseModel(1)
 		_, cmd := update(m, tea.KeyPressMsg{})
@@ -236,10 +236,10 @@ var _ = Describe("initLaneSkip", func() {
 })
 
 // ---------------------------------------------------------------------------
-// Model.Update — tickMsg
+// Model.Update - tickMsg
 // ---------------------------------------------------------------------------
 
-var _ = Describe("Model.Update — tickMsg", func() {
+var _ = Describe("Model.Update - tickMsg", func() {
 	It("increments ticks on all lanes", func() {
 		m := baseModel(2)
 		Expect(m.lanes[0].tick).To(Equal(0))
@@ -319,10 +319,10 @@ var _ = Describe("Model.Update — tickMsg", func() {
 })
 
 // ---------------------------------------------------------------------------
-// Model.Update — OvertureMsg
+// Model.Update - OvertureMsg
 // ---------------------------------------------------------------------------
 
-var _ = Describe("Model.Update — OvertureMsg", func() {
+var _ = Describe("Model.Update - OvertureMsg", func() {
 	It("sets rootPath, realMode, start time and pipelineName", func() {
 		m := baseModel(1)
 		Expect(m.realMode).To(BeFalse())
@@ -345,10 +345,10 @@ var _ = Describe("Model.Update — OvertureMsg", func() {
 })
 
 // ---------------------------------------------------------------------------
-// Model.Update — CensusMsg
+// Model.Update - CensusMsg
 // ---------------------------------------------------------------------------
 
-var _ = Describe("Model.Update — CensusMsg", func() {
+var _ = Describe("Model.Update - CensusMsg", func() {
 	It("sets totalFiles and totalDirs", func() {
 		m := baseModel(1)
 		updated, cmd := update(m, CensusMsg{TotalFiles: 100, TotalDirs: 20})
@@ -377,10 +377,10 @@ var _ = Describe("Model.Update — CensusMsg", func() {
 })
 
 // ---------------------------------------------------------------------------
-// Model.Update — MotifMsg
+// Model.Update - MotifMsg
 // ---------------------------------------------------------------------------
 
-var _ = Describe("Model.Update — MotifMsg", func() {
+var _ = Describe("Model.Update - MotifMsg", func() {
 	It("updates the current lane and advances the index round-robin", func() {
 		m := baseModel(2)
 		Expect(m.currentLaneIdx).To(Equal(0))
@@ -426,14 +426,14 @@ var _ = Describe("Model.Update — MotifMsg", func() {
 		Expect(cmd).To(BeNil())
 		Expect(updated.files).To(Equal(1))
 
-		// Same path again — not counted
+		// Same path again - not counted
 		updated, cmd = update(updated, MotifMsg{Data: MotifData{
 			Path: "/root/a.txt", IsDir: false,
 		}})
 		Expect(cmd).To(BeNil())
 		Expect(updated.files).To(Equal(1))
 
-		// Different path — counted
+		// Different path - counted
 		updated, cmd = update(updated, MotifMsg{Data: MotifData{
 			Path: "/root/b.txt", IsDir: false,
 		}})
@@ -499,10 +499,10 @@ var _ = Describe("Model.Update — MotifMsg", func() {
 })
 
 // ---------------------------------------------------------------------------
-// Model.Update — CompleteMsg
+// Model.Update - CompleteMsg
 // ---------------------------------------------------------------------------
 
-var _ = Describe("Model.Update — CompleteMsg", func() {
+var _ = Describe("Model.Update - CompleteMsg", func() {
 	It("marks the model as done", func() {
 		m := baseModel(1)
 		Expect(m.done).To(BeFalse())
@@ -552,10 +552,10 @@ var _ = Describe("Model.Update — CompleteMsg", func() {
 })
 
 // ---------------------------------------------------------------------------
-// Model.Update — default case (unknown message)
+// Model.Update - default case (unknown message)
 // ---------------------------------------------------------------------------
 
-var _ = Describe("Model.Update — unknown message", func() {
+var _ = Describe("Model.Update - unknown message", func() {
 	It("returns the model unchanged with nil cmd", func() {
 		m := baseModel(1)
 		_, cmd := update(m, "some-unknown-msg")

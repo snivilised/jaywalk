@@ -1,4 +1,4 @@
-# jay.ui.yml — View Configuration
+# jay.ui.yml - View Configuration
 # Location: ~/.config/jay/jay.ui.yml (optional, loaded on-demand per view)
 #
 # This file controls per-view settings such as emoji decoration and

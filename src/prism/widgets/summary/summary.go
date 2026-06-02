@@ -46,7 +46,7 @@ func Render(rows []Field, styles Styles) string {
 		cs := stylesForRow(row, styles.Default)
 		var b strings.Builder
 
-		// Icon cell — pad to widths.icon + gap.
+		// Icon cell - pad to widths.icon + gap.
 		if widths.icon > 0 {
 			b.WriteString(cs.Icon.Render(row.Icon))
 
@@ -55,14 +55,14 @@ func Render(rows []Field, styles Styles) string {
 			}
 		}
 
-		// Label cell — pad to widths.label + gap.
+		// Label cell - pad to widths.label + gap.
 		b.WriteString(cs.Label.Render(row.Label))
 
 		if pad := widths.label - runewidth.StringWidth(row.Label) + 2; pad > 0 {
 			b.WriteString(strings.Repeat(" ", pad))
 		}
 
-		// Value cell — right-aligned within widths.value.
+		// Value cell - right-aligned within widths.value.
 		if vPad := widths.value - runewidth.StringWidth(row.Value); vPad > 0 {
 			b.WriteString(strings.Repeat(" ", vPad))
 		}
@@ -98,7 +98,7 @@ func stylesForRow(row Field, fallback CellStyles) CellStyles {
 		cs = *row.Styles
 	}
 
-	// Clear any Width set on the incoming styles — this widget handles
+	// Clear any Width set on the incoming styles - this widget handles
 	// column alignment via runewidth, so letting lipgloss pad internally
 	// would produce double-padding.
 	cs.Icon = cs.Icon.Width(0)

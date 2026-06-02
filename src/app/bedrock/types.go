@@ -120,7 +120,7 @@ type Config struct {
 }
 
 // ---------------------------------------------------------------------------
-// View Configuration — loaded on-demand from jay.ui.yml
+// View Configuration - loaded on-demand from jay.ui.yml
 // ---------------------------------------------------------------------------
 
 // HighwayConfig holds the emoji pool and animation data for Highway view.

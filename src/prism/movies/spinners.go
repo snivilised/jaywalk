@@ -8,7 +8,7 @@ import (
 )
 
 // SpinnerDef holds a spinner's frame generator.
-// Interval is NOT stored here — per-lane animation speed is controlled by
+// Interval is NOT stored here - per-lane animation speed is controlled by
 // the config override mechanism (see HighwayConfig.Overrides →
 // Lane.IntervalMs → initLaneSkip in the highway model).
 type SpinnerDef struct {

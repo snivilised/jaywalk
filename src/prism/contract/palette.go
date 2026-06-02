@@ -145,7 +145,7 @@ type ResolvedGradient struct {
 	Animate bool
 }
 
-// Gradient component names — used in theme YAML under
+// Gradient component names - used in theme YAML under
 // highlights.components to bind a gradient to a rendering component.
 const (
 	// GradientComponentActivity is the component name for animation frames.

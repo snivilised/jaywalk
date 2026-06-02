@@ -53,7 +53,7 @@ const (
 //
 // Every view owns its own concrete config type. Callers outside this
 // package see only the sealed ViewConfig interface, so a future view
-// can be added without changing the signature of New — the caller
+// can be added without changing the signature of New - the caller
 // passes whatever config the selected view's loader produced.
 //
 // The set of implementations is closed: the unexported isViewConfig
@@ -142,7 +142,7 @@ type ViewConfigSource interface {
 // implementation in this package, (2) add a case here that maps the
 // mode to a constructor, and (3) add a case in New that constructs
 // the presenter. The view's caller (typically Bootstrap) needs no
-// changes — it always calls LoadConfig and New with the mode and
+// changes - it always calls LoadConfig and New with the mode and
 // the returned value.
 func LoadConfig(mode string, source ViewConfigSource, palette contract.Palette) (ViewConfig, error) {
 	if mode == "" {
