@@ -37,7 +37,7 @@ type highwayPresenter struct {
 	// contract.HeaderInfo for field semantics.
 	header contract.HeaderInfo
 
-	// Job emoji pool state — populated from config, random emoji picked per job arrival.
+	// Job emoji pool state - populated from config, random emoji picked per job arrival.
 	jobEmojiPool []string
 }
 

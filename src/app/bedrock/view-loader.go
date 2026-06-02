@@ -110,6 +110,6 @@ func (l *ViewConfigLoader) Load(viewName string, dest any) error {
 		return nil
 	}
 
-	// No file found at any extension — not an error, caller uses defaults.
+	// No file found at any extension - not an error, caller uses defaults.
 	return nil
 }

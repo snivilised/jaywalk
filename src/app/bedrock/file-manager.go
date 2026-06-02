@@ -14,20 +14,20 @@ import (
 //
 // Environment variables respected:
 //
-//	JAY_CONFIG_DIR   — overrides the config directory
+//	JAY_CONFIG_DIR   - overrides the config directory
 //	                  (default: $XDG_CONFIG_HOME/jay → ~/.config/jay)
-//	JAY_STATE_DIR    — overrides the state directory
+//	JAY_STATE_DIR    - overrides the state directory
 //	                  (default: $XDG_STATE_HOME/jay → ~/.local/state/jay)
-//	JAY_CACHE_DIR    — overrides the cache directory
+//	JAY_CACHE_DIR    - overrides the cache directory
 //	                  (default: $XDG_CACHE_HOME/jay → ~/.cache/jay)
-//	JAY_THEMES_DIR   — overrides the themes directory
+//	JAY_THEMES_DIR   - overrides the themes directory
 //	                  (default: $XDG_CONFIG_HOME/jay/themes → ~/.config/jay/themes)
 //
 // Standard XDG variables that are also respected:
 //
-//	XDG_CONFIG_HOME  — base config directory     (default: ~/.config)
-//	XDG_STATE_HOME   — base state directory      (default: ~/.local/state)
-//	XDG_CACHE_HOME   — base cache directory      (default: ~/.cache)
+//	XDG_CONFIG_HOME  - base config directory     (default: ~/.config)
+//	XDG_STATE_HOME   - base state directory      (default: ~/.local/state)
+//	XDG_CACHE_HOME   - base cache directory      (default: ~/.cache)
 //
 // Files managed by jay:
 //

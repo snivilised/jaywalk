@@ -1,13 +1,13 @@
 ---
 name: go-theme
-description: When creating or editing UI rendering code, NEVER hardcode lipgloss styles. Always use the prism.Theme system — add semantic colours to Palette, wire them in NewTheme, and reference styles via the Theme struct.
+description: When creating or editing UI rendering code, NEVER hardcode lipgloss styles. Always use the prism.Theme system - add semantic colours to Palette, wire them in NewTheme, and reference styles via the Theme struct.
 ---
 
 # Prism Theme-First Rule
 
 ## Purpose
 
-Every visual style in jaywalk **must** be driven by the `prism.Theme` struct, which is constructed from the user-configurable `prism.Palette`. Hardcoded `lipgloss.NewStyle()` calls in rendering code (View functions, renderers, etc.) are forbidden — they bypass the user's colour configuration and create maintenance burden.
+Every visual style in jaywalk **must** be driven by the `prism.Theme` struct, which is constructed from the user-configurable `prism.Palette`. Hardcoded `lipgloss.NewStyle()` calls in rendering code (View functions, renderers, etc.) are forbidden - they bypass the user's colour configuration and create maintenance burden.
 
 ## The Three-Step Rule
 
@@ -60,7 +60,7 @@ MyElementStyle: lipgloss.NewStyle().
     Bold(true),
 ```
 
-Add the bulk of the style attributes in `NewTheme` — callers should only `.Render()`.
+Add the bulk of the style attributes in `NewTheme` - callers should only `.Render()`.
 
 ### Step 3: Use the style in rendering code
 

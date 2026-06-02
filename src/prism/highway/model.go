@@ -58,7 +58,7 @@ type Model struct {
 
 // initLaneSkip computes the per-lane skip factor from each lane's
 // IntervalMs. The skip factor = IntervalMs / tickRate (in ms). A lane
-// with no override (IntervalMs=0) gets factor 0 — it advances every
+// with no override (IntervalMs=0) gets factor 0 - it advances every
 // tick. A lane with IntervalMs=5000 at 50ms tick rate gets factor 100,
 // advancing one frame every 100 ticks (every 5 seconds).
 // See Lane.IntervalMs for the config override path.

@@ -136,7 +136,7 @@ var _ = Describe("Validate", Ordered, func() {
 	// -----------------------------------------------------------------------
 	// HighwayConfig spinner validation
 	// -----------------------------------------------------------------------
-	Describe("HighwayConfig.Validate — spinners", func() {
+	Describe("HighwayConfig.Validate - spinners", func() {
 		It("rejects unknown spinner name", func() {
 			c := bedrock.HighwayConfig{}
 			c.AnimationData.Spinners.Enabled = []string{"nonexistent-spinner"}

@@ -126,13 +126,13 @@ palette:
   # so that multiple components can share the same gradient.
   #
   # Each gradient may define:
-  #   both hi and lo  — full two-colour gradient
-  #   hi only         — lo is derived by dimming
-  #   lo only         — hi is derived by brightening
-  #   neither         — silently ignored
+  #   both hi and lo  - full two-colour gradient
+  #   hi only         - lo is derived by dimming
+  #   lo only         - hi is derived by brightening
+  #   neither         - silently ignored
   highlights:
     gradients:
-      # Both hi + lo — full two-colour gradient
+      # Both hi + lo - full two-colour gradient
       aurora-borealis:
         steps: 8
         hi:
@@ -150,7 +150,7 @@ palette:
           ansi16: yellow
           true-color: "#FFD54F"
 
-      # Hi only — lo derived by dimming
+      # Hi only - lo derived by dimming
       neon-pulse:
         hi:
           ansi16: bright-green
@@ -161,7 +161,7 @@ palette:
           ansi16: red
           true-color: "#FF1744"
 
-      # Lo only — hi derived by brightening
+      # Lo only - hi derived by brightening
       deep-ocean:
         lo:
           ansi16: blue

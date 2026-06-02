@@ -32,8 +32,8 @@ RUN go install github.com/onsi/ginkgo/v2/ginkgo@latest && \
 # Create a non-root user matching your host UID/GID.  This avoids the
 # common pitfall where files written inside the container end up owned
 # by root and are unmodifiable from the host.
-#   /go           — GOPATH root (module cache, compiled binaries)
-#   /home/opencode — home dir for the opencode user (config, caches)
+#   /go           - GOPATH root (module cache, compiled binaries)
+#   /home/opencode - home dir for the opencode user (config, caches)
 RUN if ! getent group ${GROUP_ID} > /dev/null 2>&1; then \
         groupadd -g ${GROUP_ID} opencode; \
     fi && \

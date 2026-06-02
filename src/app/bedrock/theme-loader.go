@@ -151,12 +151,12 @@ func (tl *ThemeLoader) Load(name string) (contract.Palette, error) {
 		return palette, nil
 	}
 
-	// None of the extensions matched — report the first expected path
+	// None of the extensions matched - report the first expected path
 	// for clarity.
 	first := filepath.Join(tl.themesDir, name+themeExtensions[0])
 	if os.IsNotExist(lastErr) {
 		return contract.Palette{}, fmt.Errorf(
-			"theme %q not found — tried %s/.%s{.yaml,.yml}",
+			"theme %q not found - tried %s/.%s{.yaml,.yml}",
 			name,
 			tl.themesDir,
 			name,

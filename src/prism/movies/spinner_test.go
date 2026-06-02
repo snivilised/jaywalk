@@ -10,7 +10,7 @@ import (
 
 var _ = Describe("SpinnerFrames", func() {
 	// -----------------------------------------------------------------------
-	// bounceFrame — bounded grow/recede pattern
+	// bounceFrame - bounded grow/recede pattern
 	// -----------------------------------------------------------------------
 	DescribeTable("bounce frames",
 		func(tick int, expected string) {
@@ -33,7 +33,7 @@ var _ = Describe("SpinnerFrames", func() {
 	)
 
 	// -----------------------------------------------------------------------
-	// spinnerFrame — basic line spinner
+	// spinnerFrame - basic line spinner
 	// -----------------------------------------------------------------------
 	DescribeTable("spinner frames",
 		func(tick int, expected string) {
@@ -120,7 +120,7 @@ var _ = Describe("SpinnerFrames", func() {
 	)
 
 	// -----------------------------------------------------------------------
-	// Film strip scrolling — all 11 produce bounded windowed output
+	// Film strip scrolling - all 11 produce bounded windowed output
 	// -----------------------------------------------------------------------
 	DescribeTable("film strip scrolling frames",
 		func(name string, strip []rune) {
@@ -162,7 +162,7 @@ var _ = Describe("SpinnerFrames", func() {
 	)
 
 	// -----------------------------------------------------------------------
-	// Animation skins — render non-empty
+	// Animation skins - render non-empty
 	// -----------------------------------------------------------------------
 	DescribeTable("animation skins render without panic",
 		func(name string, fn contract.FrameFunc) {
@@ -181,7 +181,7 @@ var _ = Describe("SpinnerFrames", func() {
 	)
 
 	// -----------------------------------------------------------------------
-	// Animation skins — output changes over ticks
+	// Animation skins - output changes over ticks
 	// -----------------------------------------------------------------------
 	It("classic-waveform output changes over time", func() {
 		fn := newClassicWaveform()
