@@ -239,8 +239,7 @@ func (b *Bootstrap) Root(options ...ConfigureAppOptionFn) *cobra.Command {
 				// Bootstrap is view-agnostic. The polymorphic
 				// ui.LoadConfig returns the ViewConfig that
 				// corresponds to the selected mode; ui.New consumes
-				// it. The two calls together replace the per-view
-				// branching that used to live here.
+				// it.
 				palette, err := b.themeLoader.Load(b.rootPs.Native.Theme)
 				if err != nil {
 					return err

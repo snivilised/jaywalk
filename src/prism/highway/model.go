@@ -54,6 +54,15 @@ type Model struct {
 	// border, "bottom" places it above the status line. The default
 	// applied by the loader is "bottom".
 	FlagsRowPosition string
+
+	// banner is the per-render state for the optional ANSI shadow
+	// banner. Nil when the banner is disabled. The gradient state
+	// advances on a slower tick than the lane animations.
+	banner *bannerState
+
+	// bannerInfo is the (immutable for the session) configuration
+	// received via OvertureMsg. The view reads this each render.
+	bannerInfo BannerInfo
 }
 
 // initLaneSkip computes the per-lane skip factor from each lane's
@@ -165,6 +174,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.lanes[i].PeriscopeGradientState.Update(windowSize)
 			}
 		}
+
+		// Advance the banner's gradient state on its own slower tick
+		// so its warm glow is visibly different from the lane
+		// animations. skipFactor handles the speed difference.
+		m.banner.advance()
 		tickCmd := tea.Tick(m.tickRate, func(t time.Time) tea.Msg {
 			return tickMsg(t)
 		})
@@ -192,6 +206,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.FlagsRowPosition = msg.FlagsRowPosition
 		if m.FlagsRowPosition != FlagsRowPositionTop && m.FlagsRowPosition != FlagsRowPositionBottom {
 			m.FlagsRowPosition = FlagsRowPositionBottom
+		}
+
+		// Initialise the banner state from the OvertureMsg. The
+		// bannerState is nil when the banner is disabled, when the
+		// gradient binding is absent, or when the state pointer is
+		// nil. The view checks for nil before rendering.
+		m.bannerInfo = msg.Banner
+		if !msg.Banner.Disable && msg.Banner.State != nil && msg.Banner.Gradient != nil {
+			m.banner = newBannerState(msg.Banner.State, msg.Banner.Tick, m.tickRate)
+		} else {
+			m.banner = nil
 		}
 
 		return m, nil

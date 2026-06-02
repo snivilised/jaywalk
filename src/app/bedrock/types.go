@@ -153,6 +153,45 @@ type HighwayConfig struct {
 	// line). Empty or invalid values default to "bottom" and a warning is
 	// logged at load time.
 	FlagsRowPosition string `mapstructure:"flags-row-position,omitempty"`
+
+	// Banner controls the ANSI shadow banner rendered outside the highway
+	// view's bordered region. The banner can be disabled, placed above
+	// or below the border, and tuned with a per-tick gradient animation
+	// interval. The colour sweep itself is resolved from the theme via
+	// highlights.components["banner-control"].
+	Banner BannerSubConfig `mapstructure:"banner,omitempty"`
+}
+
+// BannerSubConfig holds the raw, on-disk shape of the banner settings
+// loaded from jay.ui.yml. The resolved (palette-aware) shape lives in
+// ui.BannerConfig - see ui/registry.go.
+type BannerSubConfig struct {
+	// Disable hides the banner when true. Defaults to false (shown).
+	Disable bool `mapstructure:"disable"`
+
+	// Position controls where the banner is rendered relative to the
+	// bordered region. "top" places it above the top border; "bottom"
+	// places it below the bottom border. Empty or unrecognised values
+	// default to "top" with a warning logged at load time.
+	Position string `mapstructure:"position,omitempty"`
+
+	// Tick is the per-tick interval in milliseconds for the banner's
+	// gradient animation. Larger values produce a slower, warmer glow.
+	// Zero or omitted resolves to banner.DefaultBannerTick (500ms).
+	Tick int `mapstructure:"tick,omitempty"`
+
+	// Justify controls the horizontal alignment of the banner within
+	// the terminal. Allowed values: "right" (default), "left",
+	// "center". Empty or unrecognised values default to "right".
+	Justify string `mapstructure:"justify,omitempty"`
+
+	// Steps overrides the number of interpolated colour steps used
+	// for the banner's gradient sweep. The banner normally inherits
+	// the steps count from the gradient defined in the theme. Setting
+	// this field lets the user produce a smoother or more abrupt
+	// colour sweep on the banner only, without redefining the shared
+	// gradient. Zero or omitted means "use the gradient's own steps".
+	Steps int `mapstructure:"steps,omitempty"`
 }
 
 // HighwayAnimationConfig holds animation data configuration for Highway view.

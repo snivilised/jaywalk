@@ -6,6 +6,13 @@ import "time"
 const (
 	defaultLaneCount = 4
 	highwayTickRate  = 50 * time.Millisecond
+
+	// bannerDefaultTickMs is the fallback tick interval (ms) for
+	// the banner's gradient animation. Users can override via
+	// ui.highway.banner.tick. The value is in milliseconds to match
+	// the underlying config field; the model converts to
+	// time.Duration on receipt.
+	bannerDefaultTickMs = 500
 )
 
 var (

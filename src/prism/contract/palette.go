@@ -162,6 +162,11 @@ const (
 
 	// GradientComponentLandingStrip is the execution info at the lane end.
 	GradientComponentLandingStrip = "landing-strip-control"
+
+	// GradientComponentBanner is the ANSI shadow banner widget.
+	// Themes bind this component to a gradient name to control the
+	// colour sweep of the banner's face/shadow characters.
+	GradientComponentBanner = "banner-control"
 )
 
 // deriveDimmed returns a colour approximately halfway between the given

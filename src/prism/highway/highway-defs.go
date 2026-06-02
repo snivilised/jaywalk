@@ -21,3 +21,15 @@ const (
 	// status line and below the last highway lane (the default).
 	FlagsRowPositionBottom = "bottom"
 )
+
+// Banner position - mirrors ui bannerPosition*. The banner is rendered
+// OUTSIDE the bordered region of the highway view, so these values do
+// not interact with the flags row placement above.
+const (
+	// BannerPositionTop places the banner above the top border.
+	BannerPositionTop = "top"
+
+	// BannerPositionBottom places the banner below the bottom border
+	// (after the summary).
+	BannerPositionBottom = "bottom"
+)
