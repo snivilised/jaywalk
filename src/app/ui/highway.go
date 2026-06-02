@@ -97,7 +97,7 @@ func (h *highwayPresenter) OnBegin(e *report.BeginEvent) {
 
 	// Derive noRecurse from cascade display. The two are mutually exclusive
 	// at the flag-binding layer, so only one of 🔒/depth can be present.
-	h.noRecurse = strings.Contains(h.header.CascadeDisplay, "🔒")
+	h.noRecurse = strings.Contains(h.header.CascadeDisplay, contract.Static.Emoji.Padlock)
 
 	lanes := BuildHighwayLanes(h.cfg, h.noW)
 	model := highway.NewModel(lanes, highwayTickRate, e.Root, h.maxDepth, h.theme, h.noRecurse)

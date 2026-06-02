@@ -305,7 +305,7 @@ var _ = Describe("Model.Update — tickMsg", func() {
 	It("respects different intervals per lane", func() {
 		fast := Lane{Emoji: "🔍", Label: "fast", FrameFn: noopFrame}
 		medium := Lane{Emoji: "⚡", Label: "medium", FrameFn: noopFrame, IntervalMs: 200}
-		verySlow := Lane{Emoji: "🐌", Label: "very-slow", FrameFn: noopFrame, IntervalMs: 5000}
+		verySlow := Lane{Emoji: contract.Static.Emoji.Snail, Label: "very-slow", FrameFn: noopFrame, IntervalMs: 5000}
 		lanes := []Lane{fast, medium, verySlow}
 		m := NewModel(lanes, 50*time.Millisecond, "/root", 5, testTheme(), false)
 

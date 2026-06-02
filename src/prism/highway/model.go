@@ -92,7 +92,7 @@ func NewModel(lanes []Lane, tickRate time.Duration, rootPath string,
 		theme:     theme,
 		counted:   make(map[string]bool),
 		progress: progress.New(
-			progress.WithSolidFill("#B9FBC0"),
+			progress.WithSolidFill("#B9FBC0"), //TODO: theme.progress
 			progress.WithoutPercentage(),
 			progress.WithWidth(10),
 		),

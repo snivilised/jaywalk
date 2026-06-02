@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"charm.land/lipgloss/v2"
+	"github.com/snivilised/jaywalk/src/prism/contract"
 )
 
 // Styles defines the styles used to render the sampler info widget.
@@ -44,7 +45,7 @@ func Render(numFiles, numFolders uint, sampleLast bool, styles Styles) string {
 	var parts []string
 
 	if sampleLast {
-		parts = append(parts, styles.LabelStyle.Render("🐌"))
+		parts = append(parts, styles.LabelStyle.Render(contract.Static.Emoji.Snail))
 	}
 	if numFiles > 0 {
 		parts = append(parts, labelValue(styles, "#files", numFiles))

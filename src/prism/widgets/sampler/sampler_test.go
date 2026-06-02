@@ -3,6 +3,7 @@ package sampler
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/snivilised/jaywalk/src/prism/contract"
 
 	"charm.land/lipgloss/v2"
 )
@@ -20,7 +21,7 @@ var _ = Describe("Sampler.Render", func() {
 
 	It("renders the 🐌 emoji when --last is set", func() {
 		result := Render(0, 0, true, noStyles)
-		Expect(result).To(Equal("🐌"))
+		Expect(result).To(Equal(contract.Static.Emoji.Snail))
 	})
 
 	It("renders #files when numFiles is positive", func() {
@@ -55,7 +56,7 @@ var _ = Describe("Sampler.Render", func() {
 			LabelStyle: labelStyle,
 			ValueStyle: valueStyle,
 		}
-		expect := labelStyle.Render("🐌") + " | " +
+		expect := labelStyle.Render(contract.Static.Emoji.Snail) + " | " +
 			labelStyle.Render("#files") + ": " + valueStyle.Render("7") + " | " +
 			labelStyle.Render("#dirs") + ": " + valueStyle.Render("3")
 		result := Render(7, 3, true, styles)
@@ -69,6 +70,6 @@ var _ = Describe("Sampler.Render", func() {
 			ValueStyle: lipgloss.NewStyle(),
 		}
 		result := Render(0, 0, true, styles)
-		Expect(result).To(Equal(labelStyle.Render("🐌")))
+		Expect(result).To(Equal(labelStyle.Render(contract.Static.Emoji.Snail)))
 	})
 })

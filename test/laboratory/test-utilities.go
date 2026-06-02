@@ -87,3 +87,18 @@ func GetJSONDir() string {
 func IgnoreFault(_ *pref.NavigationFault) error {
 	return nil
 }
+
+// stripANSI removes ANSI escape sequences from a string for test assertions.
+func StripANSI(s string) string {
+	var result strings.Builder
+	for i := 0; i < len(s); i++ {
+		if s[i] == '\x1b' {
+			for i < len(s) && s[i] != 'm' {
+				i++
+			}
+			continue
+		}
+		result.WriteByte(s[i])
+	}
+	return result.String()
+}

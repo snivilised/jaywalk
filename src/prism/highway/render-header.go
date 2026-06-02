@@ -18,7 +18,7 @@ func (m Model) renderHeader(b *strings.Builder) {
 	dashes := strings.Repeat("─", max(0, m.width-2))
 
 	// Render Top Border
-	topBorderContent := border.RenderTop(m.rootPath, m.width, border.TopStyles{
+	topBorderContent := border.RenderTop(m.rootPath, m.width, border.Styles{
 		BorderStyle: borderStyle,
 		PathStyle:   m.theme.RootStyle,
 		CornerStyle: borderStyle,

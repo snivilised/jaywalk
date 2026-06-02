@@ -4,6 +4,9 @@ import (
 	"strings"
 
 	"charm.land/lipgloss/v2"
+
+	"github.com/snivilised/jaywalk/src/prism/contract"
+	"github.com/snivilised/jaywalk/src/prism/effects"
 )
 
 type Styles struct {
@@ -17,10 +20,43 @@ type Config struct {
 	Styles Styles
 }
 
-func Render(cfg Config) string {
-	fill := min(max(cfg.Fill, 0), cfg.Width)
+type Effect struct {
+	Gradient *contract.ResolvedGradient
+	State    *effects.GradientState
+}
 
-	filled := cfg.Styles.Filled.Render(strings.Repeat("◼", fill))
-	empty := cfg.Styles.Empty.Render(strings.Repeat("◻", cfg.Width-fill))
+func Render(cfg Config, styles Styles, effect Effect) string {
+	fill := min(max(cfg.Fill, 0), cfg.Width)
+	width := max(cfg.Width, 0)
+
+	if effect.Gradient != nil {
+		barContent := strings.Repeat("◼", fill) + strings.Repeat("◻", width-fill)
+		if effect.Gradient.Animate {
+			if effect.State != nil && fill > 0 {
+				runs := effects.ApplyGradient(
+					effect.Gradient.Hi,
+					effect.Gradient.Lo,
+					barContent,
+					effect.State,
+				)
+				if runs != nil {
+					return effects.ApplyGradientStyled(runs)
+				}
+			}
+		} else {
+			runs := effects.ApplyGradientStatic(
+				effect.Gradient.Hi,
+				effect.Gradient.Lo,
+				barContent,
+				effect.Gradient.Steps,
+			)
+			if runs != nil {
+				return effects.ApplyGradientStyled(runs)
+			}
+		}
+	}
+
+	filled := styles.Filled.Render(strings.Repeat("◼", fill))
+	empty := styles.Empty.Render(strings.Repeat("◻", width-fill))
 	return filled + empty
 }

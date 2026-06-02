@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"charm.land/lipgloss/v2"
-	"github.com/snivilised/jaywalk/src/prism/effects"
 	"github.com/snivilised/jaywalk/src/prism/layout"
 	"github.com/snivilised/jaywalk/src/prism/widgets/action"
 	"github.com/snivilised/jaywalk/src/prism/widgets/activity"
@@ -64,7 +62,7 @@ func (m Model) renderLanes(b *strings.Builder) {
 		emojiPart := lane.Emoji
 
 		// Periscope bar (depth indicator)
-		laneBar := m.renderPeriscopeBar(lane, i, laneBarWidth, periscopeStyles)
+		periscopeContent := m.renderPeriscopeBar(lane, i, laneBarWidth, periscopeStyles)
 
 		// Action info (error / action name / pipeline name)
 		actionContent := action.Render(action.Config{
@@ -92,7 +90,7 @@ func (m Model) renderLanes(b *strings.Builder) {
 			Caps(borderStyle.Render("│ "), borderStyle.Render(" │"))
 		row.
 			Content(emojiPart).Gap(2).
-			Content(laneBar).Gap(2)
+			Content(periscopeContent).Gap(2)
 		if lane.JobEmoji != "" {
 			row.Content(lane.JobEmoji).Gap(2)
 		}
@@ -124,52 +122,27 @@ func (m Model) renderLanes(b *strings.Builder) {
 	}
 }
 
-func (m Model) renderPeriscopeBar(lane Lane, idx int, laneBarWidth int, styles periscope.Styles) string {
+func (m Model) renderPeriscopeBar(lane Lane, idx int, width int, styles periscope.Styles) string {
 	if m.noRecurse {
 		return styles.Filled.Render("◼")
 	}
 	var fill int
 	if m.maxDepth > 0 {
-		fill = int(float64(lane.Depth) / float64(m.maxDepth) * float64(laneBarWidth))
-		if fill > laneBarWidth {
-			fill = laneBarWidth
+		fill = int(float64(lane.Depth) / float64(m.maxDepth) * float64(width))
+		if fill > width {
+			fill = width
 		}
 	} else {
-		fill = (lane.tick * (7 + idx*3)) % (laneBarWidth + 1)
-	}
-
-	if lane.PeriscopeGradient != nil {
-		barContent := strings.Repeat("◼", fill) + strings.Repeat("◻", laneBarWidth-fill)
-
-		if lane.PeriscopeGradient.Animate {
-			if lane.PeriscopeGradientState != nil && fill > 0 {
-				runs := effects.ApplyGradient(
-					lane.PeriscopeGradient.Hi,
-					lane.PeriscopeGradient.Lo,
-					barContent,
-					lane.PeriscopeGradientState,
-				)
-				if runs != nil {
-					return effects.ApplyGradientStyled(runs)
-				}
-			}
-		} else {
-			runs := effects.ApplyGradientStatic(
-				lane.PeriscopeGradient.Hi,
-				lane.PeriscopeGradient.Lo,
-				barContent,
-				lane.PeriscopeGradient.Steps,
-			)
-			if runs != nil {
-				return effects.ApplyGradientStyled(runs)
-			}
-		}
+		fill = (lane.tick * (7 + idx*3)) % (width + 1)
 	}
 
 	return periscope.Render(periscope.Config{
-		Width:  laneBarWidth,
+		Width:  width,
 		Fill:   fill,
 		Styles: styles,
+	}, styles, periscope.Effect{
+		Gradient: lane.PeriscopeGradient,
+		State:    lane.PeriscopeGradientState,
 	})
 }
 
@@ -182,42 +155,13 @@ func (m Model) renderActivityFrame(lane Lane, styles activity.Styles) string {
 		return ""
 	}
 
-	if lane.HighlightGradient != nil && lane.GradientState != nil {
-		// Strip outer ┃ bars from film-strip and bounce frames so the
-		// gradient doesn't sweep through them. The bars are re-added
-		// with the gradient's Hi (left) and Lo (right) colours.
-		inner, hasBars := stripOuterBars(frameContent)
-
-		gradientRuns := effects.ApplyGradient(
-			lane.HighlightGradient.Hi,
-			lane.HighlightGradient.Lo,
-			inner,
-			lane.GradientState,
-		)
-		if gradientRuns != nil {
-			styledFrame := effects.ApplyGradientStyled(gradientRuns)
-			if hasBars {
-				leftBarStyle := lipgloss.NewStyle().Foreground(lane.HighlightGradient.Hi)
-				rightBarStyle := lipgloss.NewStyle().Foreground(lane.HighlightGradient.Lo)
-				return leftBarStyle.Render("┃") +
-					styledFrame +
-					rightBarStyle.Render("┃")
-			}
-			return m.theme.FrameStyle.Render(styledFrame)
-		}
-	}
-
 	return activity.Render(activity.Config{
 		Content: frameContent,
-	}, styles)
-}
-
-// stripOuterBars checks if content is wrapped in ┃...┃ and returns the
-// inner portion. Returns hasBars=false when no outer bars are detected.
-func stripOuterBars(content string) (inner string, hasBars bool) {
-	runes := []rune(content)
-	if len(runes) >= 2 && runes[0] == '┃' && runes[len(runes)-1] == '┃' {
-		return string(runes[1 : len(runes)-1]), true
-	}
-	return content, false
+	},
+		styles,
+		activity.Effect{
+			Gradient: lane.HighlightGradient,
+			State:    lane.GradientState,
+		},
+	)
 }
