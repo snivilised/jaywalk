@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/charmbracelet/x/term"
 	"github.com/snivilised/jaywalk/src/prism/contract"
 )
 
@@ -14,9 +15,15 @@ func New(palette contract.Palette, writer io.Writer, opts ...LinearOption) (cont
 		return nil, fmt.Errorf("flow.New: %w", err)
 	}
 
+	width := 80
+	if w, _, err := term.GetSize(0); err == nil && w > 0 {
+		width = w
+	}
+
 	r := &renderer{
 		theme:     theme,
 		writer:    writer,
+		width:     width,
 		treeIcons: theme.TreeIcons,
 	}
 

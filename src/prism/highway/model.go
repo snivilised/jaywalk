@@ -9,6 +9,7 @@ import (
 	"github.com/snivilised/jaywalk/src/agenor/core"
 	"github.com/snivilised/jaywalk/src/prism/contract"
 	"github.com/snivilised/jaywalk/src/prism/effects"
+	"github.com/snivilised/jaywalk/src/prism/widgets/status"
 )
 
 type tickMsg time.Time
@@ -63,6 +64,11 @@ type Model struct {
 	// bannerInfo is the (immutable for the session) configuration
 	// received via OvertureMsg. The view reads this each render.
 	bannerInfo BannerInfo
+
+	// statusStyles and statusFields are computed once during init and
+	// reused on every render cycle for the summary row.
+	statusStyles status.Styles
+	statusFields status.FieldSelectors
 }
 
 // initLaneSkip computes the per-lane skip factor from each lane's
@@ -105,6 +111,23 @@ func NewModel(lanes []Lane, tickRate time.Duration, rootPath string,
 			progress.WithoutPercentage(),
 			progress.WithWidth(10),
 		),
+		statusStyles: status.Styles{
+			TreeIcons:         theme.TreeIcons,
+			SummaryLabelStyle: theme.SummaryLabelStyle,
+			SummaryValueStyle: theme.SummaryValueStyle,
+			ErrorStyle:        theme.ErrorStyle,
+			ProgressStyle:     theme.ProgressStyle,
+			BorderStyle:       theme.BorderStyle,
+		},
+		statusFields: status.FieldSelectors{
+			ShowFiles:    true,
+			ShowDirs:     true,
+			ShowErrors:   true,
+			ShowSkipped:  false,
+			ShowProgress: true,
+			ShowComplete: true,
+			ShowElapsed:  true,
+		},
 	}
 }
 
