@@ -14,9 +14,13 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/snivilised/jaywalk/src/agenor/core"
 	"github.com/snivilised/jaywalk/src/prism/contract"
-	"github.com/snivilised/jaywalk/src/prism/widgets/clock"
+	"github.com/snivilised/jaywalk/src/prism/effects"
+	"github.com/snivilised/jaywalk/src/prism/layout"
+	"github.com/snivilised/jaywalk/src/prism/widgets/banner"
+	"github.com/snivilised/jaywalk/src/prism/widgets/border"
+	"github.com/snivilised/jaywalk/src/prism/widgets/intro"
 	"github.com/snivilised/jaywalk/src/prism/widgets/landing"
-	"github.com/snivilised/jaywalk/src/prism/widgets/summary"
+	"github.com/snivilised/jaywalk/src/prism/widgets/status"
 	"github.com/snivilised/jaywalk/src/third/lo"
 )
 
@@ -25,6 +29,13 @@ import (
 type renderer struct {
 	theme  contract.Theme
 	writer io.Writer
+
+	// width is the terminal width used for full-width banner rendering.
+	width int
+
+	// banner holds the ANSI shadow banner configuration from the Overture.
+	// Nil when the banner is disabled or not configured.
+	banner *contract.BannerInfo
 
 	// treeIcons holds configured tree glyphs from the resolved theme/options.
 	treeIcons contract.TreeIcons
@@ -39,34 +50,94 @@ type renderer struct {
 // Begin renders the opening banner using the Overture metadata. The banner
 // adapts to indicate prime or resume traversal.
 func (r *renderer) Begin(overture contract.Overture) {
-	title := lo.Ternary(overture.Kind == contract.ResumeNavigation,
-		fmt.Sprintf("  jay  resuming %s", overture.Root),
-		fmt.Sprintf("  jay  %s", overture.Root),
-	)
-
 	dateFmt := overture.DateFormat
 	if dateFmt == "" {
 		dateFmt = time.RFC1123
 	}
 
-	caption := fmt.Sprintf("  %s  -  %s",
-		overture.Caption,
-		overture.StartedAt.Format(dateFmt),
-	)
+	// Store banner config for use in Begin (top) and End (bottom)
+	r.banner = overture.Banner
 
+	var b strings.Builder
+
+	// Render ANSI banner at top if position is "top"
+	if r.banner != nil && !r.banner.Disable && r.banner.Position == banner.PositionTop {
+		r.renderAnsiBanner(&b)
+	}
+
+	// Render Top Border with path in brackets (uses contract.Static.Borders)
+	topBorderContent := border.RenderTop(overture.Root, r.width, border.Styles{
+		BorderStyle: r.theme.BorderStyle,
+		PathStyle:   r.theme.RootStyle,
+		CornerStyle: r.theme.BorderStyle,
+	})
+	b.WriteString(topBorderContent)
+
+	// Build caption for intro widget
+	caption := overture.Caption
 	if overture.Kind == contract.ResumeNavigation && overture.ResumeFrom != "" {
 		caption += fmt.Sprintf("  -  from: %s", overture.ResumeFrom)
 	}
 
-	box := r.theme.BoxStyle.
-		MarginTop(0).
-		Render(
-			r.theme.SummaryLabelStyle.Width(0).Render(title) +
-				"\n" +
-				r.theme.SummaryValueStyle.Width(0).Render(caption),
-		)
+	// Render intro line using intro widget
+	introContent := intro.Render(caption, overture.StartedAt, dateFmt, intro.Styles{
+		InfoStyle: r.theme.SummaryValueStyle,
+	})
 
-	_, _ = lipgloss.Fprintln(r.writer, box)
+	// Render header text
+	header := r.theme.HeaderStyle.Render("jay")
+	middle := header + introContent
+
+	// Render row with border caps
+	row := layout.NewRow(r.width-4).
+		Caps(
+			r.theme.BorderStyle.Render("│ "),
+			r.theme.BorderStyle.Render(" │"),
+		).
+		Content(middle)
+	row.RenderTo(&b)
+	b.WriteString("\n")
+
+	// Render bottom border using contract.Static.Borders
+	bottomDashes := strings.Repeat("─", max(0, r.width-7))
+	b.WriteString(r.theme.BorderStyle.Render(
+		contract.Static.Borders.BottomLeft + bottomDashes + contract.Static.Borders.BottomRightCorner,
+	))
+	b.WriteString("\n")
+
+	_, _ = lipgloss.Fprintln(r.writer, b.String())
+}
+
+// renderAnsiBanner renders the static ANSI shadow banner. The gradient is
+// applied based on the randomized aspects but does not animate (Offset stays at 0).
+func (r *renderer) renderAnsiBanner(b *strings.Builder) {
+	if r.banner == nil || r.banner.Gradient == nil {
+		return
+	}
+
+	// Create a static gradient state (Offset=0, never animated)
+	state := effects.NewGradientState()
+	state.TotalSteps = r.banner.Gradient.Steps
+
+	// Convert contract.BannerAspects to banner.Aspects
+	aspects := banner.Aspects{
+		Orientation: banner.Orientation(r.banner.Aspects.Orientation),
+		Banding:     banner.Banding(r.banner.Aspects.Banding),
+		Unity:       banner.Unity(r.banner.Aspects.Unity),
+		FixedEnd:    banner.FixedEnd(r.banner.Aspects.FixedEnd),
+	}
+
+	out := banner.Render(banner.Config{
+		Width:   r.width,
+		Justify: r.banner.Justify,
+	}, banner.Styles{}, banner.Effect{
+		Gradient: r.banner.Gradient,
+		State:    state,
+		Aspects:  aspects,
+	})
+	if out != "" {
+		b.WriteString(out)
+	}
 }
 
 // Show renders a single Motif immediately to the output writer.
@@ -285,60 +356,55 @@ func (r *renderer) updateBranchStack(motif contract.Motif) {
 	r.previousIsLast = motif.IsLast
 }
 
-// End renders the closing summary box with traversal counts and elapsed time.
+// End renders the closing status row with traversal counts and elapsed time.
 func (r *renderer) End(summ contract.Summary) {
-	fileLabel := "Files"
-	dirLabel := "Directories"
-	skippedLabel := "Skipped"
-	elapsedLabel := "Elapsed"
-
-	if summ.Kind == contract.ResumeNavigation {
-		fileLabel = "Files (resumed)"
-		dirLabel = "Dirs (resumed)"
-	}
-
 	errorCount := len(summ.Errors)
 
-	rows := []summary.Field{
-		r.summaryField(contract.TreeIconFile, fileLabel, fmt.Sprintf("%d", summ.FilesVisited)),
-		r.summaryField(contract.TreeIconDirectory, dirLabel, fmt.Sprintf("%d", summ.DirsVisited)),
-		r.summaryField(contract.TreeIconSkipped, skippedLabel, fmt.Sprintf("%d", summ.Skipped)),
-		r.summaryField(contract.TreeIconError, "Errors", fmt.Sprintf("%d", errorCount)),
-		r.summaryField(contract.TreeIconElapsed, elapsedLabel, clock.FormatDuration(summ.Elapsed)),
-	}
-
-	if errorCount > 0 {
-		errorStyles := summary.CellStyles{
-			Icon:  r.theme.ErrorStyle,
-			Label: r.theme.ErrorStyle,
-			Value: r.theme.ErrorStyle,
-		}
-
-		rows[len(rows)-2].Styles = &errorStyles
-
-		for _, err := range summ.Errors {
-			rows = append(rows, summary.Field{
-				Label:  err.Error(),
-				Styles: &errorStyles,
-			})
-		}
-	}
-
-	box := summary.Render(rows, summary.Styles{
-		Box: r.theme.BoxStyle,
-		Default: summary.CellStyles{
-			Icon:  r.theme.SummaryLabelStyle,
-			Label: r.theme.SummaryLabelStyle,
-			Value: r.theme.SummaryValueStyle,
-		},
+	// Render top border (empty content - just corner decorations)
+	topBorder := border.RenderTop("", r.width, border.Styles{
+		BorderStyle: r.theme.BorderStyle,
+		CornerStyle: r.theme.BorderStyle,
 	})
-	_, _ = lipgloss.Fprintln(r.writer, box)
-}
+	_, _ = lipgloss.Fprint(r.writer, topBorder)
 
-func (r *renderer) summaryField(iconKey, label, value string) summary.Field {
-	return summary.Field{
-		Icon:  r.treeIcons[iconKey],
-		Label: label,
-		Value: value,
+	statusStyles := status.Styles{
+		TreeIcons:         r.treeIcons,
+		SummaryLabelStyle: r.theme.SummaryLabelStyle,
+		SummaryValueStyle: r.theme.SummaryValueStyle,
+		ErrorStyle:        r.theme.ErrorStyle,
+		BorderStyle:       r.theme.BorderStyle,
+	}
+
+	fields := status.FieldSelectors{
+		ShowFiles:    true,
+		ShowDirs:     true,
+		ShowErrors:   true,
+		ShowSkipped:  true,
+		ShowProgress: false,
+		ShowComplete: false,
+		ShowElapsed:  true,
+	}
+
+	statusRow := status.Render(status.Config{
+		Files:   int(summ.FilesVisited),
+		Dirs:    int(summ.DirsVisited),
+		Errors:  errorCount,
+		Skipped: int(summ.Skipped),
+		Elapsed: summ.Elapsed,
+	}, statusStyles, fields, r.width)
+
+	_, _ = lipgloss.Fprintln(r.writer, statusRow)
+
+	// Render bottom border
+	bottomBorder := border.RenderBottom(r.width, border.Styles{
+		BorderStyle: r.theme.BorderStyle,
+	})
+	_, _ = lipgloss.Fprintln(r.writer, bottomBorder)
+
+	// Render ANSI banner at bottom if position is "bottom"
+	if r.banner != nil && !r.banner.Disable && r.banner.Position == banner.PositionBottom {
+		var b strings.Builder
+		r.renderAnsiBanner(&b)
+		_, _ = lipgloss.Fprintln(r.writer, b.String())
 	}
 }

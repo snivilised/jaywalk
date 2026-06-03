@@ -75,4 +75,22 @@ var _ = Describe("TopBorder", func() {
 		result := RenderTop(rootPath, width, styles)
 		Expect(result).To(Equal(expect))
 	})
+
+	It("renders border without content when content is empty", func() {
+		theme, _ := contract.NewTheme(contract.SystemPalette(), nil)
+		styles := Styles{
+			BorderStyle: theme.BorderStyle,
+			PathStyle:   theme.RootStyle,
+			CornerStyle: theme.BorderStyle,
+		}
+		width := 40
+
+		N := max(0, width-7)
+		expect := theme.BorderStyle.Render(
+			contract.Static.Borders.TopLeftCorner + strings.Repeat("─", N) + contract.Static.Borders.TopRight,
+		) + "\n"
+
+		result := RenderTop("", width, styles)
+		Expect(result).To(Equal(expect))
+	})
 })

@@ -29,4 +29,39 @@ type Overture struct {
 	// DateFormat is the Go time format string for rendering StartedAt.
 	// Empty means use the default (time.RFC1123).
 	DateFormat string
+
+	// Banner carries the optional ANSI shadow banner configuration.
+	// Nil when the banner is disabled or not configured.
+	Banner *BannerInfo
+}
+
+// BannerInfo carries the ANSI shadow banner configuration for a renderer.
+// The linear renderer uses this to render a static (non-animated) banner.
+type BannerInfo struct {
+	// Disable hides the banner when true.
+	Disable bool
+
+	// Position selects where the banner is rendered: "top" or "bottom".
+	Position string
+
+	// Justify is the horizontal alignment: "right", "left", or "center".
+	Justify string
+
+	// Width is the terminal width for justification padding.
+	Width int
+
+	// Aspects are the random visual aspects chosen once at startup.
+	Aspects BannerAspects
+
+	// Gradient is the resolved colour endpoints (Hi/Lo) bound to
+	// the "banner-control" theme component.
+	Gradient *ResolvedGradient
+}
+
+// BannerAspects captures the visual aspects for the banner.
+type BannerAspects struct {
+	Orientation int
+	Banding     int
+	Unity       int
+	FixedEnd    int
 }

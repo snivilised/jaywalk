@@ -2,13 +2,17 @@ package ui
 
 import (
 	"fmt"
+	"math/rand/v2"
+	"os"
 	"sync"
+	"time"
 
 	"github.com/snivilised/jaywalk/src/agenor/core"
 	"github.com/snivilised/jaywalk/src/agenor/enums"
 	"github.com/snivilised/jaywalk/src/agenor/pref"
 	"github.com/snivilised/jaywalk/src/app/report"
 	"github.com/snivilised/jaywalk/src/prism/contract"
+	"github.com/snivilised/jaywalk/src/prism/widgets/banner"
 	"github.com/snivilised/jaywalk/src/third/lo"
 )
 
@@ -27,6 +31,8 @@ type linear struct {
 	lastParent   string
 	peerInfo     map[string]*core.PeerInfo
 	renderedDirs map[string]bool
+	cfg          LinearConfig
+	theme        contract.Theme
 }
 
 func (l *linear) OnTraversalOptions(o *pref.Options) {
@@ -49,6 +55,9 @@ func (l *linear) OnBegin(e *report.BeginEvent) {
 	l.lastParent = ""
 	l.renderedDirs = make(map[string]bool)
 
+	// Build banner info for the renderer
+	bannerInfo := l.buildBannerInfo()
+
 	l.renderer.Begin(contract.Overture{
 		Root:       e.Root,
 		Caption:    e.Caption,
@@ -56,6 +65,7 @@ func (l *linear) OnBegin(e *report.BeginEvent) {
 		Kind:       kind,
 		ResumeFrom: e.ResumeFrom,
 		DateFormat: e.DateFormat,
+		Banner:     bannerInfo,
 	})
 }
 
@@ -226,6 +236,46 @@ func (l *linear) ensureParentRendered(node *core.Node) {
 		l.renderedDirs[p.Path] = true
 		l.lastParent = p.Path
 	}
+}
+
+// buildBannerInfo assembles the per-session BannerInfo for the linear
+// renderer. The random aspect selection is performed exactly once here
+// so the aspects are frozen for the duration of the process. The gradient
+// endpoints are resolved from the theme's "banner-control" component,
+// falling back to no gradient when the binding is absent.
+func (l *linear) buildBannerInfo() *contract.BannerInfo {
+	info := &contract.BannerInfo{
+		Disable:  l.cfg.Banner.Disable,
+		Position: l.cfg.FlagsRowPosition,
+		Justify:  l.cfg.Banner.Justify,
+	}
+
+	if l.cfg.Banner.Disable {
+		return info
+	}
+
+	// Resolve the gradient from the theme
+	var grad *contract.ResolvedGradient
+	if g, ok := l.theme.GradientFor(contract.GradientComponentBanner); ok && g.Steps > 0 {
+		steps := g.Steps
+		if l.cfg.Banner.StepsOverride > 0 {
+			steps = l.cfg.Banner.StepsOverride
+		}
+		grad = &contract.ResolvedGradient{Steps: steps, Hi: g.Hi, Lo: g.Lo}
+	}
+	info.Gradient = grad
+
+	// Pick the random aspects ONCE here, not per-render
+	rng := rand.New(rand.NewPCG(uint64(os.Getpid()), uint64(time.Now().UnixNano()))) //nolint:gosec // non-security
+	aspects := banner.RandomiseAspects(rng)
+	info.Aspects = contract.BannerAspects{
+		Orientation: int(aspects.Orientation),
+		Banding:     int(aspects.Banding),
+		Unity:       int(aspects.Unity),
+		FixedEnd:    int(aspects.FixedEnd),
+	}
+
+	return info
 }
 
 // NewLinearWithRenderer constructs a linear presenter backed by the

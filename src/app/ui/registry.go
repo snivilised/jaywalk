@@ -117,7 +117,17 @@ type ViewConfig interface {
 // currently has no per-instance settings beyond the palette, so this
 // is a zero-sized placeholder that exists for symmetry with views
 // that do have settings.
-type LinearConfig struct{}
+type LinearConfig struct {
+	// FlagsRowPosition controls the ANSI banner placement:
+	// "top" renders the banner before the linear banner,
+	// "bottom" renders it after the summary banner.
+	FlagsRowPosition string
+
+	// Banner controls the ANSI shadow banner rendered outside the
+	// linear view's bordered region. The colour sweep is resolved
+	// from the theme via highlights.components["banner-control"].
+	Banner BannerConfig
+}
 
 // isViewConfig seals the implementation set.
 func (LinearConfig) isViewConfig() {}
@@ -237,7 +247,7 @@ func LoadConfig(mode string, source ViewConfigSource, palette contract.Palette) 
 
 	switch mode {
 	case ModeLinear:
-		return LinearConfig{}, nil
+		return loadLinearConfig(source, palette)
 
 	case ModeHighway:
 		return loadHighwayConfig(source, palette)
@@ -279,6 +289,44 @@ func loadHighwayConfig(source ViewConfigSource, palette contract.Palette) (ViewC
 		FlagsRowPosition:  flagsRowPosition,
 		Banner:            bannerCfg,
 	}, nil
+}
+
+func loadLinearConfig(source ViewConfigSource, palette contract.Palette) (ViewConfig, error) {
+	var raw bedrock.LinearConfig
+	if source != nil {
+		if err := source.Load("linear", &raw); err != nil {
+			return nil, err
+		}
+	}
+
+	flagsRowPosition := normaliseLinearFlagsRowPosition(raw.FlagsRowPosition)
+	bannerCfg := resolveBannerConfig(raw.Banner, palette)
+
+	return LinearConfig{
+		FlagsRowPosition: flagsRowPosition,
+		Banner:           bannerCfg,
+	}, nil
+}
+
+// normaliseLinearFlagsRowPosition validates the configured flags row position
+// for the linear view. Empty values are treated as unset (use default).
+// Unrecognised values also resolve to the default; a warning is written to
+// stderr so the user is informed but the application is not aborted.
+func normaliseLinearFlagsRowPosition(raw string) string {
+	if raw == "" {
+		return flagsRowPositionDefault
+	}
+
+	switch raw {
+	case FlagsRowPositionTop, FlagsRowPositionBottom:
+		return raw
+	default:
+		fmt.Fprintf(os.Stderr,
+			"warning: ui.linear.flags-row-position: unrecognised value %q, defaulting to %q\n",
+			raw, flagsRowPositionDefault,
+		)
+		return flagsRowPositionDefault
+	}
 }
 
 // normaliseFlagsRowPosition validates the configured flags row position.
@@ -404,7 +452,12 @@ func nameFromPalette(palette contract.Palette, componentName string) string {
 // applies the palette's theme settings (colors, icons, styles). Custom
 // tree icons from the palette are explicitly applied via WithIcons to
 // ensure they override the defaults.
-func newLinearPresenter(palette contract.Palette) (report.Presenter, error) {
+func newLinearPresenter(palette contract.Palette, cfg LinearConfig) (report.Presenter, error) {
+	theme, err := contract.NewTheme(palette, os.Stdout)
+	if err != nil {
+		return nil, err
+	}
+
 	renderer, err := flow.New(
 		palette,
 		os.Stdout,
@@ -414,7 +467,11 @@ func newLinearPresenter(palette contract.Palette) (report.Presenter, error) {
 		return nil, err
 	}
 
-	return &linear{renderer: renderer}, nil
+	return &linear{
+		renderer: renderer,
+		cfg:      cfg,
+		theme:    theme,
+	}, nil
 }
 
 // ---------------------------------------------------------------------------
@@ -438,7 +495,13 @@ func New(mode string, palette contract.Palette, cfg ViewConfig) (report.Presente
 
 	switch mode {
 	case ModeLinear:
-		return newLinearPresenter(palette)
+		lCfg, ok := cfg.(LinearConfig)
+		if !ok {
+			return nil, fmt.Errorf(
+				"ui.New: linear mode requires LinearConfig, got %T", cfg,
+			)
+		}
+		return newLinearPresenter(palette, lCfg)
 
 	case ModeHighway:
 		hCfg, ok := cfg.(HighwayConfig)

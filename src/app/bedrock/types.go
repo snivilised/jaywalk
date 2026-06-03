@@ -162,6 +162,21 @@ type HighwayConfig struct {
 	Banner BannerSubConfig `mapstructure:"banner,omitempty"`
 }
 
+// LinearConfig holds the configuration for the linear view.
+// This configuration is loaded from jay.ui.yml when linear view is requested.
+type LinearConfig struct {
+	// FlagsRowPosition controls the ANSI banner placement:
+	// "top" renders the banner before the linear banner,
+	// "bottom" renders it after the summary banner.
+	// Empty or invalid values default to "bottom".
+	FlagsRowPosition string `mapstructure:"flags-row-position,omitempty"`
+
+	// Banner controls the ANSI shadow banner rendered outside the
+	// linear view's bordered region. The colour sweep is resolved
+	// from the theme via highlights.components["banner-control"].
+	Banner BannerSubConfig `mapstructure:"banner,omitempty"`
+}
+
 // BannerSubConfig holds the raw, on-disk shape of the banner settings
 // loaded from jay.ui.yml. The resolved (palette-aware) shape lives in
 // ui.BannerConfig - see ui/registry.go.

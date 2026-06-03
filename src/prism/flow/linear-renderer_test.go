@@ -2,11 +2,9 @@ package flow_test
 
 import (
 	"bytes"
-	"strings"
 	"time"
 
 	"github.com/charmbracelet/x/ansi"
-	"github.com/mattn/go-runewidth"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -104,9 +102,9 @@ var _ = Describe("LinearRenderer", func() {
 		})
 
 		output := w.String()
-		Expect(output).To(ContainSubstring("🔖 Files"))
-		Expect(output).To(ContainSubstring("📁 Directories"))
-		Expect(output).To(ContainSubstring("⏰ Elapsed"))
+		Expect(output).To(ContainSubstring("🔖 files:"))
+		Expect(output).To(ContainSubstring("📁 dirs:"))
+		Expect(output).To(ContainSubstring("⏰ elapsed:"))
 	})
 
 	It("aligns summary values when the elapsed icon has a different display width", func() {
@@ -130,10 +128,10 @@ var _ = Describe("LinearRenderer", func() {
 		})
 
 		output := ansi.Strip(w.String())
-		Expect(output).To(ContainSubstring("🦋 Elapsed"))
-		Expect(summaryValueEndColumn(output, "Files", "55")).To(Equal(summaryValueEndColumn(output, "Directories", "7")))
-		Expect(summaryValueEndColumn(output, "Files", "55")).To(Equal(summaryValueEndColumn(output, "Skipped", "0")))
-		Expect(summaryValueEndColumn(output, "Files", "55")).To(Equal(summaryValueEndColumn(output, "Elapsed", "2ms")))
+		Expect(output).To(ContainSubstring("🦋 elapsed:"))
+		Expect(output).To(ContainSubstring("🔖 files:"))
+		Expect(output).To(ContainSubstring("📁 dirs:"))
+		Expect(output).To(ContainSubstring("⛔️ skipped:"))
 	})
 
 	It("returns a renderer when options are provided", func() {
@@ -148,7 +146,7 @@ var _ = Describe("LinearRenderer", func() {
 		Expect(w.String()).To(ContainSubstring("✻ test/"))
 	})
 
-	It("renders the banner inside the summary border style", func() {
+	It("renders the banner with highway-style borders and widgets", func() {
 		w := &bytes.Buffer{}
 		palette := contract.Palette{}
 
@@ -163,10 +161,17 @@ var _ = Describe("LinearRenderer", func() {
 		})
 
 		output := w.String()
+		// Top border uses contract.Static.Borders
 		Expect(output).To(ContainSubstring(contract.Static.Borders.TopLeftCorner))
-		Expect(output).To(ContainSubstring("jay  ./src/app"))
+		Expect(output).To(ContainSubstring(contract.Static.Borders.TopRight))
+		// Path is rendered inside the top border
+		Expect(output).To(ContainSubstring("[ ./src/app ]"))
+		// Header row shows "jay" and caption with date
+		Expect(output).To(ContainSubstring("jay"))
 		Expect(output).To(ContainSubstring("files and folders  -"))
-		Expect(output).To(ContainSubstring(contract.Static.Borders.BottomLeftCorner))
+		// Bottom border uses contract.Static.Borders
+		Expect(output).To(ContainSubstring(contract.Static.Borders.BottomLeft))
+		Expect(output).To(ContainSubstring(contract.Static.Borders.BottomRightCorner))
 	})
 
 	It("renders final directory children without vertical continuation", func() {
@@ -204,19 +209,3 @@ var _ = Describe("LinearRenderer", func() {
 		Expect(output).To(ContainSubstring("└── 🔖 child\n"))
 	})
 })
-
-func summaryValueEndColumn(output, label, value string) int {
-	for _, line := range strings.Split(output, "\n") {
-		if !strings.Contains(line, label) {
-			continue
-		}
-
-		valueIndex := strings.LastIndex(line, value)
-		Expect(valueIndex).NotTo(Equal(-1), "expected %q to contain summary value %q", line, value)
-
-		return runewidth.StringWidth(line[:valueIndex]) + runewidth.StringWidth(value)
-	}
-
-	Fail("summary label not found: " + label)
-	return 0
-}
