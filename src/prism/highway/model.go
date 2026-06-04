@@ -4,7 +4,6 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/charmbracelet/bubbles/progress"
 
 	"github.com/snivilised/jaywalk/src/agenor/core"
 	"github.com/snivilised/jaywalk/src/prism/contract"
@@ -14,28 +13,50 @@ import (
 
 type tickMsg time.Time
 
+// statusFieldSet is the canonical FieldSelectors used by the
+// status widget in the highway view. Hoisted to a package-level
+// value so the constructor and any tests share a single source of
+// truth.
+func statusFieldSet() status.FieldSelectors {
+	return status.FieldSelectors{
+		ShowFiles:    true,
+		ShowDirs:     true,
+		ShowErrors:   true,
+		ShowSkipped:  false,
+		ShowProgress: true,
+		ShowComplete: true,
+		ShowElapsed:  true,
+	}
+}
+
 type Model struct {
-	lanes             []Lane
-	skip              []int
-	width             int
-	start             time.Time
-	tickRate          time.Duration
-	totalTicks        int64
-	rootPath          string
-	progress          progress.Model
-	percent           int
-	realMode          bool
-	done              bool
-	noRecurse         bool
-	files             int
-	dirs              int
-	errors            int
-	elapsed           time.Duration
-	currentLaneIdx    int
+	lanes          []Lane
+	skip           []int
+	width          int
+	start          time.Time
+	tickRate       time.Duration
+	totalTicks     int64
+	rootPath       string
+	realMode       bool
+	done           bool
+	noRecurse      bool
+	files          int
+	dirs           int
+	errors         int
+	elapsed        time.Duration
+	currentLaneIdx int
+	totalDirs      uint
+	maxDepth       uint
+	pipelineName   string
+	// TODO(status-widget-state-migration): totalFiles is still
+	// owned by the root in this PR. The CensusMsg path
+	// (highway/model.go Update) forwards it into the status
+	// widget via status.TotalMsg so the widget can compute
+	// percent on its own. The root's local copy remains for
+	// now because the lanes update path still references it
+	// for fake-mode rendering. Move the root copy out once
+	// lanes becomes a proper child model.
 	totalFiles        uint
-	totalDirs         uint
-	maxDepth          uint
-	pipelineName      string
 	subscriptionLabel string
 	startedAt         time.Time
 	caption           string
@@ -43,6 +64,13 @@ type Model struct {
 	theme             contract.Theme
 	counted           map[string]bool
 	errMsg            string
+
+	// status is the child status widget. It owns the
+	// files/dirs/errors/elapsed/isDone/errMsg/percent/total state
+	// and the embedded bubbles progress bar. The root
+	// translates highway messages into status.* messages
+	// (see update.go's translation helpers).
+	status status.Model
 
 	// header is the supplementary flag info carried on the OvertureMsg.
 	// Stored on the model so renderFlagsRow and other renderers can
@@ -64,11 +92,6 @@ type Model struct {
 	// bannerInfo is the (immutable for the session) configuration
 	// received via OvertureMsg. The view reads this each render.
 	bannerInfo BannerInfo
-
-	// statusStyles and statusFields are computed once during init and
-	// reused on every render cycle for the summary row.
-	statusStyles status.Styles
-	statusFields status.FieldSelectors
 }
 
 // initLaneSkip computes the per-lane skip factor from each lane's
@@ -106,28 +129,11 @@ func NewModel(lanes []Lane, tickRate time.Duration, rootPath string,
 		maxDepth:  maxDepth,
 		theme:     theme,
 		counted:   make(map[string]bool),
-		progress: progress.New(
-			progress.WithSolidFill("#B9FBC0"), //TODO: theme.progress
-			progress.WithoutPercentage(),
-			progress.WithWidth(10),
+		status: status.New(
+			status.WithTheme(theme),
+			status.WithFields(statusFieldSet()),
+			status.WithWidth(10),
 		),
-		statusStyles: status.Styles{
-			TreeIcons:         theme.TreeIcons,
-			SummaryLabelStyle: theme.SummaryLabelStyle,
-			SummaryValueStyle: theme.SummaryValueStyle,
-			ErrorStyle:        theme.ErrorStyle,
-			ProgressStyle:     theme.ProgressStyle,
-			BorderStyle:       theme.BorderStyle,
-		},
-		statusFields: status.FieldSelectors{
-			ShowFiles:    true,
-			ShowDirs:     true,
-			ShowErrors:   true,
-			ShowSkipped:  false,
-			ShowProgress: true,
-			ShowComplete: true,
-			ShowElapsed:  true,
-		},
 	}
 }
 
@@ -141,7 +147,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
-		return m, nil
+		var cmd tea.Cmd
+		m.status, cmd = m.dispatchStatus(status.WidthMsg{Width: msg.Width})
+		return m, cmd
 
 	case tea.KeyMsg:
 		switch {
@@ -153,6 +161,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tickMsg:
+		cmds := make([]tea.Cmd, 0, 2)
 		if m.done {
 			return m, nil
 		}
@@ -205,12 +214,34 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		tickCmd := tea.Tick(m.tickRate, func(t time.Time) tea.Msg {
 			return tickMsg(t)
 		})
+		cmds = append(cmds, tickCmd)
 		if !m.start.IsZero() {
+			// Elapsed time is real in both demo and real mode,
+			// so push it on every tick. Without this the status
+			// row's elapsed segment would stay at 0 in real
+			// mode until the final CompleteMsg arrived.
+			elapsed := time.Since(m.start)
+			var elapsedCmd tea.Cmd
+			m.status, elapsedCmd = m.dispatchStatus(status.ElapsedMsg{Elapsed: elapsed})
+			if elapsedCmd != nil {
+				cmds = append(cmds, elapsedCmd)
+			}
 			if !m.realMode {
-				m.percent = int(time.Since(m.start).Seconds()) * 2 % 100
+				// Demo mode only: push a time-derived percent
+				// so the bar animates without real traversal
+				// data. In real mode the percent is driven by
+				// TotalMsg + IncDoneMsg (the done/total ratio).
+				// TODO(realMode-cleanup): once lanes becomes a
+				// proper child model and owns its own ticking,
+				// move the demo-mode fake percent generation
+				// into lanes.Update so the root doesn't need
+				// to know about it.
+				m.status, _ = m.dispatchStatus(status.PercentMsg{
+					Percent: int(elapsed.Seconds()) * 2 % 100,
+				})
 			}
 		}
-		return m, tickCmd
+		return m, tea.Batch(cmds...)
 
 	case OvertureMsg:
 		m.rootPath = msg.Root
@@ -250,73 +281,130 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.MaxDepth > m.maxDepth {
 			m.maxDepth = msg.MaxDepth
 		}
+		// Forward the total to the status widget so it can
+		// compute the percent on its own.
+		if msg.TotalFiles > 0 {
+			var cmd tea.Cmd
+			m.status, cmd = m.dispatchStatus(status.TotalMsg{Total: int(msg.TotalFiles)}) //nolint:gosec // cast ok
+			return m, cmd
+		}
 		return m, nil
 
 	case MotifMsg:
-		if !m.counted[msg.Data.Path] {
+		isNew := !m.counted[msg.Data.Path]
+		if isNew {
 			m.counted[msg.Data.Path] = true
+			cmds := make([]tea.Cmd, 0, 1)
 			if msg.Data.IsDir {
 				m.dirs++
 			} else {
 				m.files++
 			}
-		}
-		if len(m.lanes) > 0 {
-			m.lanes[m.currentLaneIdx].JobEmoji = msg.Data.JobEmoji
-			m.lanes[m.currentLaneIdx].Path = msg.Data.Path
-			m.lanes[m.currentLaneIdx].Name = msg.Data.Name
-			m.lanes[m.currentLaneIdx].IsDir = msg.Data.IsDir
-			m.lanes[m.currentLaneIdx].Depth = msg.Data.Depth
-			m.lanes[m.currentLaneIdx].ActionName = msg.Data.ActionName
-			m.lanes[m.currentLaneIdx].PipelineName = msg.Data.PipelineName
-			m.lanes[m.currentLaneIdx].CommandOutput = msg.Data.CommandOutput
-			m.lanes[m.currentLaneIdx].ExecutionString = msg.Data.ExecutionString
-			m.lanes[m.currentLaneIdx].DryRun = msg.Data.DryRun
-			m.lanes[m.currentLaneIdx].Err = msg.Data.Err
-			// Copy gradient from message to lane if provided.
-			// The gradient is a ResolvedGradient {Steps, Hi, Lo} from the theme palette.
-			// It holds colour endpoint info; we apply it in renderLanes() using ApplyGradient().
-			if msg.Data.Gradient != nil {
-				m.lanes[m.currentLaneIdx].HighlightGradient = msg.Data.Gradient
-				// Also ensure GradientState exists and is configured with steps.
-				if m.lanes[m.currentLaneIdx].GradientState == nil {
-					m.lanes[m.currentLaneIdx].GradientState = effects.NewGradientState()
-				}
-				m.lanes[m.currentLaneIdx].GradientState.TotalSteps = msg.Data.Gradient.Steps
+			// Forward the new count to the status widget so the
+			// percent / progress bar reflects the new total.
+			// TODO(lanes-widget-state-migration): the counted
+			// map, m.files and m.dirs will all move to the
+			// lanes child widget in a future PR; this
+			// translation will then happen inside lanes.Update
+			// and the root's local copies can be removed.
+			var cmd tea.Cmd
+			m.status, cmd = m.dispatchStatus(status.IncDoneMsg{N: 1})
+			if cmd != nil {
+				cmds = append(cmds, cmd)
 			}
-
-			if msg.Data.PeriscopeGradient != nil {
-				m.lanes[m.currentLaneIdx].PeriscopeGradient = msg.Data.PeriscopeGradient
-				if m.lanes[m.currentLaneIdx].PeriscopeGradientState == nil {
-					m.lanes[m.currentLaneIdx].PeriscopeGradientState = effects.NewGradientState()
-				}
-				m.lanes[m.currentLaneIdx].PeriscopeGradientState.TotalSteps = msg.Data.PeriscopeGradient.Steps
-			}
-			m.currentLaneIdx = (m.currentLaneIdx + 1) % len(m.lanes)
+			m.status, _ = m.dispatchStatus(status.CountsMsg{
+				Files: m.files, Dirs: m.dirs, Errors: m.errors,
+			})
+			return m.applyMotifData(msg, cmds)
 		}
-		if m.totalFiles > 0 {
-			m.percent = int(float64(m.files) / float64(m.totalFiles) * 100)
-		}
-		return m, nil
+		return m.applyMotifData(msg, nil)
 
 	case CompleteMsg:
-		m.files = msg.Files
-		m.dirs = msg.Dirs
-		m.errors = len(msg.Errs)
-		m.elapsed = msg.Elapsed
-		m.done = true
+		// Capture the first non-nil error message for the
+		// "press space to exit" footer (still rendered by the
+		// highway chrome; see renderSummary).
 		for _, e := range msg.Errs {
 			if e != nil {
 				m.errMsg = e.Error()
 				break
 			}
 		}
-		if m.totalFiles > 0 {
-			m.percent = int(float64(m.files) / float64(m.totalFiles) * 100)
+		m.errors = len(msg.Errs)
+		m.elapsed = msg.Elapsed
+		m.done = true
+
+		// Forward the final counts and elapsed to the status
+		// widget. The widget owns the percent calculation and
+		// the isDone flag from here on.
+		cmds := make([]tea.Cmd, 0, 2)
+		m.status, _ = m.dispatchStatus(status.CountsMsg{
+			Files: msg.Files, Dirs: msg.Dirs, Errors: len(msg.Errs),
+		})
+		m.status, _ = m.dispatchStatus(status.ElapsedMsg{Elapsed: msg.Elapsed})
+		var cmd tea.Cmd
+		m.status, cmd = m.dispatchStatus(status.DoneMsg{
+			Done: msg.Files, IsDone: true, Err: m.errMsg,
+		})
+		if cmd != nil {
+			cmds = append(cmds, cmd)
 		}
-		return m, nil
+		return m, tea.Batch(cmds...)
 
 	default:
 		return m, nil
 	}
+}
+
+// dispatchStatus forwards a status-owned message to the child
+// status widget and returns the resulting (status.Model, tea.Cmd)
+// tuple, type-asserting the bubbletea Model back to a concrete
+// status.Model. The caller appends cmd to its running cmds slice
+// when non-nil and assigns the returned model back to m.status.
+func (m Model) dispatchStatus(msg tea.Msg) (status.Model, tea.Cmd) {
+	r, cmd := m.status.Update(msg)
+	return r.(status.Model), cmd //nolint:errcheck // known concrete type
+}
+
+// applyMotifData updates the per-lane fields from a MotifMsg. The
+// caller is responsible for any status translation (IncDoneMsg,
+// CountsMsg) before calling this. Extracted from the MotifMsg
+// switch arm to keep the update flow readable.
+func (m Model) applyMotifData(msg MotifMsg, cmds []tea.Cmd) (tea.Model, tea.Cmd) {
+	if len(m.lanes) > 0 {
+		m.lanes[m.currentLaneIdx].JobEmoji = msg.Data.JobEmoji
+		m.lanes[m.currentLaneIdx].Path = msg.Data.Path
+		m.lanes[m.currentLaneIdx].Name = msg.Data.Name
+		m.lanes[m.currentLaneIdx].IsDir = msg.Data.IsDir
+		m.lanes[m.currentLaneIdx].Depth = msg.Data.Depth
+		m.lanes[m.currentLaneIdx].ActionName = msg.Data.ActionName
+		m.lanes[m.currentLaneIdx].PipelineName = msg.Data.PipelineName
+		m.lanes[m.currentLaneIdx].CommandOutput = msg.Data.CommandOutput
+		m.lanes[m.currentLaneIdx].ExecutionString = msg.Data.ExecutionString
+		m.lanes[m.currentLaneIdx].DryRun = msg.Data.DryRun
+		m.lanes[m.currentLaneIdx].Err = msg.Data.Err
+		// Copy gradient from message to lane if provided.
+		// The gradient is a ResolvedGradient {Steps, Hi, Lo} from the theme palette.
+		// It holds colour endpoint info; we apply it in renderLanes() using ApplyGradient().
+		if msg.Data.Gradient != nil {
+			m.lanes[m.currentLaneIdx].HighlightGradient = msg.Data.Gradient
+			// Also ensure GradientState exists and is configured with steps.
+			if m.lanes[m.currentLaneIdx].GradientState == nil {
+				m.lanes[m.currentLaneIdx].GradientState = effects.NewGradientState()
+			}
+			m.lanes[m.currentLaneIdx].GradientState.TotalSteps = msg.Data.Gradient.Steps
+		}
+
+		if msg.Data.PeriscopeGradient != nil {
+			m.lanes[m.currentLaneIdx].PeriscopeGradient = msg.Data.PeriscopeGradient
+			if m.lanes[m.currentLaneIdx].PeriscopeGradientState == nil {
+				m.lanes[m.currentLaneIdx].PeriscopeGradientState = effects.NewGradientState()
+			}
+			m.lanes[m.currentLaneIdx].PeriscopeGradientState.TotalSteps = msg.Data.PeriscopeGradient.Steps
+		}
+		m.currentLaneIdx = (m.currentLaneIdx + 1) % len(m.lanes)
+	}
+	if len(cmds) == 0 {
+		return m, nil
+	}
+	return m, tea.Batch(cmds...)
 }
