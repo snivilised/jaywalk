@@ -96,6 +96,16 @@ var _ = lingo.Underliers{
 		File:        "flags",
 	},
 
+	"include-hidden-flag-description": {
+		MessageID:   "include-hidden-flag-description",
+		Seed:        "IncludeHiddenFlagDesc",
+		TypeName:    enums.UnderlyingTypeStaticCobra,
+		Description: "Cobra flag description for include-hidden flag",
+		Story:       "Cobra flag description for include-hidden flag",
+		Other:       "include-hidden includes hidden files (dot files) and known metadata files in the traversal",
+		File:        "flags",
+	},
+
 	// -------------------------------------------------------------------------
 	// root-cmd: Cobra messages
 	// -------------------------------------------------------------------------

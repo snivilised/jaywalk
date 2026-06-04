@@ -467,6 +467,16 @@ func (b *Bootstrap) bindNavFlags(cmd *cobra.Command, ns *navState) {
 		&ns.navPs.Native.Pipeline,
 	)
 
+	ns.navPs.BindBool(
+		assist.NewFlagInfoOnFlagSet(
+			li18ngo.Text(locale.IncludeHiddenFlagDescTemplData{}),
+			"Z",
+			false,
+			fs,
+		),
+		&ns.navPs.Native.IncludeHidden,
+	)
+
 	// family: preview [--dry-run]
 	ns.previewFam = assist.NewParamSet[store.PreviewParameterSet](cmd)
 	ns.previewFam.Native.BindAll(ns.previewFam, fs)
@@ -516,5 +526,6 @@ func navFamilies(ns *navState) NavFamilies {
 		Cascade:  ns.cascadeFam,
 		Sampling: ns.samplingFam,
 		PolyFam:  ns.polyFam,
+		NavPs:    ns.navPs,
 	}
 }

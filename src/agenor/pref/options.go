@@ -7,6 +7,7 @@ import (
 	"runtime"
 
 	"github.com/snivilised/jaywalk/src/agenor/core"
+	"github.com/snivilised/jaywalk/src/agenor/filing"
 	"github.com/snivilised/jaywalk/src/agenor/life"
 	"github.com/snivilised/jaywalk/src/agenor/tapable"
 )
@@ -171,7 +172,7 @@ func newHooks() tapable.Hooks {
 		ReadDirectory: tapable.NewHookCtrl[
 			core.ReadDirectoryHook, core.ChainReadDirectoryHook, tapable.ReadDirectoryBroadcaster,
 		](
-			DefaultReadEntriesHook,
+			filing.DefaultReadEntriesHook,
 			tapable.GetReadDirectoryBroadcaster,
 			tapable.ReadDirectoryAttacher,
 		),

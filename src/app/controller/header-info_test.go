@@ -7,6 +7,7 @@ import (
 	"github.com/snivilised/jaywalk/src/agenor"
 	"github.com/snivilised/jaywalk/src/agenor/core"
 	"github.com/snivilised/jaywalk/src/agenor/enums"
+	"github.com/snivilised/jaywalk/src/agenor/filing"
 	"github.com/snivilised/jaywalk/src/agenor/pref"
 	"github.com/snivilised/jaywalk/src/prism/contract"
 )
@@ -96,5 +97,21 @@ var _ = Describe("extractHeaderInfo", func() {
 		req := buildRequest(agenor.WithNoRecurse())
 		got := extractHeaderInfo(req)
 		Expect(got.CascadeDisplay).To(Equal(contract.Static.Emoji.Padlock))
+	})
+
+	// regression: any option that mutates Options.Hooks (eg
+	// WithHookReadDirectory, introduced for --include-hidden) must not
+	// panic when replayed against the scratch Options built inside
+	// extractHeaderInfo. Previously a bare &pref.Options{} was used,
+	// so Hooks.ReadDirectory was a nil interface and .Tap(hook)
+	// dereferenced a nil itab, segfaulting.
+	It("does not panic when a Hook option (eg WithHookReadDirectory) is in settings", func() {
+		req := buildRequest(
+			agenor.WithHookReadDirectory(filing.ReadEntriesAll),
+		)
+
+		var got contract.HeaderInfo
+		Expect(func() { got = extractHeaderInfo(req) }).NotTo(Panic())
+		_ = got
 	})
 })

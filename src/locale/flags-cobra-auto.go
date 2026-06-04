@@ -48,6 +48,27 @@ func (td DryRunFlagDescTemplData) Message() *i18n.Message {
 }
 
 // =============================================================================
+// 🧊 IncludeHiddenFlagDesc
+//
+// Cobra flag description for include-hidden flag
+// =============================================================================
+
+// IncludeHiddenFlagDescTemplData Cobra flag description for include-hidden
+// flag.
+type IncludeHiddenFlagDescTemplData struct {
+	agenorTemplData
+}
+
+// Message returns the i18n message for IncludeHiddenFlagDescTemplData.
+func (td IncludeHiddenFlagDescTemplData) Message() *i18n.Message {
+	return &i18n.Message{
+		ID:          "include-hidden-flag-description",
+		Description: "Cobra flag description for include-hidden flag",
+		Other:       "include-hidden includes hidden files (dot files) and known metadata files in the traversal",
+	}
+}
+
+// =============================================================================
 // 🧊 PipelineFlagDesc
 //
 // Cobra flag description for pipeline flag

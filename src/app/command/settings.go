@@ -32,6 +32,7 @@ func createTraversalSettingsIntent(families NavFamilies) controller.TraversalSet
 		IsSampling:    families.Sampling.Native.IsSampling,
 		NoFiles:       families.Sampling.Native.NoFiles,
 		NoDirectories: families.Sampling.Native.NoDirectories,
+		IncludeHidden: families.NavPs.Native.IncludeHidden,
 	}
 
 	flags := families.PolyFam.Command.Flags()

@@ -5,6 +5,7 @@ import (
 	"github.com/snivilised/jaywalk/src/agenor"
 	"github.com/snivilised/jaywalk/src/agenor/core"
 	"github.com/snivilised/jaywalk/src/agenor/enums"
+	"github.com/snivilised/jaywalk/src/agenor/filing"
 	"github.com/snivilised/jaywalk/src/agenor/pref"
 	"github.com/snivilised/jaywalk/src/app/report"
 	"github.com/snivilised/jaywalk/src/locale"
@@ -24,6 +25,7 @@ type TraversalSettingsIntent struct {
 	NoFiles       uint
 	NoDirectories uint
 	Filter        FilterIntent
+	IncludeHidden bool
 }
 
 func BuildTraversalSettings(intent TraversalSettingsIntent, ui report.Presenter) []pref.Option {
@@ -48,6 +50,10 @@ func BuildTraversalSettings(intent TraversalSettingsIntent, ui report.Presenter)
 
 	if filterOption, ok := TranslateFilterIntent(intent.Filter); ok {
 		opts = append(opts, filterOption)
+	}
+
+	if intent.IncludeHidden {
+		opts = append(opts, agenor.WithHookReadDirectory(filing.ReadEntriesAll))
 	}
 
 	opts = append(opts, pref.WithTraversalConfigurer(ui))
