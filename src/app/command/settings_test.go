@@ -6,20 +6,22 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/snivilised/li18ngo"
 	"github.com/snivilised/mamba/assist"
 	"github.com/snivilised/mamba/store"
-	"github.com/snivilised/li18ngo"
 
 	"github.com/snivilised/jaywalk/src/locale"
 )
 
 // buildTestNavFamilies constructs a fully populated navState bound to a
 // real cobra command. Cascade/sampling/poly are bound; nav and preview
-// are stubbed nil since createTraversalSettingsIntent only reads from
-// cascade, sampling and poly.
+// are also constructed (so the bundle can carry IncludeHidden) but
+// preview is not assigned to the returned navState since
+// createTraversalSettingsIntent only reads from cascade, sampling, poly
+// and nav.
 func buildTestNavFamilies() (*cobra.Command, *navState) {
 	cmd := &cobra.Command{Use: "test"}
-	_ = assist.NewParamSet[NavParameterSet](cmd)
+	navPs := assist.NewParamSet[NavParameterSet](cmd)
 	_ = assist.NewParamSet[store.PreviewParameterSet](cmd)
 	cascadePs := assist.NewParamSet[store.CascadeParameterSet](cmd)
 	cascadePs.Native.BindAll(cascadePs, cmd.Flags())
@@ -28,27 +30,24 @@ func buildTestNavFamilies() (*cobra.Command, *navState) {
 	polyPs := assist.NewParamSet[store.PolyFilterParameterSet](cmd)
 	polyPs.Native.BindAll(polyPs, cmd.Flags())
 	return cmd, &navState{
+		navPs:       navPs,
 		cascadeFam:  cascadePs,
 		samplingFam: samplingPs,
 		polyFam:     polyPs,
 	}
 }
 
-func init() {
-	// mamba's BindAll invokes li18ngo.Text(...) for each flag's
-	// usage string; without registration the call panics. We only
-	// need the bare Register() here because the test never asserts
-	// on rendered flag text.
-	_ = li18ngo.Register(
-		func(o *li18ngo.UseOptions) {
-			o.From.Sources = li18ngo.TranslationFiles{
-				locale.SourceID: li18ngo.TranslationSource{Name: "agenor"},
-			}
-		},
-	)
-}
+var _ = Describe("createTraversalSettingsIntent (poly filter Changed detection)", Ordered, func() {
+	BeforeEach(func() {
+		_ = li18ngo.Register(
+			func(o *li18ngo.UseOptions) {
+				o.From.Sources = li18ngo.TranslationFiles{
+					locale.SourceID: li18ngo.TranslationSource{Name: "agenor"},
+				}
+			},
+		)
+	})
 
-var _ = Describe("createTraversalSettingsIntent (poly filter Changed detection)", func() {
 	It("leaves filter fields empty when no poly flags are set", func() {
 		cmd, ns := buildTestNavFamilies()
 
@@ -152,5 +151,20 @@ var _ = Describe("createTraversalSettingsIntent (poly filter Changed detection)"
 		intent := createTraversalSettingsIntent(navFamilies(ns))
 		Expect(intent.Filter.FilesExGlob).To(BeEmpty(),
 			"un-set flag with non-empty default must NOT populate the intent")
+	})
+
+	It("captures --include-hidden when set on the nav param-set", func() {
+		_, ns := buildTestNavFamilies()
+		ns.navPs.Native.IncludeHidden = true
+
+		intent := createTraversalSettingsIntent(navFamilies(ns))
+		Expect(intent.IncludeHidden).To(BeTrue())
+	})
+
+	It("leaves IncludeHidden false by default", func() {
+		_, ns := buildTestNavFamilies()
+
+		intent := createTraversalSettingsIntent(navFamilies(ns))
+		Expect(intent.IncludeHidden).To(BeFalse())
 	})
 })

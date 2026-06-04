@@ -11,21 +11,6 @@ import (
 	"github.com/snivilised/jaywalk/src/third/lo"
 )
 
-// DefaultReadEntriesHook reads the contents of a directory. The resulting
-// slice is left un-sorted
-func DefaultReadEntriesHook(sys fs.ReadDirFS,
-	dirname string,
-) ([]fs.DirEntry, error) {
-	contents, err := fs.ReadDir(sys, dirname)
-	if err != nil {
-		return nil, err
-	}
-
-	return lo.Filter(contents, func(item fs.DirEntry, _ int) bool {
-		return item.Name() != ".DS_Store"
-	}), nil
-}
-
 // DefaultQueryStatusHook query the status of the path on the file system
 // provided.
 func DefaultQueryStatusHook(qsys fs.StatFS, path string) (fs.FileInfo, error) {

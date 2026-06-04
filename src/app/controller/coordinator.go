@@ -387,9 +387,15 @@ func (c *Coordinator) useShellPoolExec(
 // though the pref.Options struct doesn't directly expose the original
 // flags. The returned HeaderInfo is then embedded in the BeginEvent
 // sent to the UI presenter (see contract.HeaderInfo for field semantics).
+//
+// The scratch Options MUST be initialised via pref.DefaultOptions() (not
+// a bare &pref.Options{}), because the Hooks subfields are interface
+// types and a zero value would be nil; options such as
+// WithHookReadDirectory call methods on those interfaces and would
+// panic on a nil itab. useShellPoolExec uses the same pattern.
 func extractHeaderInfo(req *Request) contract.HeaderInfo {
 	var info contract.HeaderInfo
-	options := &pref.Options{}
+	options := pref.DefaultOptions()
 
 	// Extract options from settings by running all option functions
 	for _, setting := range req.Settings {

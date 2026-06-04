@@ -103,6 +103,11 @@ type NavParameterSet struct {
 	// Pipeline names the config-defined pipeline to execute.
 	// Maps to --pipeline(-p).
 	Pipeline string
+
+	// IncludeHidden switches off the platform's hidden-file filter
+	// for the directory read hook, so dotfiles and known metadata
+	// files are visited. Maps to --include-hidden(-Z).
+	IncludeHidden bool
 }
 
 // ---------------------------------------------------------------------------
