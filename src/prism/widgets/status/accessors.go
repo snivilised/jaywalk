@@ -3,7 +3,7 @@ package status
 import (
 	"time"
 
-	bp "github.com/charmbracelet/bubbles/progress"
+	bp "charm.land/bubbles/v2/progress"
 )
 
 // Public accessors for Model state. These exist so callers

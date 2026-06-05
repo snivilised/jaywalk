@@ -78,10 +78,12 @@ func (m Model) View() tea.View {
 	//     bar fills with done/total as MotifMsg deliveries come in.
 	//   - demo mode: PercentMsg has set m.percent > 0 directly.
 	// On a fresh model with neither, the segment is omitted so
-	// the row doesn't render an empty 10-cell track.
+	// the row doesn't render an empty 10-cell track. View() is
+	// used (rather than ViewAs) so the rendered bar reflects the
+	// spring's animated percentShown rather than snapping to the
+	// target.
 	if m.fields.ShowProgress && (m.percent > 0 || (m.hasTotal && m.total > 0)) {
-		pct := float64(m.percent) / 100.0
-		progressView := m.inner.ViewAs(pct)
+		progressView := m.inner.View()
 		if progressView != "" {
 			pctLabel := m.styles.ProgressStyle.Render(fmt.Sprintf("%3d%%", m.percent))
 			segments = append(segments, segment{

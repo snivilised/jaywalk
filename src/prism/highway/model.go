@@ -3,6 +3,7 @@ package highway
 import (
 	"time"
 
+	bp "charm.land/bubbles/v2/progress"
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/snivilised/jaywalk/src/agenor/core"
@@ -282,10 +283,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.maxDepth = msg.MaxDepth
 		}
 		// Forward the total to the status widget so it can
-		// compute the percent on its own.
-		if msg.TotalFiles > 0 {
+		// compute the percent on its own. The total must include
+		// both files AND dirs because every MotifMsg (regardless
+		// of IsDir) translates to a single IncDoneMsg{N:1}
+		// downstream. Seeding the total with only TotalFiles
+		// makes done exceed total during navigation, clamping
+		// the bar to 100% well before completion.
+		totalForProgress := msg.TotalFiles + msg.TotalDirs
+		if totalForProgress > 0 {
 			var cmd tea.Cmd
-			m.status, cmd = m.dispatchStatus(status.TotalMsg{Total: int(msg.TotalFiles)}) //nolint:gosec // cast ok
+			m.status, cmd = m.dispatchStatus(status.TotalMsg{Total: int(totalForProgress)}) //nolint:gosec // cast ok
 			return m, cmd
 		}
 		return m, nil
@@ -349,6 +356,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds = append(cmds, cmd)
 		}
 		return m, tea.Batch(cmds...)
+
+	case bp.FrameMsg:
+		// Forward the bubbles progress spring's animation
+		// frames to the status widget. Without this, the spring
+		// cmd returned from status.Update loops back through the
+		// bubbletea program but is dropped at the default arm,
+		// so the bar never advances past its first frame.
+		var cmd tea.Cmd
+		m.status, cmd = m.dispatchStatus(msg)
+		return m, cmd
 
 	default:
 		return m, nil
