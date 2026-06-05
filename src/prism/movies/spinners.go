@@ -3,7 +3,7 @@ package movies
 import (
 	"sync"
 
-	"github.com/charmbracelet/bubbles/spinner"
+	"charm.land/bubbles/v2/spinner"
 	"github.com/snivilised/jaywalk/src/prism/contract"
 )
 
