@@ -1,18 +1,16 @@
 package status
 
 import (
+	bp "charm.land/bubbles/v2/progress"
 	tea "charm.land/bubbletea/v2"
 )
 
-// Update handles widget-owned messages. The embedded bubbles
-// progress bar is rendered statically (ViewAs) so no FrameMsg
-// forwarding or spring driver is required; the returned cmd is
-// therefore always nil. Any unknown message is ignored.
-//
-// TODO(phase-2 progress-animation-revival): when the bar is
-// re-implemented with a bubbletea/v2 compatible animation, this
-// method must return the inner spring's tick cmd and forward
-// bubbles.FrameMsg to the inner Update.
+// Update handles widget-owned messages. Messages that re-target the
+// progress bar (PercentMsg, TotalMsg, IncDoneMsg, DoneMsg, ResetMsg)
+// drive the embedded spring via SetPercent and return its first-frame
+// cmd. FrameMsg is forwarded to the inner model so the spring can
+// advance toward equilibrium. Any unknown message is ignored and
+// returns a nil cmd.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case WidthMsg:
@@ -20,12 +18,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// width is intentionally NOT resized on terminal resize
 		// because the bar is meant to stay a small fixed glyph
 		// cluster (10 cells by default) - matching the previous
-		// behaviour where the bubbles progress Model's Width
+		// behaviour where the bubbles progress Model's width
 		// was set once at construction and never touched again.
-		// TODO(phase-2 progress-animation-revival): when the
-		// progress widget is re-implemented with a v2-compatible
-		// bar, decide whether the bar should be width-aware or
-		// stay fixed and remove/update this comment accordingly.
 		m.width = msg.Width
 		return m, nil
 
@@ -40,12 +34,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case PercentMsg:
 		m.percent = clamp(msg.Percent, 0, 100)
-		return m, nil
+		cmd := m.inner.SetPercent(float64(m.percent) / 100.0)
+		return m, cmd
 
 	case TotalMsg:
 		m.total, m.hasTotal = msg.Total, true
 		m = m.recomputePercent()
-		return m, nil
+		cmd := m.inner.SetPercent(float64(m.percent) / 100.0)
+		return m, cmd
 
 	case DoneMsg:
 		m.done = msg.Done
@@ -63,7 +59,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		} else {
 			m = m.recomputePercent()
 		}
-		return m, nil
+		cmd := m.inner.SetPercent(float64(m.percent) / 100.0)
+		return m, cmd
 
 	case IncDoneMsg:
 		n := msg.N
@@ -72,13 +69,24 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.done += n
 		m = m.recomputePercent()
-		return m, nil
+		cmd := m.inner.SetPercent(float64(m.percent) / 100.0)
+		return m, cmd
 
 	case ResetMsg:
 		m.percent, m.done, m.total, m.hasTotal = 0, 0, 0, false
 		m.isDone = false
 		m.errMsg = ""
-		return m, nil
+		cmd := m.inner.SetPercent(0.0)
+		return m, cmd
+
+	case bp.FrameMsg:
+		// Forward animation frames to the inner spring. The
+		// inner Update returns the next-frame cmd while the
+		// spring is still moving and nil once it has reached
+		// equilibrium - we propagate either verbatim.
+		inner, cmd := m.inner.Update(msg)
+		m.inner = inner
+		return m, cmd
 
 	default:
 		return m, nil

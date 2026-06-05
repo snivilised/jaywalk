@@ -5,6 +5,7 @@ import (
 	"io"
 	"time"
 
+	bp "charm.land/bubbles/v2/progress"
 	tea "charm.land/bubbletea/v2"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -426,10 +427,21 @@ var _ = Describe("Model.Update - OvertureMsg", func() {
 var _ = Describe("Model.Update - CensusMsg", func() {
 	It("sets totalFiles and totalDirs", func() {
 		m := baseModel(1)
-		updated, cmd := update(m, CensusMsg{TotalFiles: 100, TotalDirs: 20})
-		Expect(cmd).To(BeNil())
+		updated, _ := update(m, CensusMsg{TotalFiles: 100, TotalDirs: 20})
+		// cmd is the status spring's first-frame cmd (non-nil)
+		// because CensusMsg seeds the total and re-targets the
+		// embedded progress bar to 0.
 		Expect(updated.totalFiles).To(Equal(uint(100)))
 		Expect(updated.totalDirs).To(Equal(uint(20)))
+		// Regression: the status widget's total must be the sum
+		// of files and dirs, because every MotifMsg (file OR
+		// dir) increments done by 1. Seeding total with only
+		// TotalFiles makes done exceed total during navigation
+		// of trees that contain directories, clamping the bar
+		// to 100% before completion.
+		Expect(updated.status.Total()).To(Equal(120),
+			"status total must include both files and dirs to match the unit IncDoneMsg cadence")
+		Expect(updated.status.HasTotal()).To(BeTrue())
 	})
 
 	It("increases maxDepth when a larger value is seen", func() {
@@ -463,8 +475,9 @@ var _ = Describe("Model.Update - MotifMsg", func() {
 		first := MotifMsg{Data: MotifData{
 			Path: "/root/a.txt", Name: "a.txt", IsDir: false, Depth: 1,
 		}}
-		updated1, cmd := update(m, first)
-		Expect(cmd).To(BeNil())
+		updated1, _ := update(m, first)
+		// cmd is the status spring's first-frame cmd; the
+		// MotifMsg increment re-targets the bar to (done/total).
 		Expect(updated1.lanes[0].Path).To(Equal("/root/a.txt"))
 		Expect(updated1.lanes[0].Name).To(Equal("a.txt"))
 		Expect(updated1.lanes[0].IsDir).To(BeFalse())
@@ -474,8 +487,7 @@ var _ = Describe("Model.Update - MotifMsg", func() {
 		second := MotifMsg{Data: MotifData{
 			Path: "/root/b.txt", Name: "b.txt", IsDir: false, Depth: 2,
 		}}
-		updated2, cmd := update(updated1, second)
-		Expect(cmd).To(BeNil())
+		updated2, _ := update(updated1, second)
 		Expect(updated2.lanes[1].Path).To(Equal("/root/b.txt"))
 		Expect(updated2.currentLaneIdx).To(Equal(0))
 
@@ -483,8 +495,7 @@ var _ = Describe("Model.Update - MotifMsg", func() {
 		third := MotifMsg{Data: MotifData{
 			Path: "/root/c.txt", Name: "c.txt", IsDir: false, Depth: 3,
 		}}
-		updated3, cmd := update(updated2, third)
-		Expect(cmd).To(BeNil())
+		updated3, _ := update(updated2, third)
 		Expect(updated3.lanes[0].Path).To(Equal("/root/c.txt"))
 		Expect(updated3.currentLaneIdx).To(Equal(1))
 	})
@@ -495,24 +506,23 @@ var _ = Describe("Model.Update - MotifMsg", func() {
 		Expect(m.files).To(Equal(0))
 
 		// First unique path
-		updated, cmd := update(m, MotifMsg{Data: MotifData{
+		updated, _ := update(m, MotifMsg{Data: MotifData{
 			Path: "/root/a.txt", IsDir: false,
 		}})
-		Expect(cmd).To(BeNil())
 		Expect(updated.files).To(Equal(1))
 
-		// Same path again - not counted
-		updated, cmd = update(updated, MotifMsg{Data: MotifData{
+		// Same path again - not counted (no IncDoneMsg, no
+		// spring re-target, cmd is nil).
+		updated, cmd := update(updated, MotifMsg{Data: MotifData{
 			Path: "/root/a.txt", IsDir: false,
 		}})
-		Expect(cmd).To(BeNil())
+		Expect(cmd).To(BeNil(), "duplicate path must not re-target the spring")
 		Expect(updated.files).To(Equal(1))
 
 		// Different path - counted
-		updated, cmd = update(updated, MotifMsg{Data: MotifData{
+		updated, _ = update(updated, MotifMsg{Data: MotifData{
 			Path: "/root/b.txt", IsDir: false,
 		}})
-		Expect(cmd).To(BeNil())
 		Expect(updated.files).To(Equal(2))
 	})
 
@@ -520,10 +530,9 @@ var _ = Describe("Model.Update - MotifMsg", func() {
 		m := baseModel(1)
 		Expect(m.dirs).To(Equal(0))
 
-		updated, cmd := update(m, MotifMsg{Data: MotifData{
+		updated, _ := update(m, MotifMsg{Data: MotifData{
 			Path: "/root/src", IsDir: true,
 		}})
-		Expect(cmd).To(BeNil())
 		Expect(updated.dirs).To(Equal(1))
 		Expect(updated.files).To(Equal(0))
 	})
@@ -531,12 +540,11 @@ var _ = Describe("Model.Update - MotifMsg", func() {
 	It("sets action and pipeline info on the lane", func() {
 		m := baseModel(1)
 
-		updated, cmd := update(m, MotifMsg{Data: MotifData{
+		updated, _ := update(m, MotifMsg{Data: MotifData{
 			Path: "/root/f.txt", ActionName: "encode", PipelineName: "pipe",
 			CommandOutput: "ok", ExecutionString: "ffmpeg", DryRun: true,
 			Err: errors.New("boom"),
 		}})
-		Expect(cmd).To(BeNil())
 
 		Expect(updated.lanes[0].ActionName).To(Equal("encode"))
 		Expect(updated.lanes[0].PipelineName).To(Equal("pipe"))
@@ -556,20 +564,18 @@ var _ = Describe("Model.Update - MotifMsg", func() {
 		// via status.TotalMsg.
 		updated, _ := update(m, CensusMsg{TotalFiles: 10})
 
-		updated, cmd := update(updated, MotifMsg{Data: MotifData{
+		updated, _ = update(updated, MotifMsg{Data: MotifData{
 			Path: "/root/1.txt", IsDir: false,
 		}})
-		Expect(cmd).To(BeNil())
 		// 1 file traversed; done=1, total=10 → 10%.
 		Expect(updated.status.Done()).To(Equal(1))
 		Expect(updated.status.HasTotal()).To(BeTrue())
 		Expect(updated.status.Percent()).To(Equal(10))
 		Expect(updated.status.View().Content).To(ContainSubstring("10%"))
 
-		updated, cmd = update(updated, MotifMsg{Data: MotifData{
+		updated, _ = update(updated, MotifMsg{Data: MotifData{
 			Path: "/root/2.txt", IsDir: false,
 		}})
-		Expect(cmd).To(BeNil())
 		// 2 files traversed; 2/10 → 20%.
 		Expect(updated.status.Done()).To(Equal(2))
 		Expect(updated.status.Percent()).To(Equal(20))
@@ -579,10 +585,46 @@ var _ = Describe("Model.Update - MotifMsg", func() {
 	It("handles empty lanes gracefully", func() {
 		m := baseModel(0)
 
-		_, cmd := update(m, MotifMsg{Data: MotifData{
+		_, _ = update(m, MotifMsg{Data: MotifData{
 			Path: "/root/f.txt",
 		}})
-		Expect(cmd).To(BeNil())
+		// No assertion on cmd: with zero lanes the path is
+		// still counted (drives the spring), so cmd is non-nil.
+	})
+
+	It("does not reach 100% before navigation completes when dirs are traversed alongside files", func() {
+		// Regression: the bar used to clamp to 100% partway
+		// through navigation because CensusMsg seeded the
+		// status total with only TotalFiles, while every
+		// MotifMsg (file OR dir) increments done. Seeding
+		// total with files+dirs keeps the ratio accurate.
+		m := baseModel(1)
+		updated, _ := update(m, CensusMsg{TotalFiles: 3, TotalDirs: 2})
+		Expect(updated.status.Total()).To(Equal(5))
+
+		// Visit all 3 files. Done climbs to 3 of 5 → 60%.
+		for _, p := range []string{"/r/a.txt", "/r/b.txt", "/r/c.txt"} {
+			updated, _ = update(updated, MotifMsg{Data: MotifData{
+				Path: p, IsDir: false,
+			}})
+		}
+		Expect(updated.status.Done()).To(Equal(3))
+		Expect(updated.status.Percent()).To(Equal(60),
+			"with files complete but dirs pending, the bar must NOT be at 100%")
+
+		// Visit 1 of 2 dirs. Done climbs to 4 of 5 → 80%.
+		updated, _ = update(updated, MotifMsg{Data: MotifData{
+			Path: "/r/sub1", IsDir: true,
+		}})
+		Expect(updated.status.Done()).To(Equal(4))
+		Expect(updated.status.Percent()).To(Equal(80))
+
+		// Visit final dir. Done climbs to 5 of 5 → 100%.
+		updated, _ = update(updated, MotifMsg{Data: MotifData{
+			Path: "/r/sub2", IsDir: true,
+		}})
+		Expect(updated.status.Done()).To(Equal(5))
+		Expect(updated.status.Percent()).To(Equal(100))
 	})
 })
 
@@ -595,8 +637,9 @@ var _ = Describe("Model.Update - CompleteMsg", func() {
 		m := baseModel(1)
 		Expect(m.done).To(BeFalse())
 
-		updated, cmd := update(m, CompleteMsg{})
-		Expect(cmd).To(BeNil())
+		updated, _ := update(m, CompleteMsg{})
+		// cmd is tea.Batch wrapping the status spring's
+		// first-frame cmd (re-targeted to 100% via DoneMsg).
 		Expect(updated.done).To(BeTrue())
 	})
 
@@ -606,9 +649,8 @@ var _ = Describe("Model.Update - CompleteMsg", func() {
 		updated, cmd := update(m, CompleteMsg{
 			Files: 42, Dirs: 7, Elapsed: 5 * time.Second,
 		})
-		// Cmd is tea.Batch of the status widget's nil cmds
-		// (the spring animation is disabled - see TODO in
-		// status/update.go).
+		// Cmd is tea.Batch wrapping the status spring's
+		// first-frame cmd.
 		_ = cmd
 
 		// The counts now live on the status widget. The
@@ -623,13 +665,12 @@ var _ = Describe("Model.Update - CompleteMsg", func() {
 	It("captures the first error message", func() {
 		m := baseModel(1)
 
-		updated, cmd := update(m, CompleteMsg{
+		updated, _ := update(m, CompleteMsg{
 			Errs: []error{
 				errors.New("first error"),
 				errors.New("second error"),
 			},
 		})
-		Expect(cmd).To(BeNil())
 
 		Expect(updated.errMsg).To(Equal("first error"))
 		Expect(updated.errors).To(Equal(2))
@@ -658,6 +699,47 @@ var _ = Describe("Model.Update - CompleteMsg", func() {
 		Expect(updated.status.Dirs()).To(Equal(5))
 		Expect(updated.status.View().Content).To(ContainSubstring("100%"))
 		Expect(updated.status.View().Content).To(ContainSubstring("✔ complete"))
+	})
+})
+
+// ---------------------------------------------------------------------------
+// Model.Update - FrameMsg forwarding (spring animation)
+// ---------------------------------------------------------------------------
+
+var _ = Describe("Model.Update - FrameMsg forwarding", func() {
+	It("forwards bp.FrameMsg to the status widget so the spring can advance", func() {
+		// Seed the status widget's spring via CensusMsg
+		// (which translates to status.TotalMsg and re-targets
+		// the bar to 0%). Capture the first-frame cmd, execute
+		// it to obtain a real FrameMsg, and feed that back to
+		// the *same* highway state (the FrameMsg's id is tied
+		// to the specific inner model that produced it; routing
+		// it back to a fresh model would silently drop it).
+		m := baseModel(1)
+		// Re-target to a non-zero percent so the spring has
+		// somewhere to travel and the frame's next-frame cmd
+		// is non-nil.
+		updated, cmd := update(m, CensusMsg{TotalFiles: 100})
+		Expect(cmd).NotTo(BeNil(), "CensusMsg must propagate the spring cmd")
+
+		// Drive percent to 100% via a MotifMsg increment with a
+		// total set; this re-targets the spring well away from
+		// its current percentShown=0.
+		updated, cmd = update(updated, MotifMsg{Data: MotifData{
+			Path: "/root/f.txt", IsDir: false,
+		}})
+		Expect(cmd).NotTo(BeNil())
+
+		msg := cmd()
+		frame, ok := msg.(bp.FrameMsg)
+		Expect(ok).To(BeTrue(), "spring cmd must yield a bp.FrameMsg, got %T", msg)
+
+		// Forward the frame back to the same updated state.
+		// The spring is still mid-flight (percentShown ≈ 0,
+		// target = 0.01) so the next-frame cmd is non-nil.
+		_, nextCmd := update(updated, frame)
+		Expect(nextCmd).NotTo(BeNil(),
+			"FrameMsg must reach the spring and produce a next-frame cmd")
 	})
 })
 

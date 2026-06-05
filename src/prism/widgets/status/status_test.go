@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	bp "charm.land/bubbles/v2/progress"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	. "github.com/onsi/ginkgo/v2"
@@ -202,24 +203,24 @@ var _ = Describe("Model.Update - WidthMsg", func() {
 		// fixed small width (10 by default) so the percentage
 		// label and the other segments remain visible.
 		m := status.New(status.WithStyles(baseStyles()))
-		Expect(m.Inner().Width).To(Equal(10), "default inner width")
+		Expect(m.Inner().Width()).To(Equal(10), "default inner width")
 
 		updated, cmd := update(m, status.WidthMsg{Width: 120})
 		Expect(cmd).To(BeNil())
 
 		// Row width changes; inner width does NOT.
-		Expect(updated.Inner().Width).To(Equal(10),
+		Expect(updated.Inner().Width()).To(Equal(10),
 			"WidthMsg must not resize the embedded progress bar")
 		Expect(updated.View().Content).NotTo(BeEmpty())
 	})
 
 	It("respects a custom inner width set at construction", func() {
 		m := status.New(status.WithStyles(baseStyles()), status.WithWidth(20))
-		Expect(m.Inner().Width).To(Equal(20))
+		Expect(m.Inner().Width()).To(Equal(20))
 
 		updated, _ := update(m, status.WidthMsg{Width: 120})
 		// The custom width must survive WindowSizeMsg.
-		Expect(updated.Inner().Width).To(Equal(20))
+		Expect(updated.Inner().Width()).To(Equal(20))
 	})
 })
 
@@ -521,6 +522,137 @@ var _ = Describe("Model.Update - unknown message", func() {
 		updated, cmd := update(m, "some-unknown-msg")
 		Expect(cmd).To(BeNil())
 		Expect(updated.View().Content).To(Equal(m.View().Content))
+	})
+})
+
+// ---------------------------------------------------------------------------
+// Spring animation - SetPercent re-targeting and FrameMsg forwarding
+// ---------------------------------------------------------------------------
+
+var _ = Describe("Model.Update - spring re-targeting", func() {
+	It("PercentMsg returns a non-nil first-frame cmd and re-targets the inner spring", func() {
+		m := status.New(status.WithStyles(baseStyles()), status.WithFields(status.FieldSelectors{
+			ShowProgress: true,
+		}))
+		updated, cmd := update(m, status.PercentMsg{Percent: 42})
+		Expect(cmd).NotTo(BeNil(), "SetPercent must return a tick cmd to drive the spring")
+		// Inner().Percent() returns the spring's target (not the
+		// animated value), which has just been re-targeted to 0.42.
+		Expect(updated.Inner().Percent()).To(BeNumerically("~", 0.42, 1e-9))
+	})
+
+	It("IncDoneMsg after TotalMsg re-targets to done/total and returns a non-nil cmd", func() {
+		m := status.New(status.WithStyles(baseStyles()), status.WithFields(status.FieldSelectors{
+			ShowProgress: true,
+		}))
+		updated, _ := update(m, status.TotalMsg{Total: 10})
+		updated, cmd := update(updated, status.IncDoneMsg{N: 1})
+		Expect(cmd).NotTo(BeNil())
+		Expect(updated.Inner().Percent()).To(BeNumerically("~", 0.1, 1e-9))
+	})
+
+	It("DoneMsg{IsDone:true} re-targets to 1.0 and returns a non-nil cmd", func() {
+		m := status.New(status.WithStyles(baseStyles()), status.WithFields(status.FieldSelectors{
+			ShowProgress: true, ShowComplete: true,
+		}))
+		updated, cmd := update(m, status.DoneMsg{Done: 7, IsDone: true})
+		Expect(cmd).NotTo(BeNil())
+		Expect(updated.Inner().Percent()).To(BeNumerically("~", 1.0, 1e-9))
+	})
+
+	It("ResetMsg re-targets to 0.0 and returns a non-nil cmd", func() {
+		m := status.New(status.WithStyles(baseStyles()), status.WithFields(status.FieldSelectors{
+			ShowProgress: true,
+		}))
+		updated, _ := update(m, status.PercentMsg{Percent: 75})
+		Expect(updated.Inner().Percent()).To(BeNumerically("~", 0.75, 1e-9))
+
+		reset, cmd := update(updated, status.ResetMsg{})
+		Expect(cmd).NotTo(BeNil())
+		Expect(reset.Inner().Percent()).To(BeNumerically("~", 0.0, 1e-9))
+	})
+})
+
+var _ = Describe("Model.Update - FrameMsg forwarding", func() {
+	// The bubbles v2 FrameMsg id/tag fields are unexported; we
+	// cannot construct one synthetically. Instead, we drive the
+	// spring via SetPercent, capture the cmd it returns, and
+	// execute the cmd to obtain a real FrameMsg.
+	frameFromCmd := func(cmd tea.Cmd) bp.FrameMsg {
+		GinkgoHelper()
+		Expect(cmd).NotTo(BeNil(), "cmd needed to produce a FrameMsg")
+		msg := cmd()
+		frame, ok := msg.(bp.FrameMsg)
+		Expect(ok).To(BeTrue(), "cmd must produce a FrameMsg, got %T", msg)
+		return frame
+	}
+
+	It("returns a non-nil next-frame cmd while the spring is still animating", func() {
+		m := status.New(status.WithStyles(baseStyles()), status.WithFields(status.FieldSelectors{
+			ShowProgress: true,
+		}))
+		updated, cmd := update(m, status.PercentMsg{Percent: 100})
+		frame := frameFromCmd(cmd)
+
+		// Forward the first frame; the spring is nowhere near
+		// equilibrium yet so the next-frame cmd must be non-nil.
+		updated, nextCmd := update(updated, frame)
+		Expect(nextCmd).NotTo(BeNil(),
+			"spring still mid-flight; next FrameMsg cmd expected")
+		_ = updated
+	})
+
+	It("returns nil once the spring has reached equilibrium", func() {
+		m := status.New(status.WithStyles(baseStyles()), status.WithFields(status.FieldSelectors{
+			ShowProgress: true,
+		}))
+		// Re-target to 0.5 then drive the spring forward
+		// repeatedly until the inner model reports nil cmd
+		// (equilibrium). Bound the loop to avoid an infinite
+		// spin if the spring fails to settle.
+		updated, cmd := update(m, status.PercentMsg{Percent: 50})
+		var nextCmd = cmd
+		const maxFrames = 2000
+		settled := false
+		for range maxFrames {
+			if nextCmd == nil {
+				settled = true
+				break
+			}
+			frame := frameFromCmd(nextCmd)
+			updated, nextCmd = update(updated, frame)
+		}
+		Expect(settled).To(BeTrue(),
+			"spring failed to reach equilibrium within %d frames", maxFrames)
+	})
+})
+
+var _ = Describe("Model.View - reflects spring's animated percentShown", func() {
+	It("the rendered bar is bounded between the previous value and the new target during animation", func() {
+		// After SetPercent(1.0) the spring's targetPercent is 1
+		// but percentShown starts at 0. A single FrameMsg
+		// advances the spring by one step; the resulting bar
+		// View() must therefore differ from ViewAs(1.0) and
+		// match ViewAs(percentShown) which is < 1.
+		m := status.New(status.WithStyles(baseStyles()), status.WithFields(status.FieldSelectors{
+			ShowProgress: true,
+		}))
+		updated, cmd := update(m, status.PercentMsg{Percent: 100})
+		Expect(cmd).NotTo(BeNil())
+
+		// Execute the cmd to get a FrameMsg, forward it once.
+		msg := cmd()
+		frame, ok := msg.(bp.FrameMsg)
+		Expect(ok).To(BeTrue())
+		updated, _ = update(updated, frame)
+
+		// After a single frame the spring has not yet reached
+		// the target, so the animated View() output must differ
+		// from the snapped ViewAs(1.0) output.
+		animated := updated.Inner().View()
+		snapped := updated.Inner().ViewAs(1.0)
+		Expect(animated).NotTo(Equal(snapped),
+			"View() must reflect the spring's animated percentShown, not the target")
 	})
 })
 

@@ -55,7 +55,7 @@ type DoneMsg struct {
 // IncDoneMsg increments the done counter atomically. When N is
 // zero it defaults to 1. After incrementing, the widget
 // recomputes percent from done/total (if a TotalMsg was previously
-// seen) and updates the spring animation.
+// seen) and re-targets the embedded spring.
 type IncDoneMsg struct {
 	N int
 }
