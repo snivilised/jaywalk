@@ -7,18 +7,9 @@ import "time"
 // ---------------------------------------------------------------------------
 //
 // The banner is rendered OUTSIDE the bordered region of the host view.
-// These constants therefore do not interact with the highway view's
-// FlagsRowPosition - the flags row lives inside the border, the banner
-// lives outside it.
-
-const (
-	// PositionTop places the banner above the top border.
-	PositionTop = "top"
-
-	// PositionBottom places the banner below the summary (and thus
-	// below the bottom border).
-	PositionBottom = "bottom"
-)
+// The position values (top | bottom) live in prism/contract as the
+// single source of truth - see contract.PositionTop / PositionBottom.
+// They are reused here verbatim; the banner does not declare its own.
 
 // ---------------------------------------------------------------------------
 // Justification

@@ -30,41 +30,23 @@ const (
 )
 
 // ---------------------------------------------------------------------------
-// Flags row placement
+// Flags row / banner placement
 // ---------------------------------------------------------------------------
-
-const (
-	// FlagsRowPositionTop places the flags row immediately after the top
-	// border and before the first highway lane.
-	FlagsRowPositionTop = "top"
-
-	// FlagsRowPositionBottom places the flags row immediately above the
-	// status line and below the last highway lane (the default).
-	FlagsRowPositionBottom = "bottom"
-
-	// flagsRowPositionDefault is the value used when the configured value
-	// is empty or unrecognised.
-	flagsRowPositionDefault = FlagsRowPositionBottom
-)
-
-// ---------------------------------------------------------------------------
-// Banner position / justify / tick
 //
-// The banner is rendered OUTSIDE the bordered region of the highway
-// view, so it does not interact with the flags row placement.
-// ---------------------------------------------------------------------------
+// The single source of truth for the "top" | "bottom" position values
+// is prism/contract (contract.PositionTop / contract.PositionBottom).
+// This file's normalise* functions compare the raw YAML values
+// against those constants and fall back to the contract default when
+// the user-supplied value is empty or unrecognised.
 
 const (
-	// bannerPositionTop places the banner above the top border.
-	bannerPositionTop = "top"
-
-	// bannerPositionBottom places the banner below the bottom border
-	// (after the summary).
-	bannerPositionBottom = "bottom"
+	// flagsRowPositionDefault is the value used when the configured
+	// flags-row position is empty or unrecognised.
+	flagsRowPositionDefault = contract.PositionBottom
 
 	// bannerPositionDefault is the value used when the configured
-	// value is empty or unrecognised.
-	bannerPositionDefault = bannerPositionTop
+	// banner position is empty or unrecognised.
+	bannerPositionDefault = contract.PositionTop
 )
 
 const (
@@ -119,8 +101,9 @@ type ViewConfig interface {
 // that do have settings.
 type LinearConfig struct {
 	// FlagsRowPosition controls the ANSI banner placement:
-	// "top" renders the banner before the linear banner,
-	// "bottom" renders it after the summary banner.
+	// contract.PositionTop renders the banner before the linear
+	// banner, contract.PositionBottom renders it after the
+	// summary banner.
 	FlagsRowPosition string
 
 	// Banner controls the ANSI shadow banner rendered outside the
@@ -169,9 +152,9 @@ type HighwayConfig struct {
 	AnimationGradient string
 
 	// FlagsRowPosition is the placement of the supplementary flags row
-	// within the highway view. Allowed values are "top" and "bottom";
-	// an unrecognised value is normalised to "bottom" at load time
-	// (see loadHighwayConfig).
+	// within the highway view. Allowed values are contract.PositionTop
+	// and contract.PositionBottom; an unrecognised value is
+	// normalised to PositionBottom at load time (see loadHighwayConfig).
 	FlagsRowPosition string
 
 	// Banner controls the ANSI shadow banner rendered outside the
@@ -188,9 +171,10 @@ type BannerConfig struct {
 	Disable bool
 
 	// Position is the normalised banner position relative to the
-	// bordered region: "top" (above top border) or "bottom" (below
-	// bottom border). Always one of the two - the loader
-	// normalises empty/unknown values to "top".
+	// bordered region: contract.PositionTop (above top border) or
+	// contract.PositionBottom (below bottom border). Always one of
+	// the two - the loader normalises empty/unknown values to
+	// PositionTop.
 	Position string
 
 	// Tick is the per-tick interval in milliseconds for the
@@ -318,7 +302,7 @@ func normaliseLinearFlagsRowPosition(raw string) string {
 	}
 
 	switch raw {
-	case FlagsRowPositionTop, FlagsRowPositionBottom:
+	case contract.PositionTop, contract.PositionBottom:
 		return raw
 	default:
 		fmt.Fprintf(os.Stderr,
@@ -339,7 +323,7 @@ func normaliseFlagsRowPosition(raw string) string {
 	}
 
 	switch raw {
-	case FlagsRowPositionTop, FlagsRowPositionBottom:
+	case contract.PositionTop, contract.PositionBottom:
 		return raw
 	default:
 		fmt.Fprintf(os.Stderr,
@@ -375,7 +359,7 @@ func normaliseBannerPosition(raw string) string {
 	}
 
 	switch raw {
-	case bannerPositionTop, bannerPositionBottom:
+	case contract.PositionTop, contract.PositionBottom:
 		return raw
 	default:
 		fmt.Fprintf(os.Stderr,

@@ -5,7 +5,9 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/snivilised/jaywalk/src/prism/contract"
 	"github.com/snivilised/jaywalk/src/prism/widgets/banner"
+	"github.com/snivilised/jaywalk/src/prism/widgets/legend"
 )
 
 func (m Model) View() tea.View {
@@ -14,13 +16,13 @@ func (m Model) View() tea.View {
 	// Banner at top: rendered OUTSIDE the bordered region, above the
 	// top border. This is independent of the flags row position
 	// because the flags row lives INSIDE the border.
-	if m.bannerInfo.Position == banner.PositionTop {
+	if m.bannerInfo.Position == contract.PositionTop {
 		m.writeBanner(&b)
 	}
 
 	m.renderHeader(&b)
-	if m.FlagsRowPosition == FlagsRowPositionTop {
-		m.renderFlagsRow(&b)
+	if m.FlagsRowPosition == contract.PositionTop {
+		m.writeLegend(&b)
 	}
 
 	// Lane rows + separators come from the track child. The track
@@ -28,8 +30,8 @@ func (m Model) View() tea.View {
 	// own styling and rendering.
 	b.WriteString(m.track.View().Content)
 
-	if m.FlagsRowPosition == FlagsRowPositionBottom || m.FlagsRowPosition == "" {
-		m.renderFlagsRow(&b)
+	if m.FlagsRowPosition == contract.PositionBottom || m.FlagsRowPosition == "" {
+		m.writeLegend(&b)
 	}
 	m.renderSummary(&b)
 
@@ -37,7 +39,7 @@ func (m Model) View() tea.View {
 	// the summary. The summary's last line is the bottom border
 	// (no trailing newline), so we emit a separator newline to
 	// keep the banner from overwriting the border.
-	if m.bannerInfo.Position == banner.PositionBottom {
+	if m.bannerInfo.Position == contract.PositionBottom {
 		b.WriteByte('\n')
 		m.writeBanner(&b)
 	}
@@ -68,6 +70,35 @@ func (m Model) writeBanner(b *strings.Builder) {
 		return
 	}
 	if out := bm.View(); out != "" {
+		b.WriteString(out)
+	}
+}
+
+// writeLegend constructs a legend.Model on the fly using the
+// frozen-per-session headerInfo plus the current terminal width
+// and the theme's flags-row styles, calls View(), and writes the
+// result to b. The transient model pattern mirrors writeBanner:
+// no long-lived legend child on the highway root.
+//
+// The view only calls this when FlagsRowPosition is top or bottom;
+// an unknown / empty value (which the model has already coerced
+// to bottom) means "render the row at the bottom". The legend
+// widget itself short-circuits to "" when no flag is active, so
+// callers do not need to guard.
+func (m Model) writeLegend(b *strings.Builder) {
+	lm := legend.NewModel(
+		legend.WithInfo(legend.Info{
+			Position: m.FlagsRowPosition,
+			Header:   m.header,
+		}),
+		legend.WithWidth(m.width),
+		legend.WithStyles(legend.Styles{
+			LabelStyle:  m.theme.SummaryLabelStyle.Width(0),
+			ValueStyle:  m.theme.SummaryValueStyle,
+			BorderStyle: m.theme.BorderStyle,
+		}),
+	)
+	if out := lm.View(); out != "" {
 		b.WriteString(out)
 	}
 }

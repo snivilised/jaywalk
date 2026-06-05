@@ -12,7 +12,10 @@ import (
 // stores it and reads from it on every render.
 //
 // Disable: hides the banner entirely (View returns "").
-// Position: "top" or "bottom" - rendered outside the bordered region.
+// Position: contract.PositionTop | contract.PositionBottom - rendered
+//
+//	outside the bordered region.
+//
 // Justify: "left" | "center" | "right" - horizontal alignment.
 // Width: terminal width used for justification.
 // Aspects: the random visual aspects chosen once at startup.

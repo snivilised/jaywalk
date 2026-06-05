@@ -14,14 +14,14 @@ var _ = Describe("resolveBannerConfig", func() {
 	When("a steps override is provided", func() {
 		It("propagates the override to the resolved config", func() {
 			raw := bedrock.BannerSubConfig{
-				Position: bannerPositionBottom,
+				Position: contract.PositionBottom,
 				Tick:     100,
 				Steps:    48,
 			}
 
 			cfg := resolveBannerConfig(raw, contract.Palette{})
 
-			Expect(cfg.Position).To(Equal(bannerPositionBottom))
+			Expect(cfg.Position).To(Equal(contract.PositionBottom))
 			Expect(cfg.Tick).To(Equal(100))
 			Expect(cfg.StepsOverride).To(Equal(48))
 		})
@@ -30,7 +30,7 @@ var _ = Describe("resolveBannerConfig", func() {
 	When("the steps override is omitted", func() {
 		It("leaves StepsOverride as zero so the gradient's own steps are used", func() {
 			raw := bedrock.BannerSubConfig{
-				Position: bannerPositionTop,
+				Position: contract.PositionTop,
 			}
 
 			cfg := resolveBannerConfig(raw, contract.Palette{})
@@ -101,7 +101,7 @@ func newBannerPresenter(bannerCfg BannerConfig) *highwayPresenter {
 var _ = Describe("buildBannerInfo - steps override", func() {
 	It("uses the gradient's own steps when no override is configured", func() {
 		h := newBannerPresenter(BannerConfig{
-			Position: bannerPositionTop,
+			Position: contract.PositionTop,
 		})
 
 		info := h.buildBannerInfo()
@@ -112,7 +112,7 @@ var _ = Describe("buildBannerInfo - steps override", func() {
 
 	It("applies the override when the user sets steps in the UI config", func() {
 		h := newBannerPresenter(BannerConfig{
-			Position:      bannerPositionTop,
+			Position:      contract.PositionTop,
 			StepsOverride: 48,
 		})
 
@@ -124,7 +124,7 @@ var _ = Describe("buildBannerInfo - steps override", func() {
 
 	It("uses the override rather than the gradient's Hi/Lo endpoints", func() {
 		h := newBannerPresenter(BannerConfig{
-			Position:      bannerPositionTop,
+			Position:      contract.PositionTop,
 			StepsOverride: 16,
 		})
 
@@ -139,7 +139,7 @@ var _ = Describe("buildBannerInfo - steps override", func() {
 
 	It("leaves the gradient state at the override value", func() {
 		h := newBannerPresenter(BannerConfig{
-			Position:      bannerPositionTop,
+			Position:      contract.PositionTop,
 			StepsOverride: 32,
 		})
 
