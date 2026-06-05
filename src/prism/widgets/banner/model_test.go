@@ -33,7 +33,7 @@ func makeModelInfo(width int) banner.Info {
 	st.SetSteps(steps)
 	return banner.Info{
 		Disable:  false,
-		Position: banner.PositionTop,
+		Position: contract.PositionTop,
 		Justify:  banner.JustifyRight,
 		Width:    width,
 		Aspects: banner.Aspects{

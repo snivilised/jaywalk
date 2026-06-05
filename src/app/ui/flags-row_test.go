@@ -14,15 +14,15 @@ import (
 
 var _ = Describe("normaliseFlagsRowPosition", func() {
 	It("returns the default for an empty string", func() {
-		Expect(normaliseFlagsRowPosition("")).To(Equal(FlagsRowPositionBottom))
+		Expect(normaliseFlagsRowPosition("")).To(Equal(contract.PositionBottom))
 	})
 
 	It("returns top unchanged", func() {
-		Expect(normaliseFlagsRowPosition(FlagsRowPositionTop)).To(Equal(FlagsRowPositionTop))
+		Expect(normaliseFlagsRowPosition(contract.PositionTop)).To(Equal(contract.PositionTop))
 	})
 
 	It("returns bottom unchanged", func() {
-		Expect(normaliseFlagsRowPosition(FlagsRowPositionBottom)).To(Equal(FlagsRowPositionBottom))
+		Expect(normaliseFlagsRowPosition(contract.PositionBottom)).To(Equal(contract.PositionBottom))
 	})
 
 	It("returns the default and writes a warning for an unrecognised value", func() {
@@ -43,7 +43,7 @@ var _ = Describe("normaliseFlagsRowPosition", func() {
 		_ = w.Close()
 		buf := make([]byte, 1024)
 		n, _ := r.Read(buf)
-		Expect(got).To(Equal(FlagsRowPositionBottom))
+		Expect(got).To(Equal(contract.PositionBottom))
 		Expect(string(buf[:n])).To(ContainSubstring("sideways"))
 		Expect(string(buf[:n])).To(ContainSubstring("defaulting"))
 	})
@@ -67,7 +67,7 @@ ui:
 			Expect(err).NotTo(HaveOccurred())
 			hCfg, ok := cfg.(HighwayConfig)
 			Expect(ok).To(BeTrue())
-			Expect(hCfg.FlagsRowPosition).To(Equal(FlagsRowPositionTop))
+			Expect(hCfg.FlagsRowPosition).To(Equal(contract.PositionTop))
 		})
 
 		It("accepts the bottom value", func() {
@@ -84,7 +84,7 @@ ui:
 			Expect(err).NotTo(HaveOccurred())
 			hCfg, ok := cfg.(HighwayConfig)
 			Expect(ok).To(BeTrue())
-			Expect(hCfg.FlagsRowPosition).To(Equal(FlagsRowPositionBottom))
+			Expect(hCfg.FlagsRowPosition).To(Equal(contract.PositionBottom))
 		})
 
 		It("falls back to bottom for an unrecognised value", func() {
@@ -101,7 +101,7 @@ ui:
 			Expect(err).NotTo(HaveOccurred())
 			hCfg, ok := cfg.(HighwayConfig)
 			Expect(ok).To(BeTrue())
-			Expect(hCfg.FlagsRowPosition).To(Equal(FlagsRowPositionBottom))
+			Expect(hCfg.FlagsRowPosition).To(Equal(contract.PositionBottom))
 		})
 	})
 
@@ -120,7 +120,7 @@ ui:
 			Expect(err).NotTo(HaveOccurred())
 			hCfg, ok := cfg.(HighwayConfig)
 			Expect(ok).To(BeTrue())
-			Expect(hCfg.FlagsRowPosition).To(Equal(FlagsRowPositionBottom))
+			Expect(hCfg.FlagsRowPosition).To(Equal(contract.PositionBottom))
 		})
 	})
 })

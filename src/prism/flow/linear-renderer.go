@@ -61,7 +61,7 @@ func (r *renderer) Begin(overture contract.Overture) {
 	var b strings.Builder
 
 	// Render ANSI banner at top if position is "top"
-	if r.banner != nil && !r.banner.Disable && r.banner.Position == banner.PositionTop {
+	if r.banner != nil && !r.banner.Disable && r.banner.Position == contract.PositionTop {
 		r.renderAnsiBanner(&b)
 	}
 
@@ -402,7 +402,7 @@ func (r *renderer) End(summ contract.Summary) {
 	_, _ = lipgloss.Fprintln(r.writer, bottomBorder)
 
 	// Render ANSI banner at bottom if position is "bottom"
-	if r.banner != nil && !r.banner.Disable && r.banner.Position == banner.PositionBottom {
+	if r.banner != nil && !r.banner.Disable && r.banner.Position == contract.PositionBottom {
 		var b strings.Builder
 		r.renderAnsiBanner(&b)
 		_, _ = lipgloss.Fprintln(r.writer, b.String())

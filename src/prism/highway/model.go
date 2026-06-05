@@ -84,9 +84,10 @@ type Model struct {
 	header contract.HeaderInfo
 
 	// FlagsRowPosition controls where the flags row is rendered. See
-	// contract/... or the theme config; "top" places it after the top
-	// border, "bottom" places it above the status line. The default
-	// applied by the loader is "bottom".
+	// contract.PositionTop / contract.PositionBottom or the theme
+	// config; "top" places it after the top border, "bottom" places
+	// it above the status line. The default applied by the loader
+	// is PositionBottom.
 	FlagsRowPosition string
 
 	// bannerInfo is the (immutable for the session) configuration
@@ -215,10 +216,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Cache the header info for renderers.
 		m.header = msg.Header
 
-		// store flags row position; default to "bottom" for empty/invalid
+		// store flags row position; default to PositionBottom for empty/invalid
 		m.FlagsRowPosition = msg.FlagsRowPosition
-		if m.FlagsRowPosition != FlagsRowPositionTop && m.FlagsRowPosition != FlagsRowPositionBottom {
-			m.FlagsRowPosition = FlagsRowPositionBottom
+		if m.FlagsRowPosition != contract.PositionTop && m.FlagsRowPosition != contract.PositionBottom {
+			m.FlagsRowPosition = contract.PositionBottom
 		}
 
 		// Initialise the banner from the OvertureMsg. The bannerInfo

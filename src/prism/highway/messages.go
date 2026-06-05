@@ -20,9 +20,10 @@ type OvertureMsg struct {
 	// renderer. See contract.HeaderInfo for the field semantics.
 	Header contract.HeaderInfo
 
-	// FlagsRowPosition selects where the flags row is rendered. Allowed
-	// values are "top" and "bottom"; any other value is treated as
-	// "bottom" (the default).
+	// FlagsRowPosition selects where the flags row is rendered.
+	// Allowed values are contract.PositionTop and
+	// contract.PositionBottom; any other value is treated as
+	// PositionBottom (the default).
 	FlagsRowPosition string
 
 	// Banner carries the optional ANSI shadow banner info. The

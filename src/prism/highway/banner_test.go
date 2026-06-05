@@ -68,9 +68,9 @@ var _ = Describe("Banner integration with highway view", func() {
 	Describe("rendering position", func() {
 		It("renders the banner above the top border when Position = top", func() {
 			m := baseModel(1)
-			info := makeBannerInfo(banner.PositionTop)
+			info := makeBannerInfo(contract.PositionTop)
 			updated, _ := update(m, OvertureMsg{
-				FlagsRowPosition: FlagsRowPositionBottom,
+				FlagsRowPosition: contract.PositionBottom,
 				Banner:           info,
 			})
 			out := viewContent(updated)
@@ -106,9 +106,9 @@ var _ = Describe("Banner integration with highway view", func() {
 
 		It("renders the banner below the bottom border when Position = bottom", func() {
 			m := baseModel(1)
-			info := makeBannerInfo(banner.PositionBottom)
+			info := makeBannerInfo(contract.PositionBottom)
 			updated, _ := update(m, OvertureMsg{
-				FlagsRowPosition: FlagsRowPositionBottom,
+				FlagsRowPosition: contract.PositionBottom,
 				Banner:           info,
 			})
 			out := viewContent(updated)
@@ -140,10 +140,10 @@ var _ = Describe("Banner integration with highway view", func() {
 
 		It("skips the banner when Disable = true", func() {
 			m := baseModel(1)
-			info := makeBannerInfo(banner.PositionTop)
+			info := makeBannerInfo(contract.PositionTop)
 			info.Disable = true
 			updated, _ := update(m, OvertureMsg{
-				FlagsRowPosition: FlagsRowPositionBottom,
+				FlagsRowPosition: contract.PositionBottom,
 				Banner:           info,
 			})
 			out := viewContent(updated)
@@ -155,9 +155,9 @@ var _ = Describe("Banner integration with highway view", func() {
 	Describe("animation tick", func() {
 		It("advances the banner's gradient state on every global tick (skipFactor=0)", func() {
 			m := baseModel(1)
-			info := makeBannerInfo(banner.PositionTop)
+			info := makeBannerInfo(contract.PositionTop)
 			updated, _ := update(m, OvertureMsg{
-				FlagsRowPosition: FlagsRowPositionBottom,
+				FlagsRowPosition: contract.PositionBottom,
 				Banner:           info,
 			})
 
@@ -177,9 +177,9 @@ var _ = Describe("Banner integration with highway view", func() {
 
 		It("advances the gradient state after skipFactor ticks", func() {
 			m := baseModel(1)
-			info := makeBannerInfo(banner.PositionTop)
+			info := makeBannerInfo(contract.PositionTop)
 			updated, _ := update(m, OvertureMsg{
-				FlagsRowPosition: FlagsRowPositionBottom,
+				FlagsRowPosition: contract.PositionBottom,
 				Banner:           info,
 			})
 			before := updated.bannerTicker.State().Offset
