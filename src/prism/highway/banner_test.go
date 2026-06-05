@@ -13,6 +13,7 @@ import (
 
 	"github.com/snivilised/jaywalk/src/prism/contract"
 	"github.com/snivilised/jaywalk/src/prism/effects"
+	"github.com/snivilised/jaywalk/src/prism/widgets/banner"
 )
 
 // viewContent extracts the rendered string from the model's view.
@@ -33,9 +34,9 @@ func bannerTestGradient() *contract.ResolvedGradient {
 	}
 }
 
-// makeBannerInfo builds a BannerInfo that the highway model will
+// makeBannerInfo builds a banner.Info that the highway model will
 // accept (i.e. a non-nil Gradient and State).
-func makeBannerInfo(position string) BannerInfo {
+func makeBannerInfo(position string) banner.Info {
 	grad := bannerTestGradient()
 	st := effects.NewGradientState()
 	hiR, hiG, hiB, _ := grad.Hi.RGBA()
@@ -46,11 +47,17 @@ func makeBannerInfo(position string) BannerInfo {
 		grad.Steps,
 	)
 	st.SetSteps(steps)
-	return BannerInfo{
+	return banner.Info{
 		Disable:  false,
 		Position: position,
 		Justify:  "right",
 		Width:    60,
+		Aspects: banner.Aspects{
+			Orientation: banner.OrientationHorizontal,
+			Banding:     banner.BandingWithout,
+			Unity:       banner.UnityUnified,
+			FixedEnd:    banner.FixedEndUnfixed,
+		},
 		Gradient: grad,
 		State:    st,
 		Tick:     500 * time.Millisecond,
@@ -61,7 +68,7 @@ var _ = Describe("Banner integration with highway view", func() {
 	Describe("rendering position", func() {
 		It("renders the banner above the top border when Position = top", func() {
 			m := baseModel(1)
-			info := makeBannerInfo(BannerPositionTop)
+			info := makeBannerInfo(banner.PositionTop)
 			updated, _ := update(m, OvertureMsg{
 				FlagsRowPosition: FlagsRowPositionBottom,
 				Banner:           info,
@@ -99,7 +106,7 @@ var _ = Describe("Banner integration with highway view", func() {
 
 		It("renders the banner below the bottom border when Position = bottom", func() {
 			m := baseModel(1)
-			info := makeBannerInfo(BannerPositionBottom)
+			info := makeBannerInfo(banner.PositionBottom)
 			updated, _ := update(m, OvertureMsg{
 				FlagsRowPosition: FlagsRowPositionBottom,
 				Banner:           info,
@@ -133,7 +140,7 @@ var _ = Describe("Banner integration with highway view", func() {
 
 		It("skips the banner when Disable = true", func() {
 			m := baseModel(1)
-			info := makeBannerInfo(BannerPositionTop)
+			info := makeBannerInfo(banner.PositionTop)
 			info.Disable = true
 			updated, _ := update(m, OvertureMsg{
 				FlagsRowPosition: FlagsRowPositionBottom,
@@ -148,39 +155,39 @@ var _ = Describe("Banner integration with highway view", func() {
 	Describe("animation tick", func() {
 		It("advances the banner's gradient state on every global tick (skipFactor=0)", func() {
 			m := baseModel(1)
-			info := makeBannerInfo(BannerPositionTop)
+			info := makeBannerInfo(banner.PositionTop)
 			updated, _ := update(m, OvertureMsg{
 				FlagsRowPosition: FlagsRowPositionBottom,
 				Banner:           info,
 			})
 
-			before := updated.banner.gradient.Offset
 			// Drive a single tick through the model.
+			before := updated.bannerTicker.State().Offset
 			updated, _ = update(updated, tickMsg(time.Now()))
-			after := updated.banner.gradient.Offset
+			after := updated.bannerTicker.State().Offset
 
 			// 50ms global tick / 500ms banner tick = 10 → skipFactor=10
 			// One tick is not enough to advance.
 			// We assert the gradient state was created.
-			Expect(updated.banner).NotTo(BeNil())
-			Expect(updated.banner.skipFactor).To(Equal(10))
+			Expect(updated.bannerTicker).NotTo(BeNil())
+			Expect(updated.bannerTicker.Factor()).To(Equal(10))
 			_ = before
 			_ = after
 		})
 
 		It("advances the gradient state after skipFactor ticks", func() {
 			m := baseModel(1)
-			info := makeBannerInfo(BannerPositionTop)
+			info := makeBannerInfo(banner.PositionTop)
 			updated, _ := update(m, OvertureMsg{
 				FlagsRowPosition: FlagsRowPositionBottom,
 				Banner:           info,
 			})
-			before := updated.banner.gradient.Offset
+			before := updated.bannerTicker.State().Offset
 			// 10 ticks (skipFactor) → 1 advance.
 			for i := 0; i < 10; i++ {
 				updated, _ = update(updated, tickMsg(time.Now()))
 			}
-			after := updated.banner.gradient.Offset
+			after := updated.bannerTicker.State().Offset
 			Expect(after).To(Equal(before + 1))
 		})
 	})

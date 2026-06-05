@@ -8,6 +8,7 @@ import (
 
 	"github.com/snivilised/jaywalk/src/agenor/core"
 	"github.com/snivilised/jaywalk/src/prism/contract"
+	"github.com/snivilised/jaywalk/src/prism/widgets/banner"
 	"github.com/snivilised/jaywalk/src/prism/widgets/status"
 	"github.com/snivilised/jaywalk/src/prism/widgets/track"
 )
@@ -88,14 +89,14 @@ type Model struct {
 	// applied by the loader is "bottom".
 	FlagsRowPosition string
 
-	// banner is the per-render state for the optional ANSI shadow
-	// banner. Nil when the banner is disabled. The gradient state
-	// advances on a slower tick than the lane animations.
-	banner *bannerState
-
 	// bannerInfo is the (immutable for the session) configuration
-	// received via OvertureMsg. The view reads this each render.
-	bannerInfo BannerInfo
+	// received via OvertureMsg. The view reads this each render to
+	// construct a transient banner.Model on the fly. The Ticker is
+	// the long-lived state driver; nil when the banner is disabled,
+	// when the gradient binding is absent, or when the state pointer
+	// is nil. Advance() is nil-safe.
+	bannerInfo   banner.Info
+	bannerTicker *banner.Ticker
 }
 
 // NewModel constructs a highway view Model. The lanes slice is
@@ -167,9 +168,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.track, _ = m.dispatchTrack(track.TickMsg(time.Time(msg)))
 		// Advance the banner's gradient state on its own slower
 		// tick so its warm glow is visibly different from the
-		// lane animations. skipFactor handles the speed
-		// difference.
-		m.banner.advance()
+		// lane animations. The Ticker encapsulates the skip
+		// factor and the skip counter; Advance is nil-safe.
+		m.bannerTicker.Advance()
 		tickCmd := tea.Tick(m.tickRate, func(t time.Time) tea.Msg {
 			return tickMsg(t)
 		})
@@ -220,15 +221,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.FlagsRowPosition = FlagsRowPositionBottom
 		}
 
-		// Initialise the banner state from the OvertureMsg. The
-		// bannerState is nil when the banner is disabled, when the
-		// gradient binding is absent, or when the state pointer is
-		// nil. The view checks for nil before rendering.
+		// Initialise the banner from the OvertureMsg. The bannerInfo
+		// is stored verbatim; bannerTicker is nil when the banner is
+		// disabled, when the gradient binding is absent, or when
+		// the state pointer is nil. The view constructs a transient
+		// banner.Model on the fly from bannerInfo per render.
 		m.bannerInfo = msg.Banner
 		if !msg.Banner.Disable && msg.Banner.State != nil && msg.Banner.Gradient != nil {
-			m.banner = newBannerState(msg.Banner.State, msg.Banner.Tick, m.tickRate)
+			m.bannerTicker = banner.NewTicker(msg.Banner.State, msg.Banner.Tick, m.tickRate)
 		} else {
-			m.banner = nil
+			m.bannerTicker = nil
 		}
 
 		return m, nil

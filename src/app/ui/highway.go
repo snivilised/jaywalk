@@ -47,7 +47,7 @@ type highwayPresenter struct {
 	// bannerInfo is built once in OnBegin and sent to the model via
 	// OvertureMsg. It carries the random aspects and gradient
 	// endpoints resolved from the theme.
-	bannerInfo highway.BannerInfo
+	bannerInfo banner.Info
 }
 
 func newHighwayPresenter(palette contract.Palette, hCfg HighwayConfig) (report.Presenter, error) {
@@ -329,7 +329,7 @@ func BuildHighwayLanes(cfg HighwayConfig, now uint) []track.Lane {
 	return lanes
 }
 
-// buildBannerInfo assembles the per-session BannerInfo for the highway
+// buildBannerInfo assembles the per-session banner.Info for the highway
 // model. The random aspect selection is performed exactly once here
 // (math/rand/v2, package-level source) so the aspects are frozen for
 // the duration of the process. The gradient endpoints are resolved
@@ -337,11 +337,11 @@ func BuildHighwayLanes(cfg HighwayConfig, now uint) []track.Lane {
 // gradient (which causes the widget to render as plain text) when
 // the binding is absent.
 //
-// When the user has disabled the banner, the returned BannerInfo has
+// When the user has disabled the banner, the returned banner.Info has
 // Disable=true and the gradient/state pointers are nil. The highway
 // model treats this as "do not render".
-func (h *highwayPresenter) buildBannerInfo() highway.BannerInfo {
-	info := highway.BannerInfo{
+func (h *highwayPresenter) buildBannerInfo() banner.Info {
+	info := banner.Info{
 		Disable:  h.cfg.Banner.Disable,
 		Position: h.cfg.Banner.Position,
 		Justify:  h.cfg.Banner.Justify,
@@ -380,13 +380,7 @@ func (h *highwayPresenter) buildBannerInfo() highway.BannerInfo {
 	// package-level random source (math/rand/v2) which is fine for
 	// non-security purposes.
 	rng := rand.New(rand.NewPCG(uint64(os.Getpid()), uint64(core.Now().UnixNano()))) //nolint:gosec // non-security
-	aspects := banner.RandomiseAspects(rng)
-	info.Aspects = highway.BannerAspects{
-		Orientation: int(aspects.Orientation),
-		Banding:     int(aspects.Banding),
-		Unity:       int(aspects.Unity),
-		FixedEnd:    int(aspects.FixedEnd),
-	}
+	info.Aspects = banner.RandomiseAspects(rng)
 
 	// Resolve the per-tick interval. Tick in the config is in
 	// milliseconds; the model uses a time.Duration.
