@@ -82,6 +82,9 @@ type OvertureMsg struct {
 	Banner BannerInfo
 }
 
+// MotifData is the per-node payload sent to the track child widget.
+// The root re-wraps incoming highway.MotifMsg values into
+// track.MotifMsg before forwarding.
 type MotifData struct {
 	Path            string
 	Name            string
@@ -107,10 +110,20 @@ type MotifData struct {
 	PeriscopeGradient *contract.ResolvedGradient
 }
 
+// MotifMsg is the highway-level per-node event message. The root
+// translates it into a track.MotifMsg before forwarding to the
+// track child. Kept in the highway package because external
+// callers (e.g. src/app/ui/highway.go) construct it directly.
 type MotifMsg struct {
 	Data MotifData
 }
 
+// CompleteMsg marks end-of-navigation. Carries the final
+// file/dir counts, error list and elapsed time. The root stores
+// errors/elapsed/errMsg/done in its own state, forwards a
+// track.CompleteMsg{} to the track child (flush signal) and
+// translates the relevant fields into status.CountsMsg,
+// status.ElapsedMsg and status.DoneMsg for the status child.
 type CompleteMsg struct {
 	Files   int
 	Dirs    int
@@ -118,8 +131,10 @@ type CompleteMsg struct {
 	Elapsed time.Duration
 }
 
-// CensusMsg carries the total file/dir counts from a preview traversal.
-// The model uses these to calculate progress percentage during the live pass.
+// CensusMsg carries the total file/dir counts from a preview
+// traversal. The root uses the counts to seed the status widget's
+// progress total; the MaxDepth is forwarded to the track child
+// for the periscope bar fill formula.
 type CensusMsg struct {
 	TotalFiles uint
 	TotalDirs  uint

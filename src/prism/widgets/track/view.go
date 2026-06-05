@@ -1,8 +1,10 @@
-package highway
+package track
 
 import (
 	"fmt"
 	"strings"
+
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/snivilised/jaywalk/src/prism/layout"
 	"github.com/snivilised/jaywalk/src/prism/widgets/action"
@@ -12,80 +14,87 @@ import (
 	"github.com/snivilised/jaywalk/src/prism/widgets/periscope"
 )
 
-// renderLanes renders each highway lane with animation frames and event data.
-// Rendering order per lane (left to right inside one frame):
-// | 🤖  ◼◻◻◻◻◻◻◻◻◻  🍎  📁  • via boo  braillewave       <Path>  ⠁⠂⠄⡀        [👾 sleep 1.0s] |
+// View renders every lane in the track, one row per lane with a
+// `├──┤` separator between rows. The full multi-lane string is
+// returned as a single tea.View so the highway root can embed it
+// in its bordered layout.
 //
-//  1. Left border segment │
-//  2. Worker emoji indicator (changes per job arrival)
-//  3. Periscope bar (indentation depth or animated fill pattern)
-//  4. Job emoji indicator (changes per job arrival)
-//  5. Node icon (file/folder tree icon, if path is present)
-//  6. Action info (error message / action name / pipeline name)
-//  7. Spinner column (fixed width label for spinner type: "default", "bounce", etc.)
-//  8. Styled path or label (files get DirStyle/FileStyle, empty lanes get MutedStyle)
-//  9. Animation frame (frame content from FrameFunc in quotes)
+// Rendering order per lane (left to right inside one frame):
+//
+//		🤖  ◼◻◻◻◻◻◻◻◻◻  🍎  📁  • via boo  braillewave       <Path>  ⠁⠂⠄⡀        [👾 sleep 1.0s]
+//
+//	 1. Left border segment │
+//	 2. Worker emoji indicator (changes per job arrival)
+//	 3. Periscope bar (indentation depth or animated fill pattern)
+//	 4. Job emoji indicator (changes per job arrival)
+//	 5. Node icon (file/folder tree icon, if path is present)
+//	 6. Action info (error message / action name / pipeline name)
+//	 7. Spinner column (fixed width label for spinner type: "default", "bounce", etc.)
+//	 8. Styled path or label (files get DirStyle/FileStyle, empty lanes get MutedStyle)
+//	 9. Animation frame (frame content from FrameFunc in quotes)
 //
 // 10. Landing strip
-//
 // 11. Right border segment │
+func (m Model) View() tea.View {
+	var b strings.Builder
+	m.renderLanes(&b)
+	return tea.NewView(b.String())
+}
+
+// renderLanes writes the lane rows to b. The body is the former
+// highway.Model.renderLanes moved verbatim, with the only edit
+// being the theme read replaced by m.styles.
 func (m Model) renderLanes(b *strings.Builder) {
 	laneBarWidth := LaneBarWidth
 
 	periscopeStyles := periscope.Styles{
-		Filled: m.theme.BarFilledStyle,
-		Empty:  m.theme.BarEmptyStyle,
+		Filled: m.styles.BarFilledStyle,
+		Empty:  m.styles.BarEmptyStyle,
 	}
 	actionStyles := action.Styles{
-		ErrorStyle:    m.theme.ErrorStyle,
-		ActionStyle:   m.theme.ActionStyle,
-		PipelineStyle: m.theme.PipelineStyle,
+		ErrorStyle:    m.styles.ErrorStyle,
+		ActionStyle:   m.styles.ActionStyle,
+		PipelineStyle: m.styles.PipelineStyle,
 	}
 	nodePathStyles := node.Styles{
-		DirStyle:   m.theme.DirStyle,
-		FileStyle:  m.theme.FileStyle,
-		MutedStyle: m.theme.MutedStyle,
-		TreeIcons:  m.theme.TreeIcons,
+		DirStyle:   m.styles.DirStyle,
+		FileStyle:  m.styles.FileStyle,
+		MutedStyle: m.styles.MutedStyle,
+		TreeIcons:  m.styles.TreeIcons,
 	}
 	activityStyles := activity.Styles{
-		FrameStyle: m.theme.FrameStyle,
+		FrameStyle: m.styles.FrameStyle,
 	}
 	landingStripStyles := landing.Styles{
-		BranchStyle:       m.theme.BranchStyle,
-		LandingStripStyle: m.theme.LandingStripStyle,
+		BranchStyle:       m.styles.BranchStyle,
+		LandingStripStyle: m.styles.LandingStripStyle,
 	}
 
-	borderStyle := m.theme.BorderStyle
-	mutedStyle := m.theme.MutedStyle
+	borderStyle := m.styles.BorderStyle
+	mutedStyle := m.styles.MutedStyle
 
 	for i, lane := range m.lanes {
 		emojiPart := lane.Emoji
 
-		// Periscope bar (depth indicator)
 		periscopeContent := m.renderPeriscopeBar(lane, i, laneBarWidth, periscopeStyles)
 
-		// Action info (error / action name / pipeline name)
 		actionContent := action.Render(action.Config{
 			Error:        lane.Err,
 			ActionName:   lane.ActionName,
 			PipelineName: lane.PipelineName,
 		}, actionStyles)
 
-		// Spinner name column (fixed width)
 		spinnerNameCol := fmt.Sprintf("%-*s", SpinnerNameWidth, lane.SpinnerName)
 		spinnerNameCol = mutedStyle.Render(spinnerNameCol)
 
-		// Animation frame with optional gradient
 		frame := m.renderActivityFrame(lane, activityStyles)
 
-		// Landing strip (execution info)
 		landingStripContent := landing.Render(landing.Config{
 			CommandOutput:   lane.CommandOutput,
 			ExecutionString: lane.ExecutionString,
 			DryRun:          lane.DryRun,
 		}, landingStripStyles)
 
-		// Build the row layout declaratively
 		row := layout.NewRow(m.width-4).
 			Caps(borderStyle.Render("│ "), borderStyle.Render(" │"))
 		row.
@@ -99,11 +108,10 @@ func (m Model) renderLanes(b *strings.Builder) {
 		}
 		row.
 			Fixed(SpinnerNameWidth, spinnerNameCol).
-			Flex(true).Gap(2). // path: flex with gap(2) before
+			Flex(true).Gap(2).
 			Content(frame).Gap(1).
 			RightContent(landingStripContent)
 
-		// Render the path content - returns complete formatted string with icon
 		pathContent := node.Render(node.Config{
 			Path:     lane.Path,
 			IsDir:    lane.IsDir,
@@ -122,6 +130,8 @@ func (m Model) renderLanes(b *strings.Builder) {
 	}
 }
 
+// renderPeriscopeBar returns the periscope bar content for the
+// given lane. Moved verbatim from highway.Model.renderPeriscopeBar.
 func (m Model) renderPeriscopeBar(lane Lane, idx int, width int, styles periscope.Styles) string {
 	if m.noRecurse {
 		return styles.Filled.Render("◼")
@@ -146,6 +156,9 @@ func (m Model) renderPeriscopeBar(lane Lane, idx int, width int, styles periscop
 	})
 }
 
+// renderActivityFrame returns the styled animation frame content
+// for the given lane. Moved verbatim from
+// highway.Model.renderActivityFrame.
 func (m Model) renderActivityFrame(lane Lane, styles activity.Styles) string {
 	var frameContent string
 	if lane.FrameFn != nil {
@@ -157,11 +170,8 @@ func (m Model) renderActivityFrame(lane Lane, styles activity.Styles) string {
 
 	return activity.Render(activity.Config{
 		Content: frameContent,
-	},
-		styles,
-		activity.Effect{
-			Gradient: lane.HighlightGradient,
-			State:    lane.GradientState,
-		},
-	)
+	}, styles, activity.Effect{
+		Gradient: lane.HighlightGradient,
+		State:    lane.GradientState,
+	})
 }
