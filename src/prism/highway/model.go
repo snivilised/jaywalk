@@ -8,8 +8,8 @@ import (
 
 	"github.com/snivilised/jaywalk/src/agenor/core"
 	"github.com/snivilised/jaywalk/src/prism/contract"
-	"github.com/snivilised/jaywalk/src/prism/effects"
 	"github.com/snivilised/jaywalk/src/prism/widgets/status"
+	"github.com/snivilised/jaywalk/src/prism/widgets/track"
 )
 
 type tickMsg time.Time
@@ -30,41 +30,37 @@ func statusFieldSet() status.FieldSelectors {
 	}
 }
 
+// Model is the bubbletea Model for the highway view. It owns the
+// chrome (header, flags row, summary, banner), the status child
+// widget, and the track child widget. The track child is
+// responsible for lane data, per-tick advance, motif application
+// and per-lane rendering.
 type Model struct {
-	lanes          []Lane
-	skip           []int
-	width          int
-	start          time.Time
-	tickRate       time.Duration
-	totalTicks     int64
-	rootPath       string
-	realMode       bool
-	done           bool
-	noRecurse      bool
-	files          int
-	dirs           int
-	errors         int
-	elapsed        time.Duration
-	currentLaneIdx int
-	totalDirs      uint
-	maxDepth       uint
-	pipelineName   string
-	// TODO(status-widget-state-migration): totalFiles is still
-	// owned by the root in this PR. The CensusMsg path
-	// (highway/model.go Update) forwards it into the status
-	// widget via status.TotalMsg so the widget can compute
-	// percent on its own. The root's local copy remains for
-	// now because the lanes update path still references it
-	// for fake-mode rendering. Move the root copy out once
-	// lanes becomes a proper child model.
+	width        int
+	start        time.Time
+	tickRate     time.Duration
+	totalTicks   int64
+	rootPath     string
+	realMode     bool
+	done         bool
+	errors       int
+	elapsed      time.Duration
+	errMsg       string
+	pipelineName string
+	// totalFiles is still owned by the root in this PR. The
+	// CensusMsg path forwards it into the status widget via
+	// status.TotalMsg so the widget can compute percent on its
+	// own. The root's local copy remains for the demo-mode
+	// fake-percent generator (see tickMsg arm).
 	totalFiles        uint
+	totalDirs         uint
+	maxDepth          uint
+	noRecurse         bool
 	subscriptionLabel string
 	startedAt         time.Time
 	caption           string
 	dateFormat        string
 	theme             contract.Theme
-	counted           map[string]bool
-	errMsg            string
 
 	// status is the child status widget. It owns the
 	// files/dirs/errors/elapsed/isDone/errMsg/percent/total state
@@ -72,6 +68,13 @@ type Model struct {
 	// translates highway messages into status.* messages
 	// (see update.go's translation helpers).
 	status status.Model
+
+	// track is the child widget owning lane data, per-tick
+	// advance, motif application and per-lane rendering. The
+	// root forwards the relevant tea.Msg values to the child
+	// (see Message flow in
+	// make-lanes-its-own-child-widget.implementation-plan.issue-604.md).
+	track track.Model
 
 	// header is the supplementary flag info carried on the OvertureMsg.
 	// Stored on the model so renderFlagsRow and other renderers can
@@ -95,45 +98,32 @@ type Model struct {
 	bannerInfo BannerInfo
 }
 
-// initLaneSkip computes the per-lane skip factor from each lane's
-// IntervalMs. The skip factor = IntervalMs / tickRate (in ms). A lane
-// with no override (IntervalMs=0) gets factor 0 - it advances every
-// tick. A lane with IntervalMs=5000 at 50ms tick rate gets factor 100,
-// advancing one frame every 100 ticks (every 5 seconds).
-// See Lane.IntervalMs for the config override path.
-func initLaneSkip(lanes []Lane, tickRate time.Duration) []int {
-	factors := make([]int, len(lanes))
-	tickMs := int(tickRate.Milliseconds())
-	if tickMs == 0 {
-		tickMs = 50
-	}
-	for i, lane := range lanes {
-		if lane.IntervalMs > 0 {
-			factors[i] = lane.IntervalMs / tickMs
-			if factors[i] < 1 {
-				factors[i] = 1
-			}
-		}
-	}
-	return factors
-}
-
-func NewModel(lanes []Lane, tickRate time.Duration, rootPath string,
+// NewModel constructs a highway view Model. The lanes slice is
+// passed to the track child widget which owns it from then on.
+// The theme is split: a copy of the theme fields the track widget
+// needs is captured into track.WithTheme; the rest stay on the
+// root for chrome rendering.
+func NewModel(lanes []track.Lane, tickRate time.Duration, rootPath string,
 	maxDepth uint, theme contract.Theme, noRecurse bool) Model {
 	return Model{
-		lanes:     lanes,
-		skip:      initLaneSkip(lanes, tickRate),
-		tickRate:  tickRate,
-		noRecurse: noRecurse,
 		width:     80,
 		rootPath:  rootPath,
 		maxDepth:  maxDepth,
+		noRecurse: noRecurse,
+		tickRate:  tickRate,
 		theme:     theme,
-		counted:   make(map[string]bool),
 		status: status.New(
 			status.WithTheme(theme),
 			status.WithFields(statusFieldSet()),
 			status.WithWidth(10),
+		),
+		track: track.New(
+			track.WithLanes(lanes),
+			track.WithTheme(theme),
+			track.WithTickRate(tickRate),
+			track.WithMaxDepth(maxDepth),
+			track.WithNoRecurse(noRecurse),
+			track.WithWidth(80),
 		),
 	}
 }
@@ -150,6 +140,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		var cmd tea.Cmd
 		m.status, cmd = m.dispatchStatus(status.WidthMsg{Width: msg.Width})
+		m.track, _ = m.dispatchTrack(track.WidthMsg{Width: msg.Width})
 		return m, cmd
 
 	case tea.KeyMsg:
@@ -170,47 +161,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.start = core.Now()
 		}
 		m.totalTicks++
-		// Advance each lane's frame counter independently.
-		// Lanes with a skip factor > 0 (set via IntervalMs override)
-		// only advance their tick every N global ticks, producing a
-		// visibly slower animation. Lanes with skip factor 0 advance
-		// every tick (full speed).
-		for i := range m.lanes {
-			if m.skip != nil && i < len(m.skip) && m.skip[i] > 0 {
-				m.lanes[i].skipCounter++
-				if m.lanes[i].skipCounter >= m.skip[i] {
-					m.lanes[i].skipCounter = 0
-					m.lanes[i].tick++
-				}
-			} else {
-				m.lanes[i].tick++
-			}
-
-			// Advance gradient state for lanes with configured gradients.
-			// IMPORTANT: This updates the state (offset/index) but does NOT apply
-			// the gradient colours to frameContent - that happens in renderLanes().
-			// The GradientState.Offset tracks current position in gradient array;
-			// ApplyGradient() uses this offset to interpolate characters from Hi->Lo.
-			if m.lanes[i].HighlightGradient != nil {
-				windowSize := m.lanes[i].WindowSize()
-				if windowSize <= 0 {
-					windowSize = 4
-				}
-				m.lanes[i].GradientState.Update(windowSize)
-			}
-
-			if m.lanes[i].PeriscopeGradient != nil {
-				windowSize := m.lanes[i].WindowSize()
-				if windowSize <= 0 {
-					windowSize = 4
-				}
-				m.lanes[i].PeriscopeGradientState.Update(windowSize)
-			}
-		}
-
-		// Advance the banner's gradient state on its own slower tick
-		// so its warm glow is visibly different from the lane
-		// animations. skipFactor handles the speed difference.
+		// Forward the tick to the track child. Track advances
+		// each lane's tick counter, applies the per-lane skip
+		// factor and advances gradient states.
+		m.track, _ = m.dispatchTrack(track.TickMsg(time.Time(msg)))
+		// Advance the banner's gradient state on its own slower
+		// tick so its warm glow is visibly different from the
+		// lane animations. skipFactor handles the speed
+		// difference.
 		m.banner.advance()
 		tickCmd := tea.Tick(m.tickRate, func(t time.Time) tea.Msg {
 			return tickMsg(t)
@@ -232,11 +190,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				// so the bar animates without real traversal
 				// data. In real mode the percent is driven by
 				// TotalMsg + IncDoneMsg (the done/total ratio).
-				// TODO(realMode-cleanup): once lanes becomes a
-				// proper child model and owns its own ticking,
-				// move the demo-mode fake percent generation
-				// into lanes.Update so the root doesn't need
-				// to know about it.
+				// TODO(realMode-cleanup): once the demo-mode
+				// fake percent generation moves into
+				// status.Update (or track.Update), the root
+				// no longer needs to know about it.
 				m.status, _ = m.dispatchStatus(status.PercentMsg{
 					Percent: int(elapsed.Seconds()) * 2 % 100,
 				})
@@ -282,6 +239,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.MaxDepth > m.maxDepth {
 			m.maxDepth = msg.MaxDepth
 		}
+		// Forward the max depth to the track child for the
+		// periscope bar fill formula. The track package only
+		// needs MaxDepth, not the file/dir counts (those stay
+		// at the root and go to the status widget).
+		m.track, _ = m.dispatchTrack(track.CensusMsg{MaxDepth: msg.MaxDepth})
 		// Forward the total to the status widget so it can
 		// compute the percent on its own. The total must include
 		// both files AND dirs because every MotifMsg (regardless
@@ -298,33 +260,59 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case MotifMsg:
-		isNew := !m.counted[msg.Data.Path]
-		if isNew {
-			m.counted[msg.Data.Path] = true
-			cmds := make([]tea.Cmd, 0, 1)
-			if msg.Data.IsDir {
-				m.dirs++
-			} else {
-				m.files++
-			}
-			// Forward the new count to the status widget so the
-			// percent / progress bar reflects the new total.
-			// TODO(lanes-widget-state-migration): the counted
-			// map, m.files and m.dirs will all move to the
-			// lanes child widget in a future PR; this
-			// translation will then happen inside lanes.Update
-			// and the root's local copies can be removed.
-			var cmd tea.Cmd
-			m.status, cmd = m.dispatchStatus(status.IncDoneMsg{N: 1})
-			if cmd != nil {
-				cmds = append(cmds, cmd)
-			}
-			m.status, _ = m.dispatchStatus(status.CountsMsg{
-				Files: m.files, Dirs: m.dirs, Errors: m.errors,
-			})
-			return m.applyMotifData(msg, cmds)
+		// Track the pre-dispatch file/dir counts so we can
+		// detect whether the motif was new (i.e. the track
+		// child's dedup map saw the path for the first time).
+		// Only motifs that are new should drive the status
+		// progress bar; duplicates still apply their data to
+		// the current lane but must NOT re-target the spring.
+		prevFiles := m.track.Files()
+		prevDirs := m.track.Dirs()
+
+		// Forward to the track child. Track dedupes on path,
+		// increments files/dirs (only on first sighting),
+		// applies the motif data to the current lane and
+		// rotates the lane index.
+		m.track, _ = m.dispatchTrack(track.MotifMsg{Data: track.MotifData{
+			Path:              msg.Data.Path,
+			Name:              msg.Data.Name,
+			IsDir:             msg.Data.IsDir,
+			Depth:             msg.Data.Depth,
+			ActionName:        msg.Data.ActionName,
+			PipelineName:      msg.Data.PipelineName,
+			CommandOutput:     msg.Data.CommandOutput,
+			ExecutionString:   msg.Data.ExecutionString,
+			DryRun:            msg.Data.DryRun,
+			Err:               msg.Data.Err,
+			JobEmoji:          msg.Data.JobEmoji,
+			Gradient:          msg.Data.Gradient,
+			PeriscopeGradient: msg.Data.PeriscopeGradient,
+		}})
+
+		// If neither files nor dirs changed, the path was a
+		// duplicate - the track child applied data to the
+		// current lane and rotated the index, but did not
+		// increment any counter, so the status widget must
+		// not see an IncDoneMsg.
+		isNew := m.track.Files() > prevFiles || m.track.Dirs() > prevDirs
+		if !isNew {
+			return m, nil
 		}
-		return m.applyMotifData(msg, nil)
+
+		// New motif: forward the increment to the status
+		// widget so the percent / progress bar reflects the
+		// new total. We read the post-update counts from the
+		// track child (track.Files() / track.Dirs()).
+		cmds := make([]tea.Cmd, 0, 1)
+		var cmd tea.Cmd
+		m.status, cmd = m.dispatchStatus(status.IncDoneMsg{N: 1})
+		if cmd != nil {
+			cmds = append(cmds, cmd)
+		}
+		m.status, _ = m.dispatchStatus(status.CountsMsg{
+			Files: m.track.Files(), Dirs: m.track.Dirs(), Errors: m.errors,
+		})
+		return m, tea.Batch(cmds...)
 
 	case CompleteMsg:
 		// Capture the first non-nil error message for the
@@ -340,9 +328,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.elapsed = msg.Elapsed
 		m.done = true
 
+		// Forward the flush signal to the track child so it
+		// clears its counted map. The track child does not need
+		// the file/dir counts (they are not displayed in any
+		// lane); those go to status via CountsMsg below.
+		m.track, _ = m.dispatchTrack(track.CompleteMsg{})
+
 		// Forward the final counts and elapsed to the status
 		// widget. The widget owns the percent calculation and
-		// the isDone flag from here on.
+		// the isDone flag from here on. The status DoneMsg
+		// handler only overwrites its errMsg when msg.Err is
+		// non-empty, so passing the root's potentially-empty
+		// errMsg is safe.
 		cmds := make([]tea.Cmd, 0, 2)
 		m.status, _ = m.dispatchStatus(status.CountsMsg{
 			Files: msg.Files, Dirs: msg.Dirs, Errors: len(msg.Errs),
@@ -382,46 +379,11 @@ func (m Model) dispatchStatus(msg tea.Msg) (status.Model, tea.Cmd) {
 	return r.(status.Model), cmd //nolint:errcheck // known concrete type
 }
 
-// applyMotifData updates the per-lane fields from a MotifMsg. The
-// caller is responsible for any status translation (IncDoneMsg,
-// CountsMsg) before calling this. Extracted from the MotifMsg
-// switch arm to keep the update flow readable.
-func (m Model) applyMotifData(msg MotifMsg, cmds []tea.Cmd) (tea.Model, tea.Cmd) {
-	if len(m.lanes) > 0 {
-		m.lanes[m.currentLaneIdx].JobEmoji = msg.Data.JobEmoji
-		m.lanes[m.currentLaneIdx].Path = msg.Data.Path
-		m.lanes[m.currentLaneIdx].Name = msg.Data.Name
-		m.lanes[m.currentLaneIdx].IsDir = msg.Data.IsDir
-		m.lanes[m.currentLaneIdx].Depth = msg.Data.Depth
-		m.lanes[m.currentLaneIdx].ActionName = msg.Data.ActionName
-		m.lanes[m.currentLaneIdx].PipelineName = msg.Data.PipelineName
-		m.lanes[m.currentLaneIdx].CommandOutput = msg.Data.CommandOutput
-		m.lanes[m.currentLaneIdx].ExecutionString = msg.Data.ExecutionString
-		m.lanes[m.currentLaneIdx].DryRun = msg.Data.DryRun
-		m.lanes[m.currentLaneIdx].Err = msg.Data.Err
-		// Copy gradient from message to lane if provided.
-		// The gradient is a ResolvedGradient {Steps, Hi, Lo} from the theme palette.
-		// It holds colour endpoint info; we apply it in renderLanes() using ApplyGradient().
-		if msg.Data.Gradient != nil {
-			m.lanes[m.currentLaneIdx].HighlightGradient = msg.Data.Gradient
-			// Also ensure GradientState exists and is configured with steps.
-			if m.lanes[m.currentLaneIdx].GradientState == nil {
-				m.lanes[m.currentLaneIdx].GradientState = effects.NewGradientState()
-			}
-			m.lanes[m.currentLaneIdx].GradientState.TotalSteps = msg.Data.Gradient.Steps
-		}
-
-		if msg.Data.PeriscopeGradient != nil {
-			m.lanes[m.currentLaneIdx].PeriscopeGradient = msg.Data.PeriscopeGradient
-			if m.lanes[m.currentLaneIdx].PeriscopeGradientState == nil {
-				m.lanes[m.currentLaneIdx].PeriscopeGradientState = effects.NewGradientState()
-			}
-			m.lanes[m.currentLaneIdx].PeriscopeGradientState.TotalSteps = msg.Data.PeriscopeGradient.Steps
-		}
-		m.currentLaneIdx = (m.currentLaneIdx + 1) % len(m.lanes)
-	}
-	if len(cmds) == 0 {
-		return m, nil
-	}
-	return m, tea.Batch(cmds...)
+// dispatchTrack forwards a track-owned message to the child track
+// widget and returns the resulting (track.Model, tea.Cmd) tuple.
+// The caller assigns the returned model back to m.track. Mirrors
+// dispatchStatus.
+func (m Model) dispatchTrack(msg tea.Msg) (track.Model, tea.Cmd) { //nolint:unparam // ok
+	r, cmd := m.track.Update(msg)
+	return r.(track.Model), cmd //nolint:errcheck // known concrete type
 }

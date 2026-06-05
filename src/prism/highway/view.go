@@ -22,7 +22,12 @@ func (m Model) View() tea.View {
 	if m.FlagsRowPosition == FlagsRowPositionTop {
 		m.renderFlagsRow(&b)
 	}
-	m.renderLanes(&b)
+
+	// Lane rows + separators come from the track child. The track
+	// widget is a self-contained bubbletea Model that owns its
+	// own styling and rendering.
+	b.WriteString(m.track.View().Content)
+
 	if m.FlagsRowPosition == FlagsRowPositionBottom || m.FlagsRowPosition == "" {
 		m.renderFlagsRow(&b)
 	}

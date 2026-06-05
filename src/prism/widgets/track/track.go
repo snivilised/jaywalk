@@ -1,11 +1,13 @@
-package highway
+package track
 
 import (
 	"github.com/snivilised/jaywalk/src/prism/contract"
 	"github.com/snivilised/jaywalk/src/prism/effects"
 )
 
-// Lane
+// Lane holds the per-worker state for a single track lane. The
+// highway root constructs the initial slice and the track widget
+// owns the per-tick and per-motif updates from there on.
 type Lane struct {
 	Emoji           string
 	JobEmoji        string
@@ -49,16 +51,23 @@ type Lane struct {
 	PeriscopeGradientState *effects.GradientState
 }
 
+// WindowSize returns the gradient window size appropriate for the
+// lane's current content. The same heuristic that previously lived
+// on the highway Lane type: command output length when present,
+// otherwise 6 for action animations on files, otherwise 4.
 func (l *Lane) WindowSize() int {
 	if len(l.CommandOutput) > 0 {
-		return len([]rune(l.CommandOutput)) // use command output width
+		return len([]rune(l.CommandOutput))
 	}
 	if l.ActionName != "" && !l.IsDir {
-		return 6 // default window size for action animations
+		return 6
 	}
-	return 4 // default window size
+	return 4
 }
 
+// ResetGradient re-initialises the highlight gradient state pointer
+// (creating one if absent) and resets it. Used when the same lane
+// starts a new motif cycle.
 func (l *Lane) ResetGradient() {
 	if l.GradientState == nil {
 		l.GradientState = effects.NewGradientState()

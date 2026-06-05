@@ -17,6 +17,7 @@ import (
 	"github.com/snivilised/jaywalk/src/prism/highway"
 	"github.com/snivilised/jaywalk/src/prism/movies"
 	"github.com/snivilised/jaywalk/src/prism/widgets/banner"
+	"github.com/snivilised/jaywalk/src/prism/widgets/track"
 )
 
 // HighwayConfig is declared in registry.go alongside the other view
@@ -269,7 +270,7 @@ func (h *highwayPresenter) OnComplete(t *report.Traversal) {
 	<-h.done
 }
 
-func BuildHighwayLanes(cfg HighwayConfig, now uint) []highway.Lane {
+func BuildHighwayLanes(cfg HighwayConfig, now uint) []track.Lane {
 	// Static worker emoji allocation: shuffle once, assign sequentially per lane.
 	emojis := strings.Fields(cfg.WorkerPool)
 	if len(emojis) == 0 {
@@ -290,7 +291,7 @@ func BuildHighwayLanes(cfg HighwayConfig, now uint) []highway.Lane {
 		numLanes = defaultLaneCount
 	}
 
-	lanes := make([]highway.Lane, numLanes)
+	lanes := make([]track.Lane, numLanes)
 	for i := 0; i < numLanes; i++ {
 		var name string
 		if len(names) > 0 {
@@ -315,7 +316,7 @@ func BuildHighwayLanes(cfg HighwayConfig, now uint) []highway.Lane {
 			interval = 0
 		}
 
-		lanes[i] = highway.Lane{
+		lanes[i] = track.Lane{
 			Emoji:       deck[i%len(deck)],
 			Label:       label,
 			FrameFn:     def.Frames,

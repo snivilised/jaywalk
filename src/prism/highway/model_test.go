@@ -14,6 +14,7 @@ import (
 	"github.com/snivilised/jaywalk/src/prism/contract"
 	"github.com/snivilised/jaywalk/src/prism/movies"
 	"github.com/snivilised/jaywalk/src/prism/widgets/landing"
+	"github.com/snivilised/jaywalk/src/prism/widgets/track"
 )
 
 // ---------------------------------------------------------------------------
@@ -30,12 +31,14 @@ func testTheme() contract.Theme {
 
 func noopFrame(_ int) string { return "•" }
 
-func baseLane() Lane {
-	return Lane{Emoji: "🔍", JobEmoji: "🍎", Label: "test", FrameFn: noopFrame}
+func baseLane() track.Lane {
+	return track.Lane{
+		Emoji: "🔍", JobEmoji: "🍎", Label: "test", FrameFn: noopFrame,
+	}
 }
 
 func baseModel(lanes int) Model {
-	l := make([]Lane, lanes)
+	l := make([]track.Lane, lanes)
 	for i := range l {
 		l[i] = baseLane()
 	}
@@ -62,9 +65,9 @@ func invokeCmd(cmd tea.Cmd) tea.Msg {
 // ---------------------------------------------------------------------------
 
 var _ = Describe("NewModel", func() {
-	It("sets the lanes slice", func() {
+	It("sets the lanes slice on the track child", func() {
 		m := baseModel(3)
-		Expect(m.lanes).To(HaveLen(3))
+		Expect(m.track.Lanes()).To(HaveLen(3))
 	})
 
 	It("sets the tick rate", func() {
@@ -90,12 +93,6 @@ var _ = Describe("NewModel", func() {
 	It("stores the theme", func() {
 		m := baseModel(1)
 		Expect(m.theme).NotTo(Equal(contract.Theme{}))
-	})
-
-	It("initialises the counted map", func() {
-		m := baseModel(1)
-		Expect(m.counted).NotTo(BeNil())
-		Expect(m.counted).To(HaveLen(0))
 	})
 
 	It("initialises the status widget", func() {
@@ -153,6 +150,15 @@ var _ = Describe("Model.Update - WindowSizeMsg", func() {
 		Expect(cmd).To(BeNil())
 		Expect(updated.width).To(Equal(120))
 	})
+
+	It("forwards WidthMsg to the track child", func() {
+		m := baseModel(1)
+		// The track widget does not expose width directly, so
+		// the smoke check is that View produces a non-empty
+		// string at the new width.
+		updated, _ := update(m, tea.WindowSizeMsg{Width: 100})
+		Expect(updated.track.View().Content).NotTo(BeEmpty())
+	})
 })
 
 // ---------------------------------------------------------------------------
@@ -194,67 +200,20 @@ var _ = Describe("Model.Update - KeyMsg", func() {
 })
 
 // ---------------------------------------------------------------------------
-// initLaneSkip
-// ---------------------------------------------------------------------------
-
-var _ = Describe("initLaneSkip", func() {
-	It("returns zero factors when no lane has IntervalMs", func() {
-		lanes := []Lane{
-			{Emoji: "🔍", Label: "a", FrameFn: noopFrame},
-			{Emoji: "🔍", Label: "b", FrameFn: noopFrame},
-		}
-		factors := initLaneSkip(lanes, 50*time.Millisecond)
-		Expect(factors).To(HaveLen(2))
-		Expect(factors[0]).To(Equal(0))
-		Expect(factors[1]).To(Equal(0))
-	})
-
-	It("computes skip factor from IntervalMs / tickRate", func() {
-		lanes := []Lane{
-			{Emoji: "🔍", Label: "fast", FrameFn: noopFrame},
-			{Emoji: "🔍", Label: "slow", FrameFn: noopFrame, IntervalMs: 5000},
-			{Emoji: "🔍", Label: "medium", FrameFn: noopFrame, IntervalMs: 500},
-		}
-		// tickRate = 50ms → 5000/50 = 100, 500/50 = 10
-		factors := initLaneSkip(lanes, 50*time.Millisecond)
-		Expect(factors).To(HaveLen(3))
-		Expect(factors[0]).To(Equal(0))
-		Expect(factors[1]).To(Equal(100))
-		Expect(factors[2]).To(Equal(10))
-	})
-
-	It("defaults tickMs to 50 when zero", func() {
-		lanes := []Lane{
-			{Emoji: "🔍", Label: "slow", FrameFn: noopFrame, IntervalMs: 500},
-		}
-		factors := initLaneSkip(lanes, 0)
-		Expect(factors[0]).To(Equal(10))
-	})
-
-	It("clamps minimum skip factor to 1", func() {
-		lanes := []Lane{
-			{Emoji: "🔍", Label: "barely", FrameFn: noopFrame, IntervalMs: 25},
-		}
-		// 25/50 = 0 → clamped to 1
-		factors := initLaneSkip(lanes, 50*time.Millisecond)
-		Expect(factors[0]).To(Equal(1))
-	})
-})
-
-// ---------------------------------------------------------------------------
 // Model.Update - tickMsg
 // ---------------------------------------------------------------------------
 
 var _ = Describe("Model.Update - tickMsg", func() {
-	It("increments ticks on all lanes", func() {
+	It("forwards tickMsg to the track child, which advances lane ticks", func() {
 		m := baseModel(2)
-		Expect(m.lanes[0].tick).To(Equal(0))
-		Expect(m.lanes[1].tick).To(Equal(0))
+		Expect(m.track.Tick(0)).To(Equal(0))
+		Expect(m.track.Tick(1)).To(Equal(0))
 
 		updated, cmd := update(m, tickMsg(core.Now()))
-		Expect(updated.lanes[0].tick).To(Equal(1))
-		Expect(updated.lanes[1].tick).To(Equal(1))
-		_ = cmd
+		Expect(cmd).NotTo(BeNil(),
+			"root should reschedule the next tick (and possibly forward child cmds)")
+		Expect(updated.track.Tick(0)).To(Equal(1))
+		Expect(updated.track.Tick(1)).To(Equal(1))
 	})
 
 	It("reschedules the next tick when not done", func() {
@@ -293,9 +252,9 @@ var _ = Describe("Model.Update - tickMsg", func() {
 	})
 
 	It("advances slow lane fewer ticks than fast lane based on IntervalMs", func() {
-		fast := Lane{Emoji: "🔍", Label: "fast", FrameFn: noopFrame}
-		slow := Lane{Emoji: "🐢", Label: "slow", FrameFn: noopFrame, IntervalMs: 500}
-		lanes := []Lane{fast, slow}
+		fast := track.Lane{Emoji: "🔍", Label: "fast", FrameFn: noopFrame}
+		slow := track.Lane{Emoji: "🐢", Label: "slow", FrameFn: noopFrame, IntervalMs: 500}
+		lanes := []track.Lane{fast, slow}
 		m := NewModel(lanes, 50*time.Millisecond, "/root", 5, testTheme(), false)
 
 		// After 10 ticks at 50ms:
@@ -304,23 +263,8 @@ var _ = Describe("Model.Update - tickMsg", func() {
 		for range 10 {
 			m, _ = update(m, tickMsg(core.Now()))
 		}
-		Expect(m.lanes[0].tick).To(Equal(10), "fast lane should advance every tick")
-		Expect(m.lanes[1].tick).To(Equal(1), "slow lane should advance every 10th tick")
-	})
-
-	It("respects different intervals per lane", func() {
-		fast := Lane{Emoji: "🔍", Label: "fast", FrameFn: noopFrame}
-		medium := Lane{Emoji: "⚡", Label: "medium", FrameFn: noopFrame, IntervalMs: 200}
-		verySlow := Lane{Emoji: contract.Static.Emoji.Snail, Label: "very-slow", FrameFn: noopFrame, IntervalMs: 5000}
-		lanes := []Lane{fast, medium, verySlow}
-		m := NewModel(lanes, 50*time.Millisecond, "/root", 5, testTheme(), false)
-
-		for range 100 {
-			m, _ = update(m, tickMsg(core.Now()))
-		}
-		Expect(m.lanes[0].tick).To(Equal(100), "fast: every tick")
-		Expect(m.lanes[1].tick).To(Equal(25), "medium: 200/50=4, 100/4=25")
-		Expect(m.lanes[2].tick).To(Equal(1), "very-slow: 5000/50=100, 100/100=1")
+		Expect(m.track.Tick(0)).To(Equal(10), "fast lane should advance every tick")
+		Expect(m.track.Tick(1)).To(Equal(1), "slow lane should advance every 10th tick")
 	})
 
 	It("pushes elapsed to the status widget in real mode on every tick", func() {
@@ -453,6 +397,12 @@ var _ = Describe("Model.Update - CensusMsg", func() {
 		Expect(updated.maxDepth).To(Equal(uint(10)))
 	})
 
+	It("forwards MaxDepth to the track child", func() {
+		m := baseModel(1)
+		updated, _ := update(m, CensusMsg{TotalFiles: 5, MaxDepth: 12})
+		Expect(updated.track.MaxDepth()).To(Equal(uint(12)))
+	})
+
 	It("does not decrease maxDepth", func() {
 		m := baseModel(1)
 		Expect(m.maxDepth).To(Equal(uint(5)))
@@ -470,7 +420,7 @@ var _ = Describe("Model.Update - CensusMsg", func() {
 var _ = Describe("Model.Update - MotifMsg", func() {
 	It("updates the current lane and advances the index round-robin", func() {
 		m := baseModel(2)
-		Expect(m.currentLaneIdx).To(Equal(0))
+		Expect(m.track.CurrentLaneIdx()).To(Equal(0))
 
 		first := MotifMsg{Data: MotifData{
 			Path: "/root/a.txt", Name: "a.txt", IsDir: false, Depth: 1,
@@ -478,38 +428,42 @@ var _ = Describe("Model.Update - MotifMsg", func() {
 		updated1, _ := update(m, first)
 		// cmd is the status spring's first-frame cmd; the
 		// MotifMsg increment re-targets the bar to (done/total).
-		Expect(updated1.lanes[0].Path).To(Equal("/root/a.txt"))
-		Expect(updated1.lanes[0].Name).To(Equal("a.txt"))
-		Expect(updated1.lanes[0].IsDir).To(BeFalse())
-		Expect(updated1.lanes[0].Depth).To(Equal(uint(1)))
-		Expect(updated1.currentLaneIdx).To(Equal(1))
+		Expect(updated1.track.Lanes()[0].Path).To(Equal("/root/a.txt"))
+		Expect(updated1.track.Lanes()[0].Name).To(Equal("a.txt"))
+		Expect(updated1.track.Lanes()[0].IsDir).To(BeFalse())
+		Expect(updated1.track.Lanes()[0].Depth).To(Equal(uint(1)))
+		Expect(updated1.track.CurrentLaneIdx()).To(Equal(1))
 
 		second := MotifMsg{Data: MotifData{
 			Path: "/root/b.txt", Name: "b.txt", IsDir: false, Depth: 2,
 		}}
 		updated2, _ := update(updated1, second)
-		Expect(updated2.lanes[1].Path).To(Equal("/root/b.txt"))
-		Expect(updated2.currentLaneIdx).To(Equal(0))
+		Expect(updated2.track.Lanes()[1].Path).To(Equal("/root/b.txt"))
+		Expect(updated2.track.CurrentLaneIdx()).To(Equal(0))
 
 		// Third wraps around to lane 0
 		third := MotifMsg{Data: MotifData{
 			Path: "/root/c.txt", Name: "c.txt", IsDir: false, Depth: 3,
 		}}
 		updated3, _ := update(updated2, third)
-		Expect(updated3.lanes[0].Path).To(Equal("/root/c.txt"))
-		Expect(updated3.currentLaneIdx).To(Equal(1))
+		Expect(updated3.track.Lanes()[0].Path).To(Equal("/root/c.txt"))
+		Expect(updated3.track.CurrentLaneIdx()).To(Equal(1))
 	})
 
 	It("counts each unique path once for progress", func() {
 		m := baseModel(1)
-		m.totalFiles = 10
-		Expect(m.files).To(Equal(0))
+		updated, _ := update(m, CensusMsg{TotalFiles: 10})
+		// totalFiles = 10, but the new code seeds
+		// status.Total() with TotalFiles + TotalDirs. With
+		// TotalDirs = 0, total = 10.
+		Expect(updated.status.Total()).To(Equal(10))
 
 		// First unique path
-		updated, _ := update(m, MotifMsg{Data: MotifData{
+		updated, _ = update(m, MotifMsg{Data: MotifData{
 			Path: "/root/a.txt", IsDir: false,
 		}})
-		Expect(updated.files).To(Equal(1))
+		Expect(updated.track.Files()).To(Equal(1))
+		Expect(updated.status.Done()).To(Equal(1))
 
 		// Same path again - not counted (no IncDoneMsg, no
 		// spring re-target, cmd is nil).
@@ -517,24 +471,24 @@ var _ = Describe("Model.Update - MotifMsg", func() {
 			Path: "/root/a.txt", IsDir: false,
 		}})
 		Expect(cmd).To(BeNil(), "duplicate path must not re-target the spring")
-		Expect(updated.files).To(Equal(1))
+		Expect(updated.track.Files()).To(Equal(1))
 
 		// Different path - counted
 		updated, _ = update(updated, MotifMsg{Data: MotifData{
 			Path: "/root/b.txt", IsDir: false,
 		}})
-		Expect(updated.files).To(Equal(2))
+		Expect(updated.track.Files()).To(Equal(2))
 	})
 
 	It("increments dirs for directories", func() {
 		m := baseModel(1)
-		Expect(m.dirs).To(Equal(0))
+		Expect(m.track.Dirs()).To(Equal(0))
 
 		updated, _ := update(m, MotifMsg{Data: MotifData{
 			Path: "/root/src", IsDir: true,
 		}})
-		Expect(updated.dirs).To(Equal(1))
-		Expect(updated.files).To(Equal(0))
+		Expect(updated.track.Dirs()).To(Equal(1))
+		Expect(updated.track.Files()).To(Equal(0))
 	})
 
 	It("sets action and pipeline info on the lane", func() {
@@ -546,12 +500,12 @@ var _ = Describe("Model.Update - MotifMsg", func() {
 			Err: errors.New("boom"),
 		}})
 
-		Expect(updated.lanes[0].ActionName).To(Equal("encode"))
-		Expect(updated.lanes[0].PipelineName).To(Equal("pipe"))
-		Expect(updated.lanes[0].CommandOutput).To(Equal("ok"))
-		Expect(updated.lanes[0].ExecutionString).To(Equal("ffmpeg"))
-		Expect(updated.lanes[0].DryRun).To(BeTrue())
-		Expect(updated.lanes[0].Err).To(MatchError("boom"))
+		Expect(updated.track.Lanes()[0].ActionName).To(Equal("encode"))
+		Expect(updated.track.Lanes()[0].PipelineName).To(Equal("pipe"))
+		Expect(updated.track.Lanes()[0].CommandOutput).To(Equal("ok"))
+		Expect(updated.track.Lanes()[0].ExecutionString).To(Equal("ffmpeg"))
+		Expect(updated.track.Lanes()[0].DryRun).To(BeTrue())
+		Expect(updated.track.Lanes()[0].Err).To(MatchError("boom"))
 	})
 
 	It("computes percent during navigation from done/total", func() {
