@@ -1,7 +1,7 @@
 package movies
 
 import (
-	"github.com/charmbracelet/bubbles/spinner"
+	"charm.land/bubbles/v2/spinner"
 	"github.com/mattn/go-runewidth"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
