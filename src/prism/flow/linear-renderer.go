@@ -142,6 +142,15 @@ func (r *renderer) renderAnsiBanner(b *strings.Builder) {
 
 // Show renders a single Motif immediately to the output writer.
 func (r *renderer) Show(motif contract.Motif) {
+	line := r.RenderLine(motif)
+	_, _ = lipgloss.Fprint(r.writer, line)
+}
+
+// RenderLine produces the rendered string for a single Motif. The
+// returned string always ends with a trailing newline. Callers that
+// drive output line-by-line (eg the porthole view's content buffer)
+// use this directly; Show is the io.Writer-bound form.
+func (r *renderer) RenderLine(motif contract.Motif) string {
 	prefix := r.branchPrefix(motif)
 	depth := r.theme.BranchStyle.Render(prefix)
 
@@ -169,9 +178,13 @@ func (r *renderer) Show(motif contract.Motif) {
 		name = r.file(motif)
 	}
 
-	_, _ = lipgloss.Fprintf(r.writer, "%s%s\n", depth, name)
+	var b strings.Builder
+	b.WriteString(depth)
+	b.WriteString(name)
+	b.WriteByte('\n')
 
 	r.updateBranchStack(motif)
+	return b.String()
 }
 
 func (r *renderer) itemLabel(motif contract.Motif) string {

@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"fmt"
 	"math/rand/v2"
 	"os"
 	"sync"
@@ -185,14 +184,12 @@ func (l *linear) NeedsPeerInfo() bool {
 // preview. Views can use these counts to display a progress indicator
 // during the live traversal.
 func (l *linear) OnPeerInfoBegin(files, dirs uint, peerInfoMap map[string]*core.PeerInfo) {
-	fmt.Printf("🐸 DEBUG: linear.OnPeerInfoBegin (files: %d, dirs:%d) 🐸\n", files, dirs)
 	l.peerInfo = peerInfoMap
 }
 
 // OnPeerInfoEnd is called when the live traversal completes, allowing
 // the view to tear down any progress indicator it displayed.
 func (l *linear) OnPeerInfoEnd() {
-	fmt.Println("🐸 DEBUG: linear.OnPeerInfoEnd 🐸")
 }
 
 func (l *linear) ensureParentRendered(node *core.Node) {

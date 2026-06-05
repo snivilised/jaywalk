@@ -1,6 +1,7 @@
 package command_test
 
 import (
+	"errors"
 	"reflect"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -8,6 +9,7 @@ import (
 	"github.com/snivilised/jaywalk/src/agenor/test/hanno"
 	"github.com/snivilised/jaywalk/src/app/command"
 	"github.com/snivilised/jaywalk/src/app/report"
+	"github.com/snivilised/jaywalk/src/locale"
 	"github.com/snivilised/jaywalk/src/prism/movies"
 	"github.com/snivilised/li18ngo"
 	nef "github.com/snivilised/nefilim"
@@ -481,6 +483,38 @@ var _ = Describe("Bootstrap", Ordered, func() {
 					Expect(bootstrap.UI).NotTo(BeNil())
 					Expect(presenterType(bootstrap.UI)).To(Equal("*ui.linear"))
 				})
+			})
+		})
+
+		// ---------------------------------------------------------------
+		// Porthole view rejection: porthole is incompatible with sprint;
+		// the guard in PersistentPreRunE must return an error before
+		// constructing any presenter.
+		// ---------------------------------------------------------------
+
+		Context("given: --tui porthole on sprint", func() {
+			It("🧪 should: return an error because porthole is incompatible with sprint", func() {
+				bootstrap := command.Bootstrap{}
+				tester := hanno.CommandTester{
+					Args: []string{
+						"--tui", "porthole",
+						"sprint", ".",
+						"--action", "noop",
+						"--theme", "system",
+					},
+					Root: bootstrap.Root(applyTestConfig),
+				}
+				_, err := tester.Execute()
+
+				Expect(err).NotTo(BeNil(),
+					"sprint with --tui porthole must fail")
+
+				var target *locale.PortholeViewNotSupportedBySprintError
+				Expect(errors.As(err, &target)).To(BeTrue(),
+					"error should be PortholeViewNotSupportedBySprintError, got: %v", err)
+
+				Expect(bootstrap.UI).To(BeNil(),
+					"UI must remain nil when porthole guard rejects sprint")
 			})
 		})
 	})

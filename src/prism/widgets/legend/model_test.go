@@ -265,7 +265,11 @@ var _ = Describe("View separator and pipes", func() {
 	styles := makeStyles()
 	width := 200
 
-	It("emits the closing ├─────┤ separator when at least one flag is active", func() {
+	It("does NOT emit any surrounding border (the view controls layout)", func() {
+		// The legend widget is layout-agnostic: it renders the flag
+		// entries only. Surrounding ├─────┤ borders are the parent
+		// view's responsibility, so the legend must not include them
+		// in its own output.
 		info := modelWith(contract.Static.Emoji.Padlock, "", "", 0, 0, false)
 		m := legend.NewModel(
 			legend.WithInfo(info),
@@ -273,8 +277,8 @@ var _ = Describe("View separator and pipes", func() {
 			legend.WithStyles(styles),
 		)
 		out := m.View()
-		Expect(out).To(ContainSubstring("├"))
-		Expect(out).To(ContainSubstring("┤"))
+		Expect(out).NotTo(ContainSubstring("├"))
+		Expect(out).NotTo(ContainSubstring("┤"))
 	})
 
 	It("composes multiple widgets into a single line with the pipe separator", func() {
@@ -359,6 +363,50 @@ var _ = Describe("View wrap behaviour", func() {
 		// makes 3 newline-terminated lines).
 		lines := strings.Split(strings.TrimRight(out, "\n"), "\n")
 		Expect(len(lines)).To(BeNumerically(">=", 2))
+	})
+})
+
+// ---------------------------------------------------------------------------
+// Height - informs parent viewports how many rows the legend will occupy
+// ---------------------------------------------------------------------------
+
+var _ = Describe("Height", func() {
+	styles := makeStyles()
+	width := 200
+
+	It("returns 0 when position is empty (no flags rendered)", func() {
+		m := legend.NewModel(
+			legend.WithInfo(legend.Info{Position: ""}),
+			legend.WithWidth(width),
+			legend.WithStyles(styles),
+		)
+		Expect(m.Height()).To(Equal(0))
+	})
+
+	It("returns 0 when position is set but no flag is active", func() {
+		m := legend.NewModel(
+			legend.WithInfo(legend.Info{
+				Position: contract.PositionBottom,
+				Header:   contract.HeaderInfo{},
+			}),
+			legend.WithWidth(width),
+			legend.WithStyles(styles),
+		)
+		Expect(m.Height()).To(Equal(0))
+	})
+
+	It("returns the number of entry lines (no surrounding borders) when at least one flag is active", func() {
+		// The legend is layout-agnostic: it returns the count of
+		// entry lines it will render. Surrounding borders are the
+		// view's responsibility and are NOT included in this count.
+		info := modelWith(contract.Static.Emoji.Padlock, "*.go", "", 0, 0, false)
+		m := legend.NewModel(
+			legend.WithInfo(info),
+			legend.WithWidth(width),
+			legend.WithStyles(styles),
+		)
+		h := m.Height()
+		Expect(h).To(BeNumerically(">=", 1)) // >= 1 entry
 	})
 })
 

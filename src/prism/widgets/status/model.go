@@ -123,3 +123,9 @@ func (m Model) Init() tea.Cmd { return nil }
 // view uses this to decide whether to render the "press space to
 // exit" footer.
 func (m Model) IsDone() bool { return m.isDone }
+
+// Height returns the number of terminal rows the rendered status
+// row occupies. The status widget is a single line; this is a
+// constant. Host views (highway, porthole) consult this to budget
+// vertical space for the status row without re-rendering.
+func (m Model) Height() int { return 1 }

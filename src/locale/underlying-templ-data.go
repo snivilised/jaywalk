@@ -375,6 +375,27 @@ Use --action or --pipeline to name a config-defined operation.
 	},
 
 	// -------------------------------------------------------------------------
+	// ui: Error messages
+	// -------------------------------------------------------------------------
+
+	"porthole-view-not-supported-by-sprint.static-error": {
+		MessageID:   "porthole-view-not-supported-by-sprint.static-error",
+		Seed:        "PortholeViewNotSupportedBySprint",
+		TypeName:    enums.UnderlyingTypeStaticErrorWrapperMsg,
+		Description: "Porthole view not supported by sprint command error",
+		Story:       "Error returned when porthole view is requested via the sprint command",
+		Other:       "{{.Wrapped}}",
+		Fields: []lingo.UnderlyingField{
+			{
+				Note:   "Wrapped",
+				GoType: "error",
+				Tale:   "The underlying error representing the failure to use porthole with sprint",
+			},
+		},
+		File: "ui",
+	},
+
+	// -------------------------------------------------------------------------
 	// config: General messages
 	// -------------------------------------------------------------------------
 

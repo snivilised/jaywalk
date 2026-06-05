@@ -21,8 +21,10 @@ func (m Model) View() tea.View {
 	}
 
 	m.renderHeader(&b)
-	if m.FlagsRowPosition == contract.PositionTop {
+	if m.FlagsRowPosition == contract.PositionTop && m.hasFlags() {
+		m.writeSeparator(&b)
 		m.writeLegend(&b)
+		m.writeSeparator(&b)
 	}
 
 	// Lane rows + separators come from the track child. The track
@@ -30,8 +32,10 @@ func (m Model) View() tea.View {
 	// own styling and rendering.
 	b.WriteString(m.track.View().Content)
 
-	if m.FlagsRowPosition == contract.PositionBottom || m.FlagsRowPosition == "" {
+	if (m.FlagsRowPosition == contract.PositionBottom || m.FlagsRowPosition == "") && m.hasFlags() {
+		m.writeSeparator(&b)
 		m.writeLegend(&b)
+		m.writeSeparator(&b)
 	}
 	m.renderSummary(&b)
 
@@ -47,6 +51,34 @@ func (m Model) View() tea.View {
 	v := tea.NewView(b.String())
 	v.AltScreen = true
 	return v
+}
+
+// writeSeparator emits a horizontal "├─────┤" border line, used to
+// frame the legend section on both sides. The legend widget itself
+// is layout-agnostic; the surrounding borders are the view's concern.
+func (m Model) writeSeparator(b *strings.Builder) {
+	dashes := strings.Repeat("─", max(0, m.width-2))
+	b.WriteString(m.theme.BorderStyle.Render("├" + dashes + "┤"))
+	b.WriteString("\n")
+}
+
+// hasFlags reports whether the legend section will render any
+// content. Used to skip emitting the surrounding separator borders
+// when there are no active flags, so the layout collapses cleanly.
+func (m Model) hasFlags() bool {
+	lm := legend.NewModel(
+		legend.WithInfo(legend.Info{
+			Position: m.FlagsRowPosition,
+			Header:   m.header,
+		}),
+		legend.WithWidth(m.width),
+		legend.WithStyles(legend.Styles{
+			LabelStyle:  m.theme.SummaryLabelStyle.Width(0),
+			ValueStyle:  m.theme.SummaryValueStyle,
+			BorderStyle: m.theme.BorderStyle,
+		}),
+	)
+	return lm.Height() > 0
 }
 
 // writeBanner constructs a banner.Model on the fly using the

@@ -1,0 +1,549 @@
+package scroll
+
+import (
+	"strings"
+	"time"
+
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
+
+	"github.com/snivilised/jaywalk/src/prism/contract"
+	"github.com/snivilised/jaywalk/src/prism/effects"
+	"github.com/snivilised/jaywalk/src/prism/flow"
+	"github.com/snivilised/jaywalk/src/prism/widgets/banner"
+	"github.com/snivilised/jaywalk/src/prism/widgets/legend"
+	"github.com/snivilised/jaywalk/src/prism/widgets/scrollbar"
+	"github.com/snivilised/jaywalk/src/prism/widgets/status"
+)
+
+// WindowSizeCallback is called when the terminal is resized. The
+// argument is the new usable content width inside borders and the
+// scrollbar gutter. The presenter uses this to re-justify landing
+// strips at the correct column after a resize.
+type WindowSizeCallback func(bodyWidth uint)
+
+// bufEntry pairs a rendered line with the raw parameters used to
+// produce it. On terminal resize the model re-renders every buffered
+// entry with the updated bodyWidth so landing strips stay correctly
+// justified. branchStack is the branch state AFTER this line was
+// rendered, used by the view to re-render the last line with the
+// current activity frame.
+type bufEntry struct {
+	line        string
+	params      RenderParams
+	branchStack []bool
+}
+
+// Model is the bubbletea Model for the porthole view. It owns the
+// chrome (banner, header, status, footer), the content buffer
+// ([]bufEntry), and the viewport widget that renders the buffered
+// lines. The flow renderer is used to convert Motif events into
+// styled strings which are appended to the buffer.
+type Model struct {
+	width             int
+	height            int
+	start             time.Time
+	tickRate          time.Duration
+	rootPath          string
+	pipeline          string
+	subscriptionLabel string
+	caption           string
+	dateFormat        string
+	theme             contract.Theme
+
+	// contentBuf holds fully-rendered lines paired with the raw render
+	// params. The buffer is truncated from the front when it exceeds
+	// MaxContentBufferLines, dropping ContentBufferTruncateStep lines
+	// at a time to keep navigation responsive.
+	contentBuf []bufEntry
+
+	status status.Model
+
+	header contract.HeaderInfo
+
+	bannerInfo banner.Info
+
+	done   bool
+	errMsg string
+
+	maxDepth  uint
+	noRecurse bool
+	startedAt time.Time
+
+	// flagsRowPosition controls where the legend/flags row is rendered.
+	// Defaults to contract.PositionBottom (above the status line).
+	flagsRowPosition string
+
+	// autoScroll tracks whether the viewport should automatically
+	// follow new content. Set to true initially and when new content
+	// arrives. Set to false when the user scrolls manually (arrow
+	// keys, page-up/down). Re-enabled when the user scrolls back
+	// to the very bottom.
+	autoScroll bool
+
+	// yOffset is the persisted viewport scroll offset. It is set
+	// from the viewport after each render so that manual scroll
+	// position survives across render cycles (the viewport is
+	// recreated on every View call).
+	yOffset int
+
+	// onWindowSize is called when the terminal is resized so the
+	// presenter can update its bodyWidth for landing strip
+	// justification.
+	onWindowSize WindowSizeCallback
+
+	// Activity animation state. frameFn generates animation frames;
+	// activityTick advances on each tickMsg; activityFrame holds the
+	// current rendered frame string; gradientState drives the colour
+	// sweep.
+	frameFn          contract.FrameFunc
+	activityTick     int
+	activityFrame    string
+	activityGradient *contract.ResolvedGradient
+	gradientState    *effects.GradientState
+}
+
+func NewModel(rootPath string, maxDepth uint, theme contract.Theme, noRecurse bool) Model {
+	return Model{
+		width:      80,
+		rootPath:   rootPath,
+		maxDepth:   maxDepth,
+		noRecurse:  noRecurse,
+		tickRate:   TickRate,
+		theme:      theme,
+		autoScroll: true,
+		status: status.New(
+			status.WithTheme(theme),
+			status.WithFields(status.FieldSelectors{
+				ShowFiles:    true,
+				ShowDirs:     true,
+				ShowErrors:   true,
+				ShowSkipped:  true,
+				ShowProgress: false,
+				ShowComplete: true,
+				ShowElapsed:  true,
+			}),
+			status.WithWidth(10),
+		),
+		startedAt: time.Now(),
+	}
+}
+
+// SetWindowSizeCallback registers a function that is called whenever
+// the terminal is resized. The callback receives the new usable
+// content width (window width minus borders and scrollbar gutter).
+func (m *Model) SetWindowSizeCallback(fn WindowSizeCallback) {
+	m.onWindowSize = fn
+}
+
+// SetActivity configures the animation displayed next to the latest
+// content line. The frameFn generates per-tick frame strings; the
+// gradient (if non-nil) paints them with an interpolated colour sweep.
+func (m *Model) SetActivity(frameFn contract.FrameFunc, gradient *contract.ResolvedGradient) {
+	m.frameFn = frameFn
+	m.activityGradient = gradient
+	if gradient != nil && gradient.Steps > 0 {
+		hiR, hiG, hiB, _ := gradient.Hi.RGBA()
+		loR, loG, loB, _ := gradient.Lo.RGBA()
+		steps := effects.InterpolateBetweenRGBA(
+			uint8(hiR>>8), uint8(hiG>>8), uint8(hiB>>8), //nolint:gosec // channel values are 0-65535, >>8 yields 0-255
+			uint8(loR>>8), uint8(loG>>8), uint8(loB>>8), //nolint:gosec // channel values are 0-65535, >>8 yields 0-255
+			gradient.Steps,
+		)
+		gs := effects.NewGradientState()
+		gs.SetSteps(steps)
+		m.gradientState = gs
+	}
+}
+
+func (m Model) Init() tea.Cmd {
+	return tea.Tick(m.tickRate, func(t time.Time) tea.Msg {
+		return tickMsg(t)
+	})
+}
+
+func (m Model) RootPath() string {
+	return m.rootPath
+}
+
+func (m Model) Caption() string {
+	return m.caption
+}
+
+func (m Model) Pipeline() string {
+	return m.pipeline
+}
+
+func (m Model) Buffer() []string {
+	lines := make([]string, len(m.contentBuf))
+	for i, e := range m.contentBuf {
+		lines[i] = e.line
+	}
+	return lines
+}
+
+func (m Model) IsDone() bool {
+	return m.done
+}
+
+func (m Model) BannerInfo() banner.Info {
+	return m.bannerInfo
+}
+
+type tickMsg time.Time
+
+func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.width = msg.Width
+		m.height = msg.Height
+		m.rerender()
+
+		if m.onWindowSize != nil {
+			bw := m.contentWidth()
+			m.onWindowSize(uint(bw)) //nolint:gosec // contentWidth() is always non-negative and fits in uint
+		}
+
+		var cmd tea.Cmd
+		m.status, cmd = m.dispatchStatus(status.WidthMsg{Width: msg.Width})
+		return &m, cmd
+
+	case tea.KeyMsg:
+		switch {
+		case m.done && msg.String() == "space":
+			return &m, tea.Quit
+		case msg.String() == "ctrl+c":
+			return &m, tea.Quit
+		case msg.String() == "up":
+			m.autoScroll = false
+			m.yOffset--
+			if m.yOffset < 0 {
+				m.yOffset = 0
+			}
+			return &m, nil
+		case msg.String() == "down":
+			if !m.autoScroll {
+				m.yOffset++
+				m.autoScroll = m.atBottom()
+			}
+			return &m, nil
+		case msg.String() == "pgup":
+			m.autoScroll = false
+			m.yOffset -= m.viewportHeight()
+			if m.yOffset < 0 {
+				m.yOffset = 0
+			}
+			return &m, nil
+		case msg.String() == "pgdown":
+			if !m.autoScroll {
+				m.yOffset += m.viewportHeight()
+				m.autoScroll = m.atBottom()
+			}
+			return &m, nil
+		case msg.String() == "home":
+			m.autoScroll = false
+			m.yOffset = 0
+			return &m, nil
+		case msg.String() == "end":
+			m.autoScroll = true
+			m.yOffset = 0
+			return &m, nil
+		}
+		return &m, nil
+
+	case tickMsg:
+		if m.done {
+			return &m, nil
+		}
+		if m.start.IsZero() {
+			m.start = time.Now()
+		}
+
+		// Advance the activity animation.
+		if m.frameFn != nil {
+			m.activityTick++
+			m.activityFrame = m.frameFn(m.activityTick)
+			if m.gradientState != nil {
+				m.gradientState.Update(1)
+			}
+		}
+
+		tickCmd := tea.Tick(m.tickRate, func(t time.Time) tea.Msg {
+			return tickMsg(t)
+		})
+
+		var elapsedCmd tea.Cmd
+		m.status, elapsedCmd = m.dispatchStatus(status.ElapsedMsg{Elapsed: time.Since(m.start)})
+		if elapsedCmd != nil {
+			return &m, tea.Batch(tickCmd, elapsedCmd)
+		}
+		return &m, tickCmd
+
+	case OvertureMsg:
+		m.rootPath = msg.Root
+		m.subscriptionLabel = msg.SubscriptionLabel
+		m.startedAt = msg.StartedAt
+		m.caption = msg.Caption
+		m.dateFormat = msg.DateFormat
+		m.pipeline = msg.PipelineName
+
+		m.header = msg.Header
+
+		m.bannerInfo = msg.Banner
+
+		m.flagsRowPosition = msg.FlagsRowPosition
+		if m.flagsRowPosition != contract.PositionTop && m.flagsRowPosition != contract.PositionBottom {
+			m.flagsRowPosition = contract.PositionBottom
+		}
+
+		return &m, nil
+
+	case CompleteMsg:
+		m.done = true
+		m.errMsg = ""
+		for _, e := range msg.Errs {
+			if e != nil {
+				m.errMsg = e.Error()
+				break
+			}
+		}
+
+		m.status, _ = m.dispatchStatus(status.CountsMsg{
+			Files: msg.Files, Dirs: msg.Dirs, Errors: len(msg.Errs),
+		})
+		m.status, _ = m.dispatchStatus(status.ElapsedMsg{Elapsed: msg.Elapsed})
+		var cmd tea.Cmd
+		m.status, cmd = m.dispatchStatus(status.DoneMsg{
+			Done: msg.Files, IsDone: true, Err: m.errMsg,
+		})
+		if cmd != nil {
+			return &m, tea.Batch(cmd)
+		}
+
+	case ContentLineMsg:
+		line := strings.TrimRight(msg.Line, "\n")
+		if line == "" {
+			break
+		}
+
+		// Split multi-line entries (action output with embedded newlines)
+		// into individual lines so each buffer entry is a single display
+		// line. This matches the linear view which writes each line
+		// directly to the terminal.
+		maxW := m.contentWidth()
+		for _, sub := range strings.Split(line, "\n") {
+			sub = truncateStyled(sub, maxW)
+			if sub != "" {
+				m.contentBuf = append(m.contentBuf, bufEntry{
+					line:        sub,
+					params:      msg.Params,
+					branchStack: msg.BranchStack,
+				})
+			}
+		}
+
+		if len(m.contentBuf) > MaxContentBufferLines {
+			m.contentBuf = m.contentBuf[len(m.contentBuf)-ContentBufferTruncateStep:]
+		}
+
+	default:
+		return &m, nil
+	}
+	return &m, nil
+}
+
+func (m Model) dispatchStatus(msg tea.Msg) (status.Model, tea.Cmd) {
+	r, cmd := m.status.Update(msg)
+	return r.(status.Model), cmd //nolint:errcheck // known concrete type
+}
+
+// tickMsg is the internal tick message used to advance elapsed time.
+var _ = tickMsg(time.Time{})
+
+// lastLineBranchStack returns the branch state BEFORE the last line
+// in the buffer, which is what flow.RenderLine needs to re-render
+// that line. Returns nil when the buffer has fewer than 2 lines.
+func (m Model) lastLineBranchStack() []bool {
+	if len(m.contentBuf) < 2 {
+		return nil
+	}
+	return m.contentBuf[len(m.contentBuf)-2].branchStack
+}
+
+// contentWidth returns the usable content width inside the viewport,
+// accounting for left border (1), right border (1), and scrollbar gutter.
+func (m Model) contentWidth() int {
+	w := m.width - scrollbar.ScrollbarGutterWidth - 2
+	if w < 0 {
+		return 0
+	}
+	return w
+}
+
+// viewportHeight returns the number of visible rows in the content
+// body, used as the scroll step for Page-Up / Page-Down.
+func (m Model) viewportHeight() int {
+	h := m.height - 6 - m.legendSectionHeight()
+	if h < 1 {
+		return 1
+	}
+	return h
+}
+
+// atBottom reports whether the viewport's bottom edge is at or past
+// the last line of content. Used to re-enable auto-scroll when the
+// user scrolls down to the latest content.
+func (m Model) atBottom() bool {
+	vh := m.viewportHeight()
+	if vh < 1 {
+		return true
+	}
+	return m.yOffset+vh >= len(m.contentBuf)
+}
+
+// rerender re-renders every buffered line with the current bodyWidth
+// so landing strips stay correctly justified after a terminal resize.
+// It replays the branch stack progression sequentially because each
+// line's rendering depends on the branch state left by the previous line.
+func (m *Model) rerender() {
+	if len(m.contentBuf) == 0 {
+		return
+	}
+
+	bodyWidth := uint(m.contentWidth()) //nolint:gosec // contentWidth() is always non-negative and fits in uint
+	branchStack := make([]bool, 0)
+	newBuf := make([]bufEntry, 0, len(m.contentBuf))
+
+	for _, entry := range m.contentBuf {
+		p := entry.params
+		result := flow.RenderLine(
+			p.Path, p.Name, p.IsDir, p.Depth,
+			p.ActionName, p.PipelineName,
+			p.CommandOutput, p.ExecutionString,
+			p.DryRun, p.Err,
+			p.IsLast, p.IsPipelineStep, p.IsLastStep,
+			p.VisualDepth,
+			branchStack,
+			bodyWidth,
+			m.theme,
+			"",
+		)
+		branchStack = result.BranchStack
+
+		line := strings.TrimRight(result.Line, "\n")
+		if line == "" {
+			continue
+		}
+		for _, sub := range strings.Split(line, "\n") {
+			sub = truncateStyled(sub, int(bodyWidth)) //nolint:gosec // bodyWidth is always a reasonable terminal width
+			if sub != "" {
+				newBuf = append(newBuf, bufEntry{
+					line:        sub,
+					params:      entry.params,
+					branchStack: result.BranchStack,
+				})
+			}
+		}
+	}
+	m.contentBuf = newBuf
+}
+
+// legendHeight returns the number of terminal rows the legend will
+// occupy (entry lines only) given the current flags configuration.
+// Returns 0 when the legend is hidden or has no flags active so the
+// viewport can claim the full body height in that case. Surrounding
+// borders are the view's responsibility - use legendSectionHeight
+// for the total section size including the two framing separators.
+func (m Model) legendHeight() int {
+	lm := legend.NewModel(
+		legend.WithInfo(legend.Info{
+			Position: m.flagsRowPosition,
+			Header:   m.header,
+		}),
+		legend.WithWidth(m.width),
+		legend.WithStyles(legend.Styles{
+			LabelStyle:  m.theme.SummaryLabelStyle.Width(0),
+			ValueStyle:  m.theme.SummaryValueStyle,
+			BorderStyle: m.theme.BorderStyle,
+		}),
+	)
+	return lm.Height()
+}
+
+// legendSectionHeight returns the total number of rows the legend
+// section will occupy in the view: entry lines + 2 separator borders
+// (one above and one below the flags). Returns 0 when no flags are
+// active so callers can simply skip the section.
+func (m Model) legendSectionHeight() int {
+	h := m.legendHeight()
+	if h == 0 {
+		return 0
+	}
+	return h + 2
+}
+
+// writeLegend renders the flags/legend row (cascade, filter, sampler)
+// into the builder. It mirrors the highway's writeLegend pattern:
+// construct a transient legend.Model on the fly, render, and write.
+// The row is a no-op when no flag is active.
+func (m Model) writeLegend(b *strings.Builder) {
+	lm := legend.NewModel(
+		legend.WithInfo(legend.Info{
+			Position: m.flagsRowPosition,
+			Header:   m.header,
+		}),
+		legend.WithWidth(m.width),
+		legend.WithStyles(legend.Styles{
+			LabelStyle:  m.theme.SummaryLabelStyle.Width(0),
+			ValueStyle:  m.theme.SummaryValueStyle,
+			BorderStyle: m.theme.BorderStyle,
+		}),
+	)
+	if out := lm.View(); out != "" {
+		b.WriteString(out)
+	}
+}
+
+// truncateStyled truncates a lipgloss-styled string to maxVisible visible
+// characters, correctly skipping ANSI escape sequences when measuring width.
+func truncateStyled(s string, maxVisible int) string {
+	if maxVisible <= 0 {
+		return ""
+	}
+	if lipgloss.Width(s) <= maxVisible {
+		return s
+	}
+
+	visible := 0
+	runes := []rune(s)
+	var b strings.Builder
+
+	for i := 0; i < len(runes); i++ {
+		r := runes[i]
+
+		// Skip ANSI CSI sequences: ESC [ <params 0x30-0x3F> <final 0x40-0x7E>
+		if r == 0x1b && i+1 < len(runes) && runes[i+1] == '[' {
+			b.WriteRune(r)
+			i++
+			b.WriteRune(runes[i])
+			i++
+			for i < len(runes) && runes[i] >= 0x30 && runes[i] <= 0x3f {
+				b.WriteRune(runes[i])
+				i++
+			}
+			if i < len(runes) {
+				b.WriteRune(runes[i])
+			}
+			continue
+		}
+
+		rw := lipgloss.Width(string(r))
+		if visible+rw > maxVisible {
+			break
+		}
+		b.WriteRune(r)
+		visible += rw
+	}
+
+	return b.String()
+}

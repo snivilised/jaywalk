@@ -1,6 +1,7 @@
 package command
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -234,6 +235,13 @@ func (b *Bootstrap) Root(options ...ConfigureAppOptionFn) *cobra.Command {
 					if cmd.Name() == "sprint" {
 						mode = ui.ModeHighway
 					}
+				}
+
+				// Porthole is incompatible with sprint; reject early.
+				if mode == ui.ModePorthole && cmd.Name() == "sprint" {
+					return locale.NewPortholeViewNotSupportedBySprintError(
+						errors.New("porthole view is not supported by sprint"),
+					)
 				}
 
 				// Bootstrap is view-agnostic. The polymorphic

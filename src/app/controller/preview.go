@@ -2,7 +2,6 @@ package controller
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/snivilised/jaywalk/src/agenor"
 	"github.com/snivilised/jaywalk/src/agenor/core"
@@ -94,7 +93,6 @@ func (b *previewBuffer) ascend(node *core.Node) {
 }
 
 func (b *previewBuffer) finalise() PeerInfoMap {
-	fmt.Println("🔥 DEBUG: previewBuffer finalised with peer info map: 🔥")
 	if b.pending != nil {
 		b.pending.info.IsLast = true
 		b.result[b.pending.path] = b.pending.info
@@ -121,7 +119,6 @@ func buildPeerInfoMap(
 	req *PrimeRequest,
 	settings []pref.Option,
 ) (PeerInfoMap, *pref.Options, core.TraverseResult, uint, error) {
-	fmt.Println("🦋 DEBUG: buildPeerInfoMap: building peer info map with preview traversal ... 🦋")
 	buf := newPreviewBuffer()
 
 	var options *pref.Options
