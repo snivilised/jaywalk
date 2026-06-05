@@ -11,7 +11,10 @@ const (
 	SpinnerNameWidth = 18
 )
 
-// Flags row placement - mirrors ui.FlagsRowPosition*.
+// Flags row placement - mirrors ui.FlagsRowPosition*. The flags row
+// lives INSIDE the bordered region of the highway view; the banner
+// (whose position constants live in the widgets/banner package)
+// lives OUTSIDE the bordered region.
 const (
 	// FlagsRowPositionTop places the flags row immediately after the top
 	// border and before the first highway lane.
@@ -20,16 +23,4 @@ const (
 	// FlagsRowPositionBottom places the flags row immediately above the
 	// status line and below the last highway lane (the default).
 	FlagsRowPositionBottom = "bottom"
-)
-
-// Banner position - mirrors ui bannerPosition*. The banner is rendered
-// OUTSIDE the bordered region of the highway view, so these values do
-// not interact with the flags row placement above.
-const (
-	// BannerPositionTop places the banner above the top border.
-	BannerPositionTop = "top"
-
-	// BannerPositionBottom places the banner below the bottom border
-	// (after the summary).
-	BannerPositionBottom = "bottom"
 )
