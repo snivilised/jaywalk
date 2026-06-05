@@ -25,6 +25,11 @@ const (
 	// jay.ui.yml when this mode is selected.
 	ModeHighway = "highway"
 
+	// ModePorthole is a bubbletea view rendering a single stream of
+	// content lines in a viewport with optional scrollbar gutter.
+	// Config loaded on-demand from jay.ui.yml when this mode is selected.
+	ModePorthole = "porthole"
+
 	// ModeDefault is the display used when --tui is not specified.
 	ModeDefault = ModeLinear
 )
@@ -163,6 +168,38 @@ type HighwayConfig struct {
 	Banner BannerConfig
 }
 
+// PortholeConfig is the configuration for the porthole bubbletea view.
+// It mirrors HighwayConfig in structure but without lane-specific fields,
+// since porthole renders a single stream of content lines rather than
+// parallel lanes. The config is loaded from jay.ui.yml when ModePorthole
+// is selected via --tui flag.
+type PortholeConfig struct {
+	// WorkerPool is a space-separated list of emoji runes for worker decoration.
+	WorkerPool string
+
+	// JobPool is a space-separated list of emoji runes for job decoration.
+	JobPool string
+
+	// Separator between emoji and content info (default: " ").
+	Separator string
+
+	// AnimationGradient is the name of a gradient defined in the
+	// palette, applied to frame animations. Computed from the palette
+	// by LoadConfig; carried on the value so the presenter does not
+	// have to look it up again.
+	AnimationGradient string
+
+	// SpinnerNames lists the spinner types eligible for the porthole's
+	// single activity widget. One is chosen at random when the
+	// traversal begins. Falls back to a built-in default when empty.
+	SpinnerNames []string
+
+	// Banner controls the ANSI shadow banner rendered outside the
+	// porthole view's bordered region. The colour sweep is resolved
+	// from the theme via highlights.components["banner-control"].
+	Banner BannerConfig
+}
+
 // BannerConfig is the resolved (palette-aware) shape of the banner
 // settings. The raw, on-disk shape is bedrock.BannerSubConfig; the
 // loader translates between the two.
@@ -204,6 +241,8 @@ type BannerConfig struct {
 // isViewConfig seals the implementation set.
 func (HighwayConfig) isViewConfig() {}
 
+func (PortholeConfig) isViewConfig() {}
+
 // ViewConfigSource loads a named view's raw on-disk configuration
 // (typically jay.ui.yml). *bedrock.ViewConfigLoader satisfies this
 // implicitly; declaring the interface here keeps the ui package
@@ -236,6 +275,9 @@ func LoadConfig(mode string, source ViewConfigSource, palette contract.Palette) 
 	case ModeHighway:
 		return loadHighwayConfig(source, palette)
 
+	case ModePorthole:
+		return loadPortholeConfig(source, palette)
+
 	default:
 		return nil, fmt.Errorf(
 			"unknown display mode %q (valid modes: %s)",
@@ -243,6 +285,26 @@ func LoadConfig(mode string, source ViewConfigSource, palette contract.Palette) 
 			strings.Join(availableModes(), ", "),
 		)
 	}
+}
+
+func loadPortholeConfig(source ViewConfigSource, palette contract.Palette) (ViewConfig, error) {
+	var raw bedrock.HighwayConfig // porthole uses highway config shape minus lane fields
+	if source != nil {
+		if err := source.Load("highway", &raw); err != nil {
+			return nil, err
+		}
+	}
+
+	bannerCfg := resolveBannerConfig(raw.Banner, palette)
+
+	return PortholeConfig{
+		WorkerPool:        raw.WorkerPool,
+		JobPool:           raw.JobPool,
+		Separator:         raw.Separator,
+		AnimationGradient: nameFromPalette(palette, contract.GradientComponentActivity),
+		SpinnerNames:      raw.AnimationData.Spinners.Enabled,
+		Banner:            bannerCfg,
+	}, nil
 }
 
 func loadHighwayConfig(source ViewConfigSource, palette contract.Palette) (ViewConfig, error) {
@@ -496,6 +558,15 @@ func New(mode string, palette contract.Palette, cfg ViewConfig) (report.Presente
 		}
 		return newHighwayPresenter(palette, hCfg)
 
+	case ModePorthole:
+		pCfg, ok := cfg.(PortholeConfig)
+		if !ok {
+			return nil, fmt.Errorf(
+				"ui.New: porthole mode requires PortholeConfig, got %T", cfg,
+			)
+		}
+		return newPortholePresenter(palette, pCfg)
+
 	default:
 		return nil, fmt.Errorf(
 			"unknown display mode %q (valid modes: %s)",
@@ -507,5 +578,5 @@ func New(mode string, palette contract.Palette, cfg ViewConfig) (report.Presente
 
 // availableModes returns all known mode names, for error messages.
 func availableModes() []string {
-	return []string{ModeLinear, ModeHighway}
+	return []string{ModeLinear, ModeHighway, ModePorthole}
 }

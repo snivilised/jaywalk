@@ -1,6 +1,8 @@
 package landing
 
 import (
+	"strings"
+
 	"charm.land/lipgloss/v2"
 )
 
@@ -14,6 +16,11 @@ type Config struct {
 	ExecutionString string
 	DryRun          bool
 	SkippedIcon     string
+	// Width, when > 0, right-justifies the landing strip within the
+	// given visible width. Padding is rendered using blank cells with
+	// no extra style so the strip aligns to the right edge of the
+	// surrounding body.
+	Width int
 }
 
 func Render(cfg Config, styles Styles) string {
@@ -28,7 +35,17 @@ func Render(cfg Config, styles Styles) string {
 	if cfg.SkippedIcon != "" {
 		bracket = " " + cfg.SkippedIcon
 	}
-	return styles.BranchStyle.Render(" ["+bracket) +
+	strip := styles.BranchStyle.Render(" ["+bracket) +
 		styles.LandingStripStyle.Render(content) +
 		styles.BranchStyle.Render("]")
+
+	if cfg.Width <= 0 {
+		return strip
+	}
+
+	visible := lipgloss.Width(strip)
+	if visible >= cfg.Width {
+		return strip
+	}
+	return strings.Repeat(" ", cfg.Width-visible) + strip
 }

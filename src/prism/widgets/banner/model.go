@@ -1,5 +1,7 @@
 package banner
 
+import "strings"
+
 // Model is a thin rendering wrapper around the existing Render
 // function. It is value-typed and intended to be constructed on the
 // fly inside a parent view's render method. There is no Init/Update
@@ -65,4 +67,15 @@ func (m Model) View() string {
 			Aspects:  m.info.Aspects,
 		},
 	)
+}
+
+// Height returns the number of terminal rows the rendered banner
+// occupies. Returns 0 when disabled. Used by host views (highway,
+// porthole) to budget vertical space for the banner without
+// re-rendering it.
+func (m Model) Height() int {
+	if m.Disabled() {
+		return 0
+	}
+	return strings.Count(m.View(), "\n")
 }

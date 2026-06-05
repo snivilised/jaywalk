@@ -65,10 +65,34 @@ func NewModel(opts ...Option) Model {
 	return m
 }
 
+// Height returns the number of terminal rows the rendered flag entries
+// will occupy. The result is 0 when the position is empty/unrecognised
+// or when no flag is active. When at least one flag is active, the
+// height is the number of entry lines (no surrounding borders are
+// included - those are the caller's responsibility). Callers (e.g.
+// porthole's viewport body-height calculation) use this to reserve
+// the right number of rows for the flag content.
+func (m Model) Height() int {
+	if m.info.Position != contract.PositionTop && m.info.Position != contract.PositionBottom {
+		return 0
+	}
+	entries := m.compose()
+	if len(entries) == 0 {
+		return 0
+	}
+	available := m.width - 4
+	if available < 1 {
+		available = 1
+	}
+	lines := wrap(entries, available)
+	return len(lines)
+}
+
 // View returns the rendered flags-row string, or "" when the
 // position is empty / unrecognised or when no flag is active.
-// The closing "├─────┤" separator is emitted only when at least
-// one flag is active, so the row is a no-op in the default case.
+// The widget renders the flag entries only - surrounding borders
+// are the caller's responsibility, since the layout around the
+// flags section depends on the parent view's overall structure.
 func (m Model) View() string {
 	if m.info.Position != contract.PositionTop && m.info.Position != contract.PositionBottom {
 		return ""
@@ -96,12 +120,6 @@ func (m Model) View() string {
 		row.RenderTo(&b)
 		b.WriteString("\n")
 	}
-
-	// Close the row section with a separator border, matching the
-	// look of the existing top/lane separators.
-	dashes := strings.Repeat("─", max(0, m.width-2))
-	b.WriteString(borderStyle.Render("├" + dashes + "┤"))
-	b.WriteString("\n")
 
 	return b.String()
 }

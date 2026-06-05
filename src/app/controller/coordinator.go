@@ -148,7 +148,6 @@ func (c *Coordinator) ExecutePrime(ctx context.Context, req *PrimeRequest) error
 
 	if isPeerAware && view.NeedsPeerInfo() {
 		// Execute the preview traversal to build the PeerInfoMap and collect.
-		fmt.Println("🦄 DEBUG: Coordinator.ExecutePrime: peer aware ... 🦄")
 		peerInfoMap, builtOptions, result, maxDepth, err := buildPeerInfoMap(
 			ctx, req, req.Settings,
 		)
@@ -199,7 +198,6 @@ func (c *Coordinator) ExecutePrime(ctx context.Context, req *PrimeRequest) error
 		return err
 	}
 
-	fmt.Println("🦁 DEBUG: Coordinator.ExecutePrime: executing live traversal only ... 🦁")
 	facade := &pref.Using{
 		Subscription: req.Subscription,
 		Head: pref.Head{
