@@ -11,4 +11,4 @@
 // The linear view supports custom tree icons via the palette's TreeIcons map.
 // These icons are applied to the linear renderer via the WithIcons option at
 // construction time. Custom icons override the defaults provided by prism.
-package flow
+package linear

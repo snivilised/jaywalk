@@ -9,13 +9,11 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/term"
 
-	"github.com/snivilised/jaywalk/src/agenor/core"
-	"github.com/snivilised/jaywalk/src/agenor/pref"
 	"github.com/snivilised/jaywalk/src/app/report"
 	"github.com/snivilised/jaywalk/src/prism/contract"
-	"github.com/snivilised/jaywalk/src/prism/flow"
 	"github.com/snivilised/jaywalk/src/prism/movies"
-	"github.com/snivilised/jaywalk/src/prism/scroll"
+	"github.com/snivilised/jaywalk/src/prism/views/linear"
+	"github.com/snivilised/jaywalk/src/prism/views/porthole"
 	"github.com/snivilised/jaywalk/src/prism/widgets/banner"
 )
 
@@ -24,24 +22,14 @@ import (
 // to the model via the program. The view renders a single stream of
 // content lines in a viewport with optional scrollbar gutter.
 type portholePresenter struct {
-	program     *tea.Program
-	done        chan struct{}
-	cfg         PortholeConfig
-	noW         uint
-	maxDepth    uint
-	totalFiles  uint
-	totalDirs   uint
-	theme       contract.Theme
-	noRecurse   bool
+	presenter
+	cfg PortholeConfig
+
 	branchStack []bool
 	// bodyWidth is the usable column count inside the left/right
 	// borders and the scrollbar gutter. It is used to right-justify
-	// the landing strip produced by flow.RenderLine.
+	// the landing strip produced by linear.RenderLine.
 	bodyWidth uint
-
-	header contract.HeaderInfo
-
-	bannerInfo banner.Info
 }
 
 func newPortholePresenter(palette contract.Palette, pCfg PortholeConfig) (report.Presenter, error) {
@@ -49,11 +37,7 @@ func newPortholePresenter(palette contract.Palette, pCfg PortholeConfig) (report
 	if err != nil {
 		return nil, err
 	}
-	return &portholePresenter{cfg: pCfg, theme: theme}, nil
-}
-
-func (p *portholePresenter) OnTraversalOptions(o *pref.Options) {
-	p.noW = o.Concurrency.NoW
+	return &portholePresenter{presenter: presenter{theme: theme}, cfg: pCfg}, nil
 }
 
 // OnBegin creates the bubbletea model and starts the program.
@@ -82,7 +66,12 @@ func (p *portholePresenter) OnBegin(e *report.BeginEvent) {
 		p.bodyWidth = 80
 	}
 
-	model := scroll.NewModel(e.Root, p.maxDepth, p.theme, p.noRecurse)
+	model := porthole.NewModel(contract.NewModelParams{
+		RootPath:  e.Root,
+		MaxDepth:  p.maxDepth,
+		Theme:     p.theme,
+		NoRecurse: p.noRecurse,
+	})
 	model.SetWindowSizeCallback(func(bw uint) {
 		p.bodyWidth = bw
 	})
@@ -122,58 +111,51 @@ func (p *portholePresenter) OnBegin(e *report.BeginEvent) {
 		}()
 	}
 
-	p.program.Send(scroll.OvertureMsg{
-		Root:              e.Root,
-		Caption:           e.Caption,
-		SubscriptionLabel: subscriptionLabelFor(e.Subscription),
-		StartedAt:         e.StartedAt,
-		DateFormat:        e.DateFormat,
-		PipelineName:      e.PipelineName,
-
-		Header: p.header,
-
+	p.program.Send(porthole.OvertureMsg{
+		OvertureMsg: contract.OvertureMsg{
+			Root:              e.Root,
+			Caption:           e.Caption,
+			SubscriptionLabel: subscriptionLabelFor(e.Subscription),
+			StartedAt:         e.StartedAt,
+			DateFormat:        e.DateFormat,
+			PipelineName:      e.PipelineName,
+			Header:            p.header,
+			FlagsRowPosition:  contract.PositionBottom,
+		},
 		Banner: p.bannerInfo,
-
-		FlagsRowPosition: contract.PositionBottom,
 	})
 }
-
-func (p *portholePresenter) NeedsPeerInfo() bool {
-	return true
-}
-
-func (p *portholePresenter) OnPeerInfoBegin(files, dirs uint, _ map[string]*core.PeerInfo) {
-	p.totalFiles = files
-	p.totalDirs = dirs
-}
-
-func (p *portholePresenter) OnPeerInfoEnd() {}
 
 func (p *portholePresenter) OnNodeEvent(e *report.NeutralEvent) {
 	depth := uint(e.Node.Extension.Depth)
 	visualDepth := uint(e.Node.VisualDepth())
-	result := flow.RenderLine(
-		e.Node.Path,
-		e.Node.Extension.Name,
-		e.Node.IsDirectory(),
-		depth,
-		"", "", "", "", false, nil,
-		e.IsLast, false, false, visualDepth,
-		p.branchStack,
-		p.bodyWidth,
-		p.theme,
-		"",
-	)
-	p.branchStack = result.BranchStack
-	p.program.Send(scroll.ContentLineMsg{
-		Line: result.Line,
-		Params: scroll.RenderParams{
+	result := linear.RenderLine(linear.LineParams{
+		NodeParams: contract.NodeParams{
 			Path:        e.Node.Path,
 			Name:        e.Node.Extension.Name,
 			IsDir:       e.Node.IsDirectory(),
 			Depth:       depth,
 			IsLast:      e.IsLast,
 			VisualDepth: visualDepth,
+		},
+		RenderParams: contract.RenderParams{
+			BodyWidth: p.bodyWidth,
+			Theme:     p.theme,
+		},
+		BranchStack: p.branchStack,
+	})
+	p.branchStack = result.BranchStack
+	p.program.Send(porthole.ContentLineMsg{
+		Line: result.Line,
+		Params: porthole.RenderParams{
+			NodeParams: contract.NodeParams{
+				Path:        e.Node.Path,
+				Name:        e.Node.Extension.Name,
+				IsDir:       e.Node.IsDirectory(),
+				Depth:       depth,
+				IsLast:      e.IsLast,
+				VisualDepth: visualDepth,
+			},
 		},
 		BranchStack: result.BranchStack,
 	})
@@ -187,22 +169,8 @@ func (p *portholePresenter) OnActionEvent(e *report.ActionEvent) {
 		visualDepth++
 		isLastStep = e.IsLastStep
 	}
-	result := flow.RenderLine(
-		e.Node.Path,
-		e.Node.Extension.Name,
-		e.Node.IsDirectory(),
-		depth,
-		e.Name, "", e.CommandOutput, e.ExecutionString, e.DryRun, e.Err,
-		e.IsLast, e.IsPipelineStep, isLastStep, visualDepth,
-		p.branchStack,
-		p.bodyWidth,
-		p.theme,
-		"",
-	)
-	p.branchStack = result.BranchStack
-	p.program.Send(scroll.ContentLineMsg{
-		Line: result.Line,
-		Params: scroll.RenderParams{
+	result := linear.RenderLine(linear.LineParams{
+		NodeParams: contract.NodeParams{
 			Path:            e.Node.Path,
 			Name:            e.Node.Extension.Name,
 			IsDir:           e.Node.IsDirectory(),
@@ -216,6 +184,32 @@ func (p *portholePresenter) OnActionEvent(e *report.ActionEvent) {
 			IsPipelineStep:  e.IsPipelineStep,
 			IsLastStep:      isLastStep,
 			VisualDepth:     visualDepth,
+		},
+		RenderParams: contract.RenderParams{
+			BodyWidth: p.bodyWidth,
+			Theme:     p.theme,
+		},
+		BranchStack: p.branchStack,
+	})
+	p.branchStack = result.BranchStack
+	p.program.Send(porthole.ContentLineMsg{
+		Line: result.Line,
+		Params: porthole.RenderParams{
+			NodeParams: contract.NodeParams{
+				Path:            e.Node.Path,
+				Name:            e.Node.Extension.Name,
+				IsDir:           e.Node.IsDirectory(),
+				Depth:           depth,
+				ActionName:      e.Name,
+				CommandOutput:   e.CommandOutput,
+				ExecutionString: e.ExecutionString,
+				DryRun:          e.DryRun,
+				Err:             e.Err,
+				IsLast:          e.IsLast,
+				IsPipelineStep:  e.IsPipelineStep,
+				IsLastStep:      isLastStep,
+				VisualDepth:     visualDepth,
+			},
 		},
 		BranchStack: result.BranchStack,
 	})
@@ -232,22 +226,8 @@ func (p *portholePresenter) OnPipelineEvent(e *report.PipelineEvent) {
 	// Pipeline-not-found error: render as a standalone error line.
 	depth := uint(e.Node.Extension.Depth)
 	visualDepth := uint(e.Node.VisualDepth())
-	result := flow.RenderLine(
-		e.Node.Path,
-		e.Node.Extension.Name,
-		e.Node.IsDirectory(),
-		depth,
-		"", e.Name, "", "", false, e.Err,
-		e.IsLast, false, false, visualDepth,
-		p.branchStack,
-		p.bodyWidth,
-		p.theme,
-		"",
-	)
-	p.branchStack = result.BranchStack
-	p.program.Send(scroll.ContentLineMsg{
-		Line: result.Line,
-		Params: scroll.RenderParams{
+	result := linear.RenderLine(linear.LineParams{
+		NodeParams: contract.NodeParams{
 			Path:         e.Node.Path,
 			Name:         e.Node.Extension.Name,
 			IsDir:        e.Node.IsDirectory(),
@@ -256,6 +236,27 @@ func (p *portholePresenter) OnPipelineEvent(e *report.PipelineEvent) {
 			Err:          e.Err,
 			IsLast:       e.IsLast,
 			VisualDepth:  visualDepth,
+		},
+		RenderParams: contract.RenderParams{
+			BodyWidth: p.bodyWidth,
+			Theme:     p.theme,
+		},
+		BranchStack: p.branchStack,
+	})
+	p.branchStack = result.BranchStack
+	p.program.Send(porthole.ContentLineMsg{
+		Line: result.Line,
+		Params: porthole.RenderParams{
+			NodeParams: contract.NodeParams{
+				Path:         e.Node.Path,
+				Name:         e.Node.Extension.Name,
+				IsDir:        e.Node.IsDirectory(),
+				Depth:        depth,
+				PipelineName: e.Name,
+				Err:          e.Err,
+				IsLast:       e.IsLast,
+				VisualDepth:  visualDepth,
+			},
 		},
 		BranchStack: result.BranchStack,
 	})
@@ -269,22 +270,8 @@ func (p *portholePresenter) OnSkipEvent(e *report.SkipEvent) {
 		visualDepth++
 		isLastStep = true // skip always terminates the pipeline
 	}
-	result := flow.RenderLine(
-		e.Node.Path,
-		e.Node.Extension.Name,
-		e.Node.IsDirectory(),
-		depth,
-		e.Name, "", "", "", false, nil,
-		e.IsLast, e.IsPipelineStep, isLastStep, visualDepth,
-		p.branchStack,
-		p.bodyWidth,
-		p.theme,
-		"",
-	)
-	p.branchStack = result.BranchStack
-	p.program.Send(scroll.ContentLineMsg{
-		Line: result.Line,
-		Params: scroll.RenderParams{
+	result := linear.RenderLine(linear.LineParams{
+		NodeParams: contract.NodeParams{
 			Path:           e.Node.Path,
 			Name:           e.Node.Extension.Name,
 			IsDir:          e.Node.IsDirectory(),
@@ -294,6 +281,28 @@ func (p *portholePresenter) OnSkipEvent(e *report.SkipEvent) {
 			IsPipelineStep: e.IsPipelineStep,
 			IsLastStep:     isLastStep,
 			VisualDepth:    visualDepth,
+		},
+		RenderParams: contract.RenderParams{
+			BodyWidth: p.bodyWidth,
+			Theme:     p.theme,
+		},
+		BranchStack: p.branchStack,
+	})
+	p.branchStack = result.BranchStack
+	p.program.Send(porthole.ContentLineMsg{
+		Line: result.Line,
+		Params: porthole.RenderParams{
+			NodeParams: contract.NodeParams{
+				Path:           e.Node.Path,
+				Name:           e.Node.Extension.Name,
+				IsDir:          e.Node.IsDirectory(),
+				Depth:          depth,
+				ActionName:     e.Name,
+				IsLast:         e.IsLast,
+				IsPipelineStep: e.IsPipelineStep,
+				IsLastStep:     isLastStep,
+				VisualDepth:    visualDepth,
+			},
 		},
 		BranchStack: result.BranchStack,
 	})
@@ -317,7 +326,7 @@ func (p *portholePresenter) OnComplete(traversal *report.Traversal) {
 		errs = append(errs, traversal.Err)
 	}
 
-	p.program.Send(scroll.CompleteMsg{
+	p.program.Send(porthole.CompleteMsg{
 		Files:   int(traversal.FilesVisited),
 		Dirs:    int(traversal.DirsVisited),
 		Errs:    errs,

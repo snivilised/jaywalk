@@ -3,6 +3,7 @@ package track
 import (
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/snivilised/jaywalk/src/prism/contract"
 	"github.com/snivilised/jaywalk/src/prism/effects"
 )
 
@@ -58,7 +59,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
-	case MotifMsg:
+	case contract.MotifMsg:
 		return m.applyMotifData(msg), nil
 
 	case CensusMsg:
@@ -86,14 +87,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // stays readable. The dedup is on the path: a second motif with
 // the same path increments neither files nor dirs but still
 // applies its data to the current lane and rotates the index.
-func (m Model) applyMotifData(msg MotifMsg) Model {
-	data := msg.Data
+func (m Model) applyMotifData(msg contract.MotifMsg) Model {
 	if m.counted == nil {
 		m.counted = make(map[string]bool)
 	}
-	if !m.counted[data.Path] {
-		m.counted[data.Path] = true
-		if data.IsDir {
+	if !m.counted[msg.Path] {
+		m.counted[msg.Path] = true
+		if msg.IsDir {
 			m.dirs++
 		} else {
 			m.files++
@@ -101,35 +101,35 @@ func (m Model) applyMotifData(msg MotifMsg) Model {
 	}
 	if len(m.lanes) > 0 {
 		idx := m.currentLaneIdx
-		m.lanes[idx].JobEmoji = data.JobEmoji
-		m.lanes[idx].Path = data.Path
-		m.lanes[idx].Name = data.Name
-		m.lanes[idx].IsDir = data.IsDir
-		m.lanes[idx].Depth = data.Depth
-		m.lanes[idx].ActionName = data.ActionName
-		m.lanes[idx].PipelineName = data.PipelineName
-		m.lanes[idx].CommandOutput = data.CommandOutput
-		m.lanes[idx].ExecutionString = data.ExecutionString
-		m.lanes[idx].DryRun = data.DryRun
-		m.lanes[idx].Err = data.Err
+		m.lanes[idx].JobEmoji = msg.JobEmoji
+		m.lanes[idx].Path = msg.Path
+		m.lanes[idx].Name = msg.Name
+		m.lanes[idx].IsDir = msg.IsDir
+		m.lanes[idx].Depth = msg.Depth
+		m.lanes[idx].ActionName = msg.ActionName
+		m.lanes[idx].PipelineName = msg.PipelineName
+		m.lanes[idx].CommandOutput = msg.CommandOutput
+		m.lanes[idx].ExecutionString = msg.ExecutionString
+		m.lanes[idx].DryRun = msg.DryRun
+		m.lanes[idx].Err = msg.Err
 
 		// Copy gradient from message to lane if provided. The
 		// gradient is a ResolvedGradient{Steps, Hi, Lo} from
 		// the theme palette. It holds colour endpoint info;
 		// the view applies it via ApplyGradient.
-		if data.Gradient != nil {
-			m.lanes[idx].HighlightGradient = data.Gradient
+		if msg.Gradient != nil {
+			m.lanes[idx].HighlightGradient = msg.Gradient
 			if m.lanes[idx].GradientState == nil {
 				m.lanes[idx].GradientState = effects.NewGradientState()
 			}
-			m.lanes[idx].GradientState.TotalSteps = data.Gradient.Steps
+			m.lanes[idx].GradientState.TotalSteps = msg.Gradient.Steps
 		}
-		if data.PeriscopeGradient != nil {
-			m.lanes[idx].PeriscopeGradient = data.PeriscopeGradient
+		if msg.PeriscopeGradient != nil {
+			m.lanes[idx].PeriscopeGradient = msg.PeriscopeGradient
 			if m.lanes[idx].PeriscopeGradientState == nil {
 				m.lanes[idx].PeriscopeGradientState = effects.NewGradientState()
 			}
-			m.lanes[idx].PeriscopeGradientState.TotalSteps = data.PeriscopeGradient.Steps
+			m.lanes[idx].PeriscopeGradientState.TotalSteps = msg.PeriscopeGradient.Steps
 		}
 		m.currentLaneIdx = (m.currentLaneIdx + 1) % len(m.lanes)
 	}

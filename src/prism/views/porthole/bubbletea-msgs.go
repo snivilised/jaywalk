@@ -1,4 +1,4 @@
-package scroll
+package porthole
 
 import (
 	"time"
@@ -11,47 +11,21 @@ import (
 // It is sent once at the start of traversal and contains all the
 // metadata needed to render the banner, header, and footer chrome.
 type OvertureMsg struct {
-	Root              string
-	Caption           string
-	SubscriptionLabel string
-	StartedAt         time.Time
-	DateFormat        string
-	PipelineName      string
-
-	Header contract.HeaderInfo
+	contract.OvertureMsg
 
 	Banner banner.Info
-
-	// FlagsRowPosition selects where the flags row is rendered.
-	// contract.PositionTop places it after the top border;
-	// contract.PositionBottom places it above the status line.
-	// Empty or invalid values default to PositionBottom.
-	FlagsRowPosition string
 }
 
-// RenderParams stores the raw parameters passed to flow.RenderLine
+// RenderParams stores the raw parameters passed to linear.RenderLine
 // so the line can be re-rendered when the terminal is resized.
 type RenderParams struct {
-	Path            string
-	Name            string
-	IsDir           bool
-	Depth           uint
-	ActionName      string
-	PipelineName    string
-	CommandOutput   string
-	ExecutionString string
-	DryRun          bool
-	Err             error
-	IsLast          bool
-	IsPipelineStep  bool
-	IsLastStep      bool
-	VisualDepth     uint
+	contract.NodeParams
 }
 
 // ContentLineMsg carries a single line of content to render. The
 // porthole view buffers these lines in memory and renders them via
 // the viewport widget when requested. RenderParams stores the raw
-// flow.RenderLine arguments so the line can be re-rendered on
+// linear.RenderLine arguments so the line can be re-rendered on
 // terminal resize with the updated bodyWidth. BranchStack is the
 // branch state AFTER this line was rendered, stored so the view can
 // re-render the last line with the current activity frame.

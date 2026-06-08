@@ -37,38 +37,7 @@ func statusFieldSet() status.FieldSelectors {
 // responsible for lane data, per-tick advance, motif application
 // and per-lane rendering.
 type Model struct {
-	width        int
-	start        time.Time
-	tickRate     time.Duration
-	totalTicks   int64
-	rootPath     string
-	realMode     bool
-	done         bool
-	errors       int
-	elapsed      time.Duration
-	errMsg       string
-	pipelineName string
-	// totalFiles is still owned by the root in this PR. The
-	// CensusMsg path forwards it into the status widget via
-	// status.TotalMsg so the widget can compute percent on its
-	// own. The root's local copy remains for the demo-mode
-	// fake-percent generator (see tickMsg arm).
-	totalFiles        uint
-	totalDirs         uint
-	maxDepth          uint
-	noRecurse         bool
-	subscriptionLabel string
-	startedAt         time.Time
-	caption           string
-	dateFormat        string
-	theme             contract.Theme
-
-	// status is the child status widget. It owns the
-	// files/dirs/errors/elapsed/isDone/errMsg/percent/total state
-	// and the embedded bubbles progress bar. The root
-	// translates highway messages into status.* messages
-	// (see update.go's translation helpers).
-	status status.Model
+	contract.TraverseModel
 
 	// track is the child widget owning lane data, per-tick
 	// advance, motif application and per-lane rendering. The
@@ -76,19 +45,6 @@ type Model struct {
 	// (see Message flow in
 	// make-lanes-its-own-child-widget.implementation-plan.issue-604.md).
 	track track.Model
-
-	// header is the supplementary flag info carried on the OvertureMsg.
-	// Stored on the model so renderFlagsRow and other renderers can
-	// access it without further plumbing. See contract.HeaderInfo for
-	// the field semantics.
-	header contract.HeaderInfo
-
-	// FlagsRowPosition controls where the flags row is rendered. See
-	// contract.PositionTop / contract.PositionBottom or the theme
-	// config; "top" places it after the top border, "bottom" places
-	// it above the status line. The default applied by the loader
-	// is PositionBottom.
-	FlagsRowPosition string
 
 	// bannerInfo is the (immutable for the session) configuration
 	// received via OvertureMsg. The view reads this each render to
@@ -98,6 +54,18 @@ type Model struct {
 	// is nil. Advance() is nil-safe.
 	bannerInfo   banner.Info
 	bannerTicker *banner.Ticker
+
+	// status is the child status widget. It owns the
+	// files/dirs/errors/elapsed/isDone/errMsg/percent/total state
+	// and the embedded bubbles progress bar. The root
+	// translates highway messages into status.* messages
+	// (see update.go's translation helpers).
+	status status.Model
+
+	totalTicks int64
+	realMode   bool
+	totalFiles uint
+	totalDirs  uint
 }
 
 // NewModel constructs a highway view Model. The lanes slice is
@@ -105,33 +73,34 @@ type Model struct {
 // The theme is split: a copy of the theme fields the track widget
 // needs is captured into track.WithTheme; the rest stay on the
 // root for chrome rendering.
-func NewModel(lanes []track.Lane, tickRate time.Duration, rootPath string,
-	maxDepth uint, theme contract.Theme, noRecurse bool) Model {
+func NewModel(params contract.NewModelParams, lanes []track.Lane, tickRate time.Duration) Model {
 	return Model{
-		width:     80,
-		rootPath:  rootPath,
-		maxDepth:  maxDepth,
-		noRecurse: noRecurse,
-		tickRate:  tickRate,
-		theme:     theme,
+		TraverseModel: contract.TraverseModel{
+			Width:     80,
+			RootPath:  params.RootPath,
+			MaxDepth:  params.MaxDepth,
+			NoRecurse: params.NoRecurse,
+			TickRate:  tickRate,
+			Theme:     params.Theme,
+		},
 		status: status.New(
-			status.WithTheme(theme),
+			status.WithTheme(params.Theme),
 			status.WithFields(statusFieldSet()),
 			status.WithWidth(10),
 		),
 		track: track.New(
 			track.WithLanes(lanes),
-			track.WithTheme(theme),
+			track.WithTheme(params.Theme),
 			track.WithTickRate(tickRate),
-			track.WithMaxDepth(maxDepth),
-			track.WithNoRecurse(noRecurse),
+			track.WithMaxDepth(params.MaxDepth),
+			track.WithNoRecurse(params.NoRecurse),
 			track.WithWidth(80),
 		),
 	}
 }
 
 func (m Model) Init() tea.Cmd {
-	return tea.Tick(m.tickRate, func(t time.Time) tea.Msg {
+	return tea.Tick(m.TickRate, func(t time.Time) tea.Msg {
 		return tickMsg(t)
 	})
 }
@@ -139,7 +108,7 @@ func (m Model) Init() tea.Cmd {
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		m.width = msg.Width
+		m.Width = msg.Width
 		var cmd tea.Cmd
 		m.status, cmd = m.dispatchStatus(status.WidthMsg{Width: msg.Width})
 		m.track, _ = m.dispatchTrack(track.WidthMsg{Width: msg.Width})
@@ -147,7 +116,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		switch {
-		case m.done && msg.String() == "space":
+		case m.Done && msg.String() == "space":
 			return m, tea.Quit
 		case msg.String() == "ctrl+c":
 			return m, tea.Quit
@@ -156,11 +125,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tickMsg:
 		cmds := make([]tea.Cmd, 0, 2)
-		if m.done {
+		if m.Done {
 			return m, nil
 		}
-		if m.start.IsZero() && !m.realMode {
-			m.start = core.Now()
+		if m.Start.IsZero() && !m.realMode {
+			m.Start = core.Now()
 		}
 		m.totalTicks++
 		// Forward the tick to the track child. Track advances
@@ -172,16 +141,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// lane animations. The Ticker encapsulates the skip
 		// factor and the skip counter; Advance is nil-safe.
 		m.bannerTicker.Advance()
-		tickCmd := tea.Tick(m.tickRate, func(t time.Time) tea.Msg {
+		tickCmd := tea.Tick(m.TickRate, func(t time.Time) tea.Msg {
 			return tickMsg(t)
 		})
 		cmds = append(cmds, tickCmd)
-		if !m.start.IsZero() {
+		if !m.Start.IsZero() {
 			// Elapsed time is real in both demo and real mode,
 			// so push it on every tick. Without this the status
 			// row's elapsed segment would stay at 0 in real
 			// mode until the final CompleteMsg arrived.
-			elapsed := time.Since(m.start)
+			elapsed := time.Since(m.Start)
 			var elapsedCmd tea.Cmd
 			m.status, elapsedCmd = m.dispatchStatus(status.ElapsedMsg{Elapsed: elapsed})
 			if elapsedCmd != nil {
@@ -204,23 +173,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(cmds...)
 
 	case OvertureMsg:
-		m.rootPath = msg.Root
-		m.start = core.Now()
+		m.Start = core.Now()
 		m.realMode = true
-		m.pipelineName = msg.PipelineName
-		m.subscriptionLabel = msg.SubscriptionLabel
-		m.startedAt = msg.StartedAt
-		m.caption = msg.Caption
-		m.dateFormat = msg.DateFormat
-
-		// Cache the header info for renderers.
-		m.header = msg.Header
-
-		// store flags row position; default to PositionBottom for empty/invalid
-		m.FlagsRowPosition = msg.FlagsRowPosition
-		if m.FlagsRowPosition != contract.PositionTop && m.FlagsRowPosition != contract.PositionBottom {
-			m.FlagsRowPosition = contract.PositionBottom
-		}
+		m.ApplyOverture(&msg.OvertureMsg)
 
 		// Initialise the banner from the OvertureMsg. The bannerInfo
 		// is stored verbatim; bannerTicker is nil when the banner is
@@ -229,7 +184,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// banner.Model on the fly from bannerInfo per render.
 		m.bannerInfo = msg.Banner
 		if !msg.Banner.Disable && msg.Banner.State != nil && msg.Banner.Gradient != nil {
-			m.bannerTicker = banner.NewTicker(msg.Banner.State, msg.Banner.Tick, m.tickRate)
+			m.bannerTicker = banner.NewTicker(msg.Banner.State, msg.Banner.Tick, m.TickRate)
 		} else {
 			m.bannerTicker = nil
 		}
@@ -239,8 +194,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case CensusMsg:
 		m.totalFiles = msg.TotalFiles
 		m.totalDirs = msg.TotalDirs
-		if msg.MaxDepth > m.maxDepth {
-			m.maxDepth = msg.MaxDepth
+		if msg.MaxDepth > m.MaxDepth {
+			m.MaxDepth = msg.MaxDepth
 		}
 		// Forward the max depth to the track child for the
 		// periscope bar fill formula. The track package only
@@ -262,7 +217,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
-	case MotifMsg:
+	case contract.MotifMsg:
 		// Track the pre-dispatch file/dir counts so we can
 		// detect whether the motif was new (i.e. the track
 		// child's dedup map saw the path for the first time).
@@ -276,21 +231,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// increments files/dirs (only on first sighting),
 		// applies the motif data to the current lane and
 		// rotates the lane index.
-		m.track, _ = m.dispatchTrack(track.MotifMsg{Data: track.MotifData{
-			Path:              msg.Data.Path,
-			Name:              msg.Data.Name,
-			IsDir:             msg.Data.IsDir,
-			Depth:             msg.Data.Depth,
-			ActionName:        msg.Data.ActionName,
-			PipelineName:      msg.Data.PipelineName,
-			CommandOutput:     msg.Data.CommandOutput,
-			ExecutionString:   msg.Data.ExecutionString,
-			DryRun:            msg.Data.DryRun,
-			Err:               msg.Data.Err,
-			JobEmoji:          msg.Data.JobEmoji,
-			Gradient:          msg.Data.Gradient,
-			PeriscopeGradient: msg.Data.PeriscopeGradient,
-		}})
+		m.track, _ = m.dispatchTrack(msg)
 
 		// If neither files nor dirs changed, the path was a
 		// duplicate - the track child applied data to the
@@ -313,7 +254,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds = append(cmds, cmd)
 		}
 		m.status, _ = m.dispatchStatus(status.CountsMsg{
-			Files: m.track.Files(), Dirs: m.track.Dirs(), Errors: m.errors,
+			Files: m.track.Files(), Dirs: m.track.Dirs(), Errors: m.Errors,
 		})
 		return m, tea.Batch(cmds...)
 
@@ -321,15 +262,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Capture the first non-nil error message for the
 		// "press space to exit" footer (still rendered by the
 		// highway chrome; see renderSummary).
-		for _, e := range msg.Errs {
-			if e != nil {
-				m.errMsg = e.Error()
-				break
-			}
-		}
-		m.errors = len(msg.Errs)
-		m.elapsed = msg.Elapsed
-		m.done = true
+		m.ApplyCompletion(msg.Errs, msg.Elapsed)
 
 		// Forward the flush signal to the track child so it
 		// clears its counted map. The track child does not need
@@ -350,7 +283,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.status, _ = m.dispatchStatus(status.ElapsedMsg{Elapsed: msg.Elapsed})
 		var cmd tea.Cmd
 		m.status, cmd = m.dispatchStatus(status.DoneMsg{
-			Done: msg.Files, IsDone: true, Err: m.errMsg,
+			Done: msg.Files, IsDone: true, Err: m.ErrMsg,
 		})
 		if cmd != nil {
 			cmds = append(cmds, cmd)

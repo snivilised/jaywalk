@@ -83,9 +83,9 @@ var _ = Describe("New", func() {
 
 	It("initialises the counted map to empty (verified by MotifMsg behaviour)", func() {
 		m := baseModel(1)
-		updated, _ := update(m, MotifMsg{Data: MotifData{
+		updated, _ := update(m, contract.MotifMsg{
 			Path: "/a", IsDir: false,
-		}})
+		})
 		Expect(updated.files).To(Equal(1))
 	})
 
@@ -283,9 +283,9 @@ var _ = Describe("Model.Update - TickMsg", func() {
 var _ = Describe("Model.Update - MotifMsg", func() {
 	It("applies motif data to the current lane", func() {
 		m := baseModel(2)
-		updated, _ := update(m, MotifMsg{Data: MotifData{
+		updated, _ := update(m, contract.MotifMsg{
 			Path: "/root/a.txt", Name: "a.txt", IsDir: false, Depth: 1,
-		}})
+		})
 		Expect(updated.lanes[0].Path).To(Equal("/root/a.txt"))
 		Expect(updated.lanes[0].Name).To(Equal("a.txt"))
 		Expect(updated.lanes[0].IsDir).To(BeFalse())
@@ -294,50 +294,50 @@ var _ = Describe("Model.Update - MotifMsg", func() {
 
 	It("rotates currentLaneIdx round-robin", func() {
 		m := baseModel(2)
-		updated, _ := update(m, MotifMsg{Data: MotifData{
+		updated, _ := update(m, contract.MotifMsg{
 			Path: "/root/a.txt", IsDir: false,
-		}})
+		})
 		Expect(updated.currentLaneIdx).To(Equal(1))
 
-		updated, _ = update(updated, MotifMsg{Data: MotifData{
+		updated, _ = update(updated, contract.MotifMsg{
 			Path: "/root/b.txt", IsDir: false,
-		}})
+		})
 		Expect(updated.lanes[1].Path).To(Equal("/root/b.txt"))
 		Expect(updated.currentLaneIdx).To(Equal(0))
 	})
 
 	It("dedupes via the counted map", func() {
 		m := baseModel(1)
-		updated, _ := update(m, MotifMsg{Data: MotifData{
+		updated, _ := update(m, contract.MotifMsg{
 			Path: "/root/a.txt", IsDir: false,
-		}})
+		})
 		Expect(updated.files).To(Equal(1))
 
 		// Same path again - no increment.
-		updated, _ = update(updated, MotifMsg{Data: MotifData{
+		updated, _ = update(updated, contract.MotifMsg{
 			Path: "/root/a.txt", IsDir: false,
-		}})
+		})
 		Expect(updated.files).To(Equal(1))
 
 		// Different path - incremented.
-		updated, _ = update(updated, MotifMsg{Data: MotifData{
+		updated, _ = update(updated, contract.MotifMsg{
 			Path: "/root/b.txt", IsDir: false,
-		}})
+		})
 		Expect(updated.files).To(Equal(2))
 	})
 
 	It("increments Dirs for directories", func() {
 		m := baseModel(1)
-		updated, _ := update(m, MotifMsg{Data: MotifData{
+		updated, _ := update(m, contract.MotifMsg{
 			Path: "/root/src", IsDir: true,
-		}})
+		})
 		Expect(updated.dirs).To(Equal(1))
 		Expect(updated.files).To(Equal(0))
 	})
 
 	It("sets action and pipeline info on the lane", func() {
 		m := baseModel(1)
-		updated, _ := update(m, MotifMsg{Data: MotifData{
+		updated, _ := update(m, contract.MotifMsg{
 			Path:            "/f.txt",
 			ActionName:      "encode",
 			PipelineName:    "pipe",
@@ -345,7 +345,7 @@ var _ = Describe("Model.Update - MotifMsg", func() {
 			ExecutionString: "ffmpeg",
 			DryRun:          true,
 			Err:             errors.New("boom"),
-		}})
+		})
 		Expect(updated.lanes[0].ActionName).To(Equal("encode"))
 		Expect(updated.lanes[0].PipelineName).To(Equal("pipe"))
 		Expect(updated.lanes[0].CommandOutput).To(Equal("ok"))
@@ -356,9 +356,9 @@ var _ = Describe("Model.Update - MotifMsg", func() {
 
 	It("handles zero lanes gracefully (counted still increments)", func() {
 		m := baseModel(0)
-		updated, _ := update(m, MotifMsg{Data: MotifData{
+		updated, _ := update(m, contract.MotifMsg{
 			Path: "/root/f.txt",
-		}})
+		})
 		// Files still increments because the dedup is
 		// independent of lane application.
 		Expect(updated.files).To(Equal(1))
@@ -369,10 +369,10 @@ var _ = Describe("Model.Update - MotifMsg", func() {
 		grad := &contract.ResolvedGradient{
 			Steps: 5, Hi: lipgloss.Color("#FF0000"), Lo: lipgloss.Color("#000000"),
 		}
-		updated, _ := update(m, MotifMsg{Data: MotifData{
+		updated, _ := update(m, contract.MotifMsg{
 			Path:     "/f.txt",
 			Gradient: grad,
-		}})
+		})
 		Expect(updated.lanes[0].HighlightGradient).To(Equal(grad))
 		Expect(updated.lanes[0].GradientState).NotTo(BeNil())
 		Expect(updated.lanes[0].GradientState.TotalSteps).To(Equal(5))
@@ -414,17 +414,17 @@ var _ = Describe("Model.Update - CensusMsg", func() {
 var _ = Describe("Model.Update - CompleteMsg", func() {
 	It("clears the counted map so subsequent motifs increment again", func() {
 		m := baseModel(1)
-		updated, _ := update(m, MotifMsg{Data: MotifData{
+		updated, _ := update(m, contract.MotifMsg{
 			Path: "/root/a.txt", IsDir: false,
-		}})
+		})
 		Expect(updated.files).To(Equal(1))
 
 		updated, _ = update(updated, CompleteMsg{})
 		// Same path after CompleteMsg: dedup map is empty,
 		// so this is treated as a new path.
-		updated, _ = update(updated, MotifMsg{Data: MotifData{
+		updated, _ = update(updated, contract.MotifMsg{
 			Path: "/root/a.txt", IsDir: false,
-		}})
+		})
 		Expect(updated.files).To(Equal(2))
 	})
 
