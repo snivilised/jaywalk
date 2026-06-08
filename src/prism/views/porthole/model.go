@@ -1,4 +1,4 @@
-package scroll
+package porthole
 
 import (
 	"strings"
@@ -9,7 +9,7 @@ import (
 
 	"github.com/snivilised/jaywalk/src/prism/contract"
 	"github.com/snivilised/jaywalk/src/prism/effects"
-	"github.com/snivilised/jaywalk/src/prism/flow"
+	"github.com/snivilised/jaywalk/src/prism/views/linear"
 	"github.com/snivilised/jaywalk/src/prism/widgets/banner"
 	"github.com/snivilised/jaywalk/src/prism/widgets/legend"
 	"github.com/snivilised/jaywalk/src/prism/widgets/scrollbar"
@@ -21,6 +21,18 @@ import (
 // scrollbar gutter. The presenter uses this to re-justify landing
 // strips at the correct column after a resize.
 type WindowSizeCallback func(bodyWidth uint)
+
+func statusFieldSet() status.FieldSelectors {
+	return status.FieldSelectors{
+		ShowFiles:    true,
+		ShowDirs:     true,
+		ShowErrors:   true,
+		ShowSkipped:  true,
+		ShowProgress: false,
+		ShowComplete: true,
+		ShowElapsed:  true,
+	}
+}
 
 // bufEntry pairs a rendered line with the raw parameters used to
 // produce it. On terminal resize the model re-renders every buffered
@@ -40,16 +52,8 @@ type bufEntry struct {
 // lines. The flow renderer is used to convert Motif events into
 // styled strings which are appended to the buffer.
 type Model struct {
-	width             int
-	height            int
-	start             time.Time
-	tickRate          time.Duration
-	rootPath          string
-	pipeline          string
-	subscriptionLabel string
-	caption           string
-	dateFormat        string
-	theme             contract.Theme
+	contract.TraverseModel
+	height int
 
 	// contentBuf holds fully-rendered lines paired with the raw render
 	// params. The buffer is truncated from the front when it exceeds
@@ -57,22 +61,8 @@ type Model struct {
 	// at a time to keep navigation responsive.
 	contentBuf []bufEntry
 
-	status status.Model
-
-	header contract.HeaderInfo
-
+	status     status.Model
 	bannerInfo banner.Info
-
-	done   bool
-	errMsg string
-
-	maxDepth  uint
-	noRecurse bool
-	startedAt time.Time
-
-	// flagsRowPosition controls where the legend/flags row is rendered.
-	// Defaults to contract.PositionBottom (above the status line).
-	flagsRowPosition string
 
 	// autoScroll tracks whether the viewport should automatically
 	// follow new content. Set to true initially and when new content
@@ -103,29 +93,21 @@ type Model struct {
 	gradientState    *effects.GradientState
 }
 
-func NewModel(rootPath string, maxDepth uint, theme contract.Theme, noRecurse bool) Model {
+func NewModel(params contract.NewModelParams) Model {
 	return Model{
-		width:      80,
-		rootPath:   rootPath,
-		maxDepth:   maxDepth,
-		noRecurse:  noRecurse,
-		tickRate:   TickRate,
-		theme:      theme,
-		autoScroll: true,
+		TraverseModel: contract.TraverseModel{
+			Width:     80,
+			RootPath:  params.RootPath,
+			MaxDepth:  params.MaxDepth,
+			NoRecurse: params.NoRecurse,
+			TickRate:  TickRate,
+			Theme:     params.Theme,
+		},
 		status: status.New(
-			status.WithTheme(theme),
-			status.WithFields(status.FieldSelectors{
-				ShowFiles:    true,
-				ShowDirs:     true,
-				ShowErrors:   true,
-				ShowSkipped:  true,
-				ShowProgress: false,
-				ShowComplete: true,
-				ShowElapsed:  true,
-			}),
+			status.WithTheme(params.Theme),
+			status.WithFields(statusFieldSet()),
 			status.WithWidth(10),
 		),
-		startedAt: time.Now(),
 	}
 }
 
@@ -157,21 +139,9 @@ func (m *Model) SetActivity(frameFn contract.FrameFunc, gradient *contract.Resol
 }
 
 func (m Model) Init() tea.Cmd {
-	return tea.Tick(m.tickRate, func(t time.Time) tea.Msg {
+	return tea.Tick(m.TickRate, func(t time.Time) tea.Msg {
 		return tickMsg(t)
 	})
-}
-
-func (m Model) RootPath() string {
-	return m.rootPath
-}
-
-func (m Model) Caption() string {
-	return m.caption
-}
-
-func (m Model) Pipeline() string {
-	return m.pipeline
 }
 
 func (m Model) Buffer() []string {
@@ -183,7 +153,7 @@ func (m Model) Buffer() []string {
 }
 
 func (m Model) IsDone() bool {
-	return m.done
+	return m.Done
 }
 
 func (m Model) BannerInfo() banner.Info {
@@ -195,7 +165,7 @@ type tickMsg time.Time
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		m.width = msg.Width
+		m.Width = msg.Width
 		m.height = msg.Height
 		m.rerender()
 
@@ -210,7 +180,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		switch {
-		case m.done && msg.String() == "space":
+		case m.Done && msg.String() == "space":
 			return &m, tea.Quit
 		case msg.String() == "ctrl+c":
 			return &m, tea.Quit
@@ -252,11 +222,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return &m, nil
 
 	case tickMsg:
-		if m.done {
+		if m.Done {
 			return &m, nil
 		}
-		if m.start.IsZero() {
-			m.start = time.Now()
+		if m.Start.IsZero() {
+			m.Start = time.Now()
 		}
 
 		// Advance the activity animation.
@@ -268,53 +238,38 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
-		tickCmd := tea.Tick(m.tickRate, func(t time.Time) tea.Msg {
+		tickCmd := tea.Tick(m.TickRate, func(t time.Time) tea.Msg {
 			return tickMsg(t)
 		})
 
 		var elapsedCmd tea.Cmd
-		m.status, elapsedCmd = m.dispatchStatus(status.ElapsedMsg{Elapsed: time.Since(m.start)})
+		m.status, elapsedCmd = m.dispatchStatus(status.ElapsedMsg{
+			Elapsed: time.Since(m.Start),
+		})
 		if elapsedCmd != nil {
 			return &m, tea.Batch(tickCmd, elapsedCmd)
 		}
 		return &m, tickCmd
 
 	case OvertureMsg:
-		m.rootPath = msg.Root
-		m.subscriptionLabel = msg.SubscriptionLabel
-		m.startedAt = msg.StartedAt
-		m.caption = msg.Caption
-		m.dateFormat = msg.DateFormat
-		m.pipeline = msg.PipelineName
-
-		m.header = msg.Header
-
+		m.ApplyOverture(&msg.OvertureMsg)
 		m.bannerInfo = msg.Banner
-
-		m.flagsRowPosition = msg.FlagsRowPosition
-		if m.flagsRowPosition != contract.PositionTop && m.flagsRowPosition != contract.PositionBottom {
-			m.flagsRowPosition = contract.PositionBottom
-		}
 
 		return &m, nil
 
 	case CompleteMsg:
-		m.done = true
-		m.errMsg = ""
-		for _, e := range msg.Errs {
-			if e != nil {
-				m.errMsg = e.Error()
-				break
-			}
-		}
+		m.ApplyCompletion(msg.Errs, msg.Elapsed)
 
 		m.status, _ = m.dispatchStatus(status.CountsMsg{
 			Files: msg.Files, Dirs: msg.Dirs, Errors: len(msg.Errs),
 		})
-		m.status, _ = m.dispatchStatus(status.ElapsedMsg{Elapsed: msg.Elapsed})
+		m.status, _ = m.dispatchStatus(status.ElapsedMsg{
+			Elapsed: msg.Elapsed,
+		})
+
 		var cmd tea.Cmd
 		m.status, cmd = m.dispatchStatus(status.DoneMsg{
-			Done: msg.Files, IsDone: true, Err: m.errMsg,
+			Done: msg.Files, IsDone: true, Err: m.ErrMsg,
 		})
 		if cmd != nil {
 			return &m, tea.Batch(cmd)
@@ -357,11 +312,8 @@ func (m Model) dispatchStatus(msg tea.Msg) (status.Model, tea.Cmd) {
 	return r.(status.Model), cmd //nolint:errcheck // known concrete type
 }
 
-// tickMsg is the internal tick message used to advance elapsed time.
-var _ = tickMsg(time.Time{})
-
 // lastLineBranchStack returns the branch state BEFORE the last line
-// in the buffer, which is what flow.RenderLine needs to re-render
+// in the buffer, which is what linear.RenderLine needs to re-render
 // that line. Returns nil when the buffer has fewer than 2 lines.
 func (m Model) lastLineBranchStack() []bool {
 	if len(m.contentBuf) < 2 {
@@ -373,7 +325,7 @@ func (m Model) lastLineBranchStack() []bool {
 // contentWidth returns the usable content width inside the viewport,
 // accounting for left border (1), right border (1), and scrollbar gutter.
 func (m Model) contentWidth() int {
-	w := m.width - scrollbar.ScrollbarGutterWidth - 2
+	w := m.Width - scrollbar.ScrollbarGutterWidth - 2
 	if w < 0 {
 		return 0
 	}
@@ -416,25 +368,21 @@ func (m *Model) rerender() {
 
 	for _, entry := range m.contentBuf {
 		p := entry.params
-		result := flow.RenderLine(
-			p.Path, p.Name, p.IsDir, p.Depth,
-			p.ActionName, p.PipelineName,
-			p.CommandOutput, p.ExecutionString,
-			p.DryRun, p.Err,
-			p.IsLast, p.IsPipelineStep, p.IsLastStep,
-			p.VisualDepth,
-			branchStack,
-			bodyWidth,
-			m.theme,
-			"",
-		)
+		result := linear.RenderLine(linear.LineParams{
+			NodeParams: p.NodeParams,
+			RenderParams: contract.RenderParams{
+				BodyWidth: bodyWidth,
+				Theme:     m.Theme,
+			},
+			BranchStack: branchStack,
+		})
 		branchStack = result.BranchStack
 
 		line := strings.TrimRight(result.Line, "\n")
 		if line == "" {
 			continue
 		}
-		for _, sub := range strings.Split(line, "\n") {
+		for sub := range strings.SplitSeq(line, "\n") {
 			sub = truncateStyled(sub, int(bodyWidth)) //nolint:gosec // bodyWidth is always a reasonable terminal width
 			if sub != "" {
 				newBuf = append(newBuf, bufEntry{
@@ -457,14 +405,14 @@ func (m *Model) rerender() {
 func (m Model) legendHeight() int {
 	lm := legend.NewModel(
 		legend.WithInfo(legend.Info{
-			Position: m.flagsRowPosition,
-			Header:   m.header,
+			Position: m.FlagsRowPosition,
+			Header:   m.Header,
 		}),
-		legend.WithWidth(m.width),
+		legend.WithWidth(m.Width),
 		legend.WithStyles(legend.Styles{
-			LabelStyle:  m.theme.SummaryLabelStyle.Width(0),
-			ValueStyle:  m.theme.SummaryValueStyle,
-			BorderStyle: m.theme.BorderStyle,
+			LabelStyle:  m.Theme.SummaryLabelStyle.Width(0),
+			ValueStyle:  m.Theme.SummaryValueStyle,
+			BorderStyle: m.Theme.BorderStyle,
 		}),
 	)
 	return lm.Height()
@@ -489,14 +437,14 @@ func (m Model) legendSectionHeight() int {
 func (m Model) writeLegend(b *strings.Builder) {
 	lm := legend.NewModel(
 		legend.WithInfo(legend.Info{
-			Position: m.flagsRowPosition,
-			Header:   m.header,
+			Position: m.FlagsRowPosition,
+			Header:   m.Header,
 		}),
-		legend.WithWidth(m.width),
+		legend.WithWidth(m.Width),
 		legend.WithStyles(legend.Styles{
-			LabelStyle:  m.theme.SummaryLabelStyle.Width(0),
-			ValueStyle:  m.theme.SummaryValueStyle,
-			BorderStyle: m.theme.BorderStyle,
+			LabelStyle:  m.Theme.SummaryLabelStyle.Width(0),
+			ValueStyle:  m.Theme.SummaryValueStyle,
+			BorderStyle: m.Theme.BorderStyle,
 		}),
 	)
 	if out := lm.View(); out != "" {

@@ -1,4 +1,4 @@
-package flow
+package linear
 
 import (
 	"fmt"
@@ -19,64 +19,71 @@ type RenderLineResult struct {
 	BranchStack []bool
 }
 
+// LineParams holds all parameters needed for RenderLine.
+type LineParams struct {
+	contract.NodeParams
+	contract.RenderParams
+	BranchStack []bool
+}
+
+// renderParams bundles the rendering-specific subset of LineParams
+// that the internal renderDir, renderFile, renderTask and renderStep
+// functions need. It embeds NodeParams so the node data is available
+// without repeating the 14 fields in each function signature.
+type renderParams struct {
+	contract.NodeParams
+	contract.RenderParams
+	PrefixWidth uint
+}
+
 // RenderLine produces the rendered string for a single node given its data.
-// The returned string always ends with a trailing newline. branchStack is
+// The returned string always ends with a trailing newline. BranchStack is
 // the ancestor continuation state carried across calls; pass nil for the
 // first call.
 //
-// Pipeline steps set isPipelineStep=true and pass visualDepth (the parent
-// node depth + 1). The isLastStep flag determines the branch glyph for
+// Pipeline steps set IsPipelineStep=true and pass VisualDepth (the parent
+// node depth + 1). The IsLastStep flag determines the branch glyph for
 // the final step (└── vs ├──).
 //
-// bodyWidth, when > 0, right-justifies the landing strip within the given
+// BodyWidth, when > 0, right-justifies the landing strip within the given
 // visible width. Pass 0 to keep the legacy inline behaviour where the
 // strip is rendered immediately after the action/pipeline name.
-func RenderLine(
-	path, name string,
-	isDir bool,
-	depth uint,
-	actionName, pipelineName string,
-	commandOutput, executionString string,
-	dryRun bool,
-	err error,
-	isLast bool,
-	isPipelineStep bool,
-	isLastStep bool,
-	visualDepth uint,
-	branchStack []bool,
-	bodyWidth uint,
-	theme contract.Theme,
-	activityFrame string,
-) RenderLineResult {
+func RenderLine(p LineParams) RenderLineResult {
 	// For pipeline steps the visual depth is one deeper than the parent
-	// node and the branch icon uses isLastStep (not isLast).
-	prefixDepth := visualDepth
-	prefixIsLast := isLast
-	if isPipelineStep {
-		prefixIsLast = isLastStep && !isDir
+	// node and the branch icon uses IsLastStep (not IsLast).
+	prefixDepth := p.VisualDepth
+	prefixIsLast := p.IsLast
+	if p.IsPipelineStep {
+		prefixIsLast = p.IsLastStep && !p.IsDir
 	}
 
-	prefix := buildBranchPrefix(prefixDepth, prefixIsLast, branchStack, theme.TreeIcons)
-	branchStyle := theme.BranchStyle
+	prefix := buildBranchPrefix(prefixDepth, prefixIsLast, p.BranchStack, p.Theme.TreeIcons)
+	branchStyle := p.Theme.BranchStyle
 
 	prefixWidth := lipglossWidth(prefix, branchStyle)
+
+	rp := renderParams{
+		NodeParams:   p.NodeParams,
+		RenderParams: p.RenderParams,
+		PrefixWidth:  prefixWidth,
+	}
 
 	var nameStr string
 
 	switch {
-	case isPipelineStep:
-		nameStr = renderStep(actionName, commandOutput, executionString, dryRun, err, bodyWidth, prefixWidth, theme, activityFrame)
+	case p.IsPipelineStep:
+		nameStr = renderStep(rp)
 
-	case err != nil:
-		nameStr = theme.ErrorStyle.Render(
-			fmt.Sprintf("! %s  %s", name, err.Error()),
+	case p.Err != nil:
+		nameStr = p.Theme.ErrorStyle.Render(
+			fmt.Sprintf("! %s  %s", p.Name, p.Err.Error()),
 		)
 
-	case isDir:
-		nameStr = renderDir(name, actionName, pipelineName, commandOutput, executionString, dryRun, bodyWidth, prefixWidth, theme, activityFrame)
+	case p.IsDir:
+		nameStr = renderDir(rp)
 
 	default:
-		nameStr = renderFile(name, actionName, pipelineName, commandOutput, executionString, dryRun, bodyWidth, prefixWidth, theme, activityFrame)
+		nameStr = renderFile(rp)
 	}
 
 	var b strings.Builder
@@ -86,33 +93,33 @@ func RenderLine(
 
 	return RenderLineResult{
 		Line:        b.String(),
-		BranchStack: updateBranchStack(visualDepth, prefixIsLast, branchStack),
+		BranchStack: updateBranchStack(p.VisualDepth, prefixIsLast, p.BranchStack),
 	}
 }
 
-func renderStep(actionName, commandOutput, executionString string, dryRun bool, err error, bodyWidth, prefixWidth uint, theme contract.Theme, activityFrame string) string {
+func renderStep(rp renderParams) string {
 	var b strings.Builder
 
-	if err != nil {
-		b.WriteString(theme.ErrorStyle.Render(
-			fmt.Sprintf("! %s  %s", actionName, err.Error()),
+	if rp.Err != nil {
+		b.WriteString(rp.Theme.ErrorStyle.Render(
+			fmt.Sprintf("! %s  %s", rp.ActionName, rp.Err.Error()),
 		))
 	} else {
-		action := theme.ActionStyle.Render("  • via " + actionName)
+		action := rp.Theme.ActionStyle.Render("  • via " + rp.ActionName)
 		b.WriteString(action)
-		consumed := prefixWidth + lipglossWidth(action, theme.ActionStyle)
-		if activityFrame != "" {
-			b.WriteString(activityFrame)
-			consumed += lipglossWidth(activityFrame, lipgloss.Style{})
+		consumed := rp.PrefixWidth + lipglossWidth(action, rp.Theme.ActionStyle)
+		if rp.ActivityFrame != "" {
+			b.WriteString(rp.ActivityFrame)
+			consumed += lipglossWidth(rp.ActivityFrame, lipgloss.Style{})
 		}
 		b.WriteString(landing.Render(landing.Config{
-			CommandOutput:   commandOutput,
-			ExecutionString: executionString,
-			DryRun:          dryRun,
-			Width:           rightJustifyWidth(bodyWidth, consumed),
+			CommandOutput:   rp.CommandOutput,
+			ExecutionString: rp.ExecutionString,
+			DryRun:          rp.DryRun,
+			Width:           rightJustifyWidth(rp.BodyWidth, consumed),
 		}, landing.Styles{
-			BranchStyle:       theme.BranchStyle,
-			LandingStripStyle: theme.LandingStripStyle,
+			BranchStyle:       rp.Theme.BranchStyle,
+			LandingStripStyle: rp.Theme.LandingStripStyle,
 		}))
 	}
 
@@ -170,54 +177,56 @@ func updateBranchStack(depth uint, isLast bool, stack []bool) []bool {
 	return stack
 }
 
-func renderDir(name, actionName, pipelineName, commandOutput, executionString string, dryRun bool, bodyWidth, prefixWidth uint, theme contract.Theme, activityFrame string) string {
+func renderDir(rp renderParams) string {
 	var b strings.Builder
 
-	itemLabel := buildItemLabel(name, true, theme.TreeIcons)
-	dirLabel := theme.DirStyle.Render(itemLabel)
+	itemLabel := buildItemLabel(rp.Name, true, rp.Theme.TreeIcons)
+	dirLabel := rp.Theme.DirStyle.Render(itemLabel)
 	b.WriteString(dirLabel)
-	b.WriteString(renderTask(actionName, pipelineName, commandOutput, executionString, dryRun, bodyWidth, prefixWidth+lipglossWidth(dirLabel, theme.DirStyle), theme, activityFrame))
+	rp.PrefixWidth += lipglossWidth(dirLabel, rp.Theme.DirStyle)
+	b.WriteString(renderTask(rp))
 
 	return b.String()
 }
 
-func renderFile(name, actionName, pipelineName, commandOutput, executionString string, dryRun bool, bodyWidth, prefixWidth uint, theme contract.Theme, activityFrame string) string {
+func renderFile(rp renderParams) string {
 	var b strings.Builder
 
-	itemLabel := buildItemLabel(name, false, theme.TreeIcons)
-	fileLabel := theme.FileStyle.Render(itemLabel)
+	itemLabel := buildItemLabel(rp.Name, false, rp.Theme.TreeIcons)
+	fileLabel := rp.Theme.FileStyle.Render(itemLabel)
 	b.WriteString(fileLabel)
-	b.WriteString(renderTask(actionName, pipelineName, commandOutput, executionString, dryRun, bodyWidth, prefixWidth+lipglossWidth(fileLabel, theme.FileStyle), theme, activityFrame))
+	rp.PrefixWidth += lipglossWidth(fileLabel, rp.Theme.FileStyle)
+	b.WriteString(renderTask(rp))
 
 	return b.String()
 }
 
-func renderTask(actionName, pipelineName string, commandOutput, executionString string, dryRun bool, bodyWidth, prefixWidth uint, theme contract.Theme, activityFrame string) string {
+func renderTask(rp renderParams) string {
 	var b strings.Builder
 
-	if actionName != "" {
-		action := theme.ActionStyle.Render("  • via " + actionName)
+	if rp.ActionName != "" {
+		action := rp.Theme.ActionStyle.Render("  • via " + rp.ActionName)
 		b.WriteString(action)
-		prefixWidth += lipglossWidth(action, theme.ActionStyle)
-	} else if pipelineName != "" {
-		pipeline := theme.PipelineStyle.Render("  • via " + pipelineName)
+		rp.PrefixWidth += lipglossWidth(action, rp.Theme.ActionStyle)
+	} else if rp.PipelineName != "" {
+		pipeline := rp.Theme.PipelineStyle.Render("  • via " + rp.PipelineName)
 		b.WriteString(pipeline)
-		prefixWidth += lipglossWidth(pipeline, theme.PipelineStyle)
+		rp.PrefixWidth += lipglossWidth(pipeline, rp.Theme.PipelineStyle)
 	}
 
-	if activityFrame != "" {
-		b.WriteString(activityFrame)
-		prefixWidth += lipglossWidth(activityFrame, lipgloss.Style{})
+	if rp.ActivityFrame != "" {
+		b.WriteString(rp.ActivityFrame)
+		rp.PrefixWidth += lipglossWidth(rp.ActivityFrame, lipgloss.Style{})
 	}
 
 	b.WriteString(landing.Render(landing.Config{
-		CommandOutput:   commandOutput,
-		ExecutionString: executionString,
-		DryRun:          dryRun,
-		Width:           rightJustifyWidth(bodyWidth, prefixWidth),
+		CommandOutput:   rp.CommandOutput,
+		ExecutionString: rp.ExecutionString,
+		DryRun:          rp.DryRun,
+		Width:           rightJustifyWidth(rp.BodyWidth, rp.PrefixWidth),
 	}, landing.Styles{
-		BranchStyle:       theme.BranchStyle,
-		LandingStripStyle: theme.LandingStripStyle,
+		BranchStyle:       rp.Theme.BranchStyle,
+		LandingStripStyle: rp.Theme.LandingStripStyle,
 	}))
 
 	return b.String()

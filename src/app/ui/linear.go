@@ -15,14 +15,14 @@ import (
 	"github.com/snivilised/jaywalk/src/third/lo"
 )
 
-// linear is the linear-view display implementation. It translates
+// linearPresenter is the linearPresenter-view display implementation. It translates
 // report events into contract.Motif calls and delegates all formatting
 // and output to the contract.Renderer. It contains no formatting logic.
 //
 // Safe for concurrent use - all renderer calls are serialised through
 // a mutex so interleaved output from the sprint command's worker pool is
 // avoided.
-type linear struct {
+type linearPresenter struct {
 	mux          sync.Mutex
 	renderer     contract.Renderer
 	kind         contract.NavigationKind // remembered from OnBegin for use in OnComplete
@@ -34,13 +34,13 @@ type linear struct {
 	theme        contract.Theme
 }
 
-func (l *linear) OnTraversalOptions(o *pref.Options) {
+func (l *linearPresenter) OnTraversalOptions(o *pref.Options) {
 	o.View.Peer.IsActive = true
 }
 
 // OnBegin translates the BeginEvent into a contract.Overture and calls
 // renderer.Begin to render the opening banner.
-func (l *linear) OnBegin(e *report.BeginEvent) {
+func (l *linearPresenter) OnBegin(e *report.BeginEvent) {
 	l.mux.Lock()
 	defer l.mux.Unlock()
 
@@ -70,7 +70,7 @@ func (l *linear) OnBegin(e *report.BeginEvent) {
 
 // OnNodeEvent translates a neutral node visit into a contract.Motif.
 // Depth is sourced from node.Extension.Depth as provided by agenor.
-func (l *linear) OnNodeEvent(e *report.NeutralEvent) {
+func (l *linearPresenter) OnNodeEvent(e *report.NeutralEvent) {
 	l.mux.Lock()
 	defer l.mux.Unlock()
 
@@ -85,7 +85,7 @@ func (l *linear) OnNodeEvent(e *report.NeutralEvent) {
 	})
 }
 
-func (l *linear) OnActionEvent(e *report.ActionEvent) {
+func (l *linearPresenter) OnActionEvent(e *report.ActionEvent) {
 	l.mux.Lock()
 	defer l.mux.Unlock()
 
@@ -107,7 +107,7 @@ func (l *linear) OnActionEvent(e *report.ActionEvent) {
 	})
 }
 
-func (l *linear) OnPipelineEvent(e *report.PipelineEvent) {
+func (l *linearPresenter) OnPipelineEvent(e *report.PipelineEvent) {
 	l.mux.Lock()
 	defer l.mux.Unlock()
 
@@ -130,7 +130,7 @@ func (l *linear) OnPipelineEvent(e *report.PipelineEvent) {
 
 // OnSkipEvent translates a skip event into a contract.Motif flagged as
 // skipped so the renderer can apply warning styling.
-func (l *linear) OnSkipEvent(e *report.SkipEvent) {
+func (l *linearPresenter) OnSkipEvent(e *report.SkipEvent) {
 	l.mux.Lock()
 	defer l.mux.Unlock()
 
@@ -154,7 +154,7 @@ func (l *linear) OnSkipEvent(e *report.SkipEvent) {
 // OnComplete translates the Traversal outcome into a contract.Summary and
 // calls renderer.End to render the closing summary box. Kind is carried
 // from OnBegin so the summary labels correctly for resume traversals.
-func (l *linear) OnComplete(traversal *report.Traversal) {
+func (l *linearPresenter) OnComplete(traversal *report.Traversal) {
 	l.mux.Lock()
 	defer l.mux.Unlock()
 
@@ -175,7 +175,7 @@ func (l *linear) OnComplete(traversal *report.Traversal) {
 
 // NeedsPeerInfo reports whether this view requires peer position data.
 // Returning true causes the coordinator to run a preview traversal.
-func (l *linear) NeedsPeerInfo() bool {
+func (l *linearPresenter) NeedsPeerInfo() bool {
 	return true
 }
 
@@ -183,16 +183,16 @@ func (l *linear) NeedsPeerInfo() bool {
 // with the total file and directory counts collected during the
 // preview. Views can use these counts to display a progress indicator
 // during the live traversal.
-func (l *linear) OnPeerInfoBegin(files, dirs uint, peerInfoMap map[string]*core.PeerInfo) {
+func (l *linearPresenter) OnPeerInfoBegin(files, dirs uint, peerInfoMap map[string]*core.PeerInfo) {
 	l.peerInfo = peerInfoMap
 }
 
 // OnPeerInfoEnd is called when the live traversal completes, allowing
 // the view to tear down any progress indicator it displayed.
-func (l *linear) OnPeerInfoEnd() {
+func (l *linearPresenter) OnPeerInfoEnd() {
 }
 
-func (l *linear) ensureParentRendered(node *core.Node) {
+func (l *linearPresenter) ensureParentRendered(node *core.Node) {
 	if l.subscription != enums.SubscribeFiles {
 		return
 	}
@@ -240,7 +240,7 @@ func (l *linear) ensureParentRendered(node *core.Node) {
 // so the aspects are frozen for the duration of the process. The gradient
 // endpoints are resolved from the theme's "banner-control" component,
 // falling back to no gradient when the binding is absent.
-func (l *linear) buildBannerInfo() *contract.BannerInfo {
+func (l *linearPresenter) buildBannerInfo() *contract.BannerInfo {
 	info := &contract.BannerInfo{
 		Disable:  l.cfg.Banner.Disable,
 		Position: l.cfg.FlagsRowPosition,
@@ -281,5 +281,5 @@ func (l *linear) buildBannerInfo() *contract.BannerInfo {
 // spy or stub renderer to be injected without going through contract.New
 // and without requiring a real terminal.
 func NewLinearWithRenderer(r contract.Renderer) report.Presenter {
-	return &linear{renderer: r}
+	return &linearPresenter{renderer: r}
 }

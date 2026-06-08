@@ -19,12 +19,12 @@ func (m Model) renderSummary(b *strings.Builder) {
 	b.WriteString(m.status.View().Content)
 	b.WriteString("\n")
 
-	b.WriteString(border.RenderBottom(m.width, border.Styles{
-		BorderStyle: m.theme.BorderStyle,
+	b.WriteString(border.RenderBottom(m.Width, border.Styles{
+		BorderStyle: m.Theme.BorderStyle,
 	}))
 
 	if m.status.IsDone() {
 		b.WriteString("\n")
-		b.WriteString(m.theme.MutedStyle.Render(" • press space to exit"))
+		b.WriteString(m.Theme.MutedStyle.Render(" • press space to exit"))
 	}
 }

@@ -349,7 +349,7 @@ var _ = Describe("Bootstrap", Ordered, func() {
 
 					Expect(bootstrap.UI).NotTo(BeNil(),
 						"PersistentPreRunE should have populated b.UI")
-					Expect(presenterType(bootstrap.UI)).To(Equal("*ui.linear"))
+					Expect(presenterType(bootstrap.UI)).To(Equal("*ui.linearPresenter"))
 				})
 			})
 
@@ -386,7 +386,7 @@ var _ = Describe("Bootstrap", Ordered, func() {
 					_, _ = tester.Execute()
 
 					Expect(bootstrap.UI).NotTo(BeNil())
-					Expect(presenterType(bootstrap.UI)).To(Equal("*ui.linear"))
+					Expect(presenterType(bootstrap.UI)).To(Equal("*ui.linearPresenter"))
 				})
 			})
 
@@ -481,7 +481,7 @@ var _ = Describe("Bootstrap", Ordered, func() {
 					_, _ = tester.Execute()
 
 					Expect(bootstrap.UI).NotTo(BeNil())
-					Expect(presenterType(bootstrap.UI)).To(Equal("*ui.linear"))
+					Expect(presenterType(bootstrap.UI)).To(Equal("*ui.linearPresenter"))
 				})
 			})
 		})

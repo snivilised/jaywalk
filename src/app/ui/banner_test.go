@@ -91,10 +91,12 @@ func newBannerPresenter(bannerCfg BannerConfig) *highwayPresenter {
 	Expect(err).NotTo(HaveOccurred())
 
 	return &highwayPresenter{
+		presenter: presenter{
+			theme: theme,
+		},
 		cfg: HighwayConfig{
 			Banner: bannerCfg,
 		},
-		theme: theme,
 	}
 }
 

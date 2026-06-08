@@ -3,7 +3,7 @@
 //
 // Dependency rule: flow imports contract (shared types) and is imported
 // by prism root.
-package flow
+package linear
 
 import (
 	"fmt"

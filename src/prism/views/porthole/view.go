@@ -1,4 +1,4 @@
-package scroll
+package porthole
 
 import (
 	"strings"
@@ -8,8 +8,8 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"github.com/snivilised/jaywalk/src/prism/contract"
-	"github.com/snivilised/jaywalk/src/prism/flow"
 	"github.com/snivilised/jaywalk/src/prism/layout"
+	"github.com/snivilised/jaywalk/src/prism/views/linear"
 	"github.com/snivilised/jaywalk/src/prism/widgets/activity"
 	"github.com/snivilised/jaywalk/src/prism/widgets/banner"
 	"github.com/snivilised/jaywalk/src/prism/widgets/border"
@@ -26,32 +26,32 @@ func (m *Model) View() tea.View {
 	}
 
 	m.renderHeader(&b)
-	if m.flagsRowPosition == contract.PositionTop && m.legendHeight() > 0 {
-		m.writeSeparator(&b)
+	if m.FlagsRowPosition == contract.PositionTop && m.legendHeight() > 0 {
+		m.WriteSeparator(&b)
 		m.writeLegend(&b)
-		m.writeSeparator(&b)
+		m.WriteSeparator(&b)
 	}
 
 	b.WriteString(m.renderBody())
 
-	if (m.flagsRowPosition == contract.PositionBottom || m.flagsRowPosition == "") &&
+	if (m.FlagsRowPosition == contract.PositionBottom || m.FlagsRowPosition == "") &&
 		m.legendHeight() > 0 {
-		m.writeSeparator(&b)
+		m.WriteSeparator(&b)
 		m.writeLegend(&b)
-		m.writeSeparator(&b)
+		m.WriteSeparator(&b)
 	}
 
 	statusContent := m.status.View().Content
 	b.WriteString(statusContent)
 	b.WriteString("\n")
 
-	b.WriteString(border.RenderBottom(m.width, border.Styles{
-		BorderStyle: m.theme.BorderStyle,
+	b.WriteString(border.RenderBottom(m.Width, border.Styles{
+		BorderStyle: m.Theme.BorderStyle,
 	}))
 
 	if m.status.IsDone() {
 		b.WriteString("\n")
-		b.WriteString(m.theme.MutedStyle.Render(" • press space to exit"))
+		b.WriteString(m.Theme.MutedStyle.Render(" • press space to exit"))
 	}
 
 	v := tea.NewView(b.String())
@@ -59,19 +59,10 @@ func (m *Model) View() tea.View {
 	return v
 }
 
-// writeSeparator emits a horizontal "├─────┤" border line, used to
-// frame the legend section on both sides. The legend widget itself
-// is layout-agnostic; the surrounding borders are the view's concern.
-func (m Model) writeSeparator(b *strings.Builder) {
-	dashes := strings.Repeat("─", max(0, m.width-2))
-	b.WriteString(m.theme.BorderStyle.Render("├" + dashes + "┤"))
-	b.WriteString("\n")
-}
-
 func (m Model) writeBanner(b *strings.Builder) {
 	bm := banner.NewModel(
 		banner.WithInfo(m.bannerInfo),
-		banner.WithWidth(m.width),
+		banner.WithWidth(m.Width),
 	)
 	if bm.Disabled() {
 		return
@@ -82,32 +73,32 @@ func (m Model) writeBanner(b *strings.Builder) {
 }
 
 func (m Model) renderHeader(b *strings.Builder) {
-	borderStyle := m.theme.BorderStyle
-	headerStyle := m.theme.HeaderStyle
-	summaryValueStyle := m.theme.SummaryValueStyle
-	pipelineStyle := m.theme.PipelineStyle
+	borderStyle := m.Theme.BorderStyle
+	headerStyle := m.Theme.HeaderStyle
+	summaryValueStyle := m.Theme.SummaryValueStyle
+	pipelineStyle := m.Theme.PipelineStyle
 
-	dashes := strings.Repeat("─", max(0, m.width-2))
+	dashes := strings.Repeat("─", max(0, m.Width-2))
 
-	topBorderContent := border.RenderTop(m.rootPath, m.width, border.Styles{
+	topBorderContent := border.RenderTop(m.RootPath, m.Width, border.Styles{
 		BorderStyle: borderStyle,
-		PathStyle:   m.theme.RootStyle,
+		PathStyle:   m.Theme.RootStyle,
 		CornerStyle: borderStyle,
 	})
 	b.WriteString(topBorderContent)
 
-	introContent := intro.Render(m.subscriptionLabel, m.startedAt, m.dateFormat, intro.Styles{
+	introContent := intro.Render(m.SubscriptionLabel, m.StartedAt, m.DateFormat, intro.Styles{
 		InfoStyle: summaryValueStyle,
 	})
 
 	header := headerStyle.Render("Processing")
 	middle := header + introContent
 
-	row := layout.NewRow(m.width-4).
+	row := layout.NewRow(m.Width-4).
 		Caps(borderStyle.Render("│ "), borderStyle.Render(" │")).
 		Content(middle)
 
-	pipelineContent := pipeline.Render(m.pipeline, pipeline.Styles{
+	pipelineContent := pipeline.Render(m.PipelineName, pipeline.Styles{
 		PipelineStyle: pipelineStyle,
 	})
 	if pipelineContent != "" {
@@ -124,10 +115,7 @@ func (m Model) renderHeader(b *strings.Builder) {
 func (m *Model) renderBody() string {
 	// bodyWidth is the usable content width inside the left/right borders
 	// and the scrollbar gutter column.
-	bodyWidth := m.width - scrollbar.ScrollbarGutterWidth - 2
-	if bodyWidth < 0 {
-		bodyWidth = 0
-	}
+	bodyWidth := max(m.Width-scrollbar.ScrollbarGutterWidth-2, 0)
 
 	// Account for all fixed chrome: top border (1), header row (1),
 	// separator (1), status (1), bottom border (1), "press space
@@ -135,10 +123,7 @@ func (m *Model) renderBody() string {
 	// entry lines + 2 separator borders framing it (one above, one
 	// below). legendSectionHeight returns 0 when no flags are present
 	// so the body claims the full available space in that case.
-	bodyHeight := m.height - 6 - m.legendSectionHeight()
-	if bodyHeight < 1 {
-		bodyHeight = 1
-	}
+	bodyHeight := max(m.height-6-m.legendSectionHeight(), 1)
 
 	truncated := make([]string, len(m.contentBuf))
 	for i, entry := range m.contentBuf {
@@ -165,7 +150,7 @@ func (m *Model) renderBody() string {
 	// Collect gutter lines (one per row).
 	var gutterLines []string
 	if scrollbar.Visible(scrollbarState) {
-		gutterStr := scrollbar.View(scrollbarState, scrollbar.Config{Theme: m.theme})
+		gutterStr := scrollbar.View(scrollbarState, scrollbar.Config{Theme: m.Theme})
 		gutterLines = strings.Split(strings.TrimRight(gutterStr, "\n"), "\n")
 	}
 
@@ -200,7 +185,7 @@ func (m *Model) renderBody() string {
 	}
 
 	// When showing activity, re-render the last content line via
-	// flow.RenderLine with the current activity frame. This places
+	// linear.RenderLine with the current activity frame. This places
 	// the spinner after the action/pipeline text (matching the
 	// highway's layout) rather than at the far right edge.
 	var activityLine string
@@ -208,36 +193,26 @@ func (m *Model) renderBody() string {
 		last := m.contentBuf[len(m.contentBuf)-1]
 		branchStack := m.lastLineBranchStack()
 		spinner := " " + m.renderActivity()
-		result := flow.RenderLine(
-			last.params.Path,
-			last.params.Name,
-			last.params.IsDir,
-			last.params.Depth,
-			last.params.ActionName,
-			last.params.PipelineName,
-			last.params.CommandOutput,
-			last.params.ExecutionString,
-			last.params.DryRun,
-			last.params.Err,
-			last.params.IsLast,
-			last.params.IsPipelineStep,
-			last.params.IsLastStep,
-			last.params.VisualDepth,
-			branchStack,
-			uint(bodyWidth),
-			m.theme,
-			spinner,
-		)
+		nodeParams := last.params.NodeParams
+		nodeParams.ActivityFrame = spinner
+		result := linear.RenderLine(linear.LineParams{
+			NodeParams: nodeParams,
+			RenderParams: contract.RenderParams{
+				BodyWidth: uint(bodyWidth),
+				Theme:     m.Theme,
+			},
+			BranchStack: branchStack,
+		})
 		activityLine = strings.TrimRight(result.Line, "\n")
 		activityLine = truncateStyled(activityLine, bodyWidth)
 	}
 
-	borderStyle := m.theme.BorderStyle
+	borderStyle := m.Theme.BorderStyle
 	leftBar := borderStyle.Render("│")
 	rightBar := borderStyle.Render("│")
 
 	var b strings.Builder
-	for i := 0; i < bodyHeight; i++ {
+	for i := range bodyHeight {
 		b.WriteString(leftBar)
 
 		// Content line, padded to bodyWidth.

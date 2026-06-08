@@ -51,7 +51,7 @@ func (s *spyRenderer) End(su contract.Summary) {
 // Helpers
 // ---------------------------------------------------------------------------
 
-// newLinearWithSpy constructs a ui.linear backed by the given spy and
+// newLinearWithSpy constructs a ui.linearPresenter backed by the given spy and
 // returns it as a report.Presenter. This uses the exported
 // ui.NewLinearWithRenderer constructor added specifically for testing
 // so that spies can be injected without going through the registry.

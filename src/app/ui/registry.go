@@ -8,7 +8,7 @@ import (
 	"github.com/snivilised/jaywalk/src/app/bedrock"
 	"github.com/snivilised/jaywalk/src/app/report"
 	"github.com/snivilised/jaywalk/src/prism/contract"
-	"github.com/snivilised/jaywalk/src/prism/flow"
+	"github.com/snivilised/jaywalk/src/prism/views/linear"
 )
 
 // ---------------------------------------------------------------------------
@@ -368,7 +368,7 @@ func normaliseLinearFlagsRowPosition(raw string) string {
 		return raw
 	default:
 		fmt.Fprintf(os.Stderr,
-			"warning: ui.linear.flags-row-position: unrecognised value %q, defaulting to %q\n",
+			"warning: ui.linearPresenter.flags-row-position: unrecognised value %q, defaulting to %q\n",
 			raw, flagsRowPositionDefault,
 		)
 		return flagsRowPositionDefault
@@ -504,16 +504,16 @@ func newLinearPresenter(palette contract.Palette, cfg LinearConfig) (report.Pres
 		return nil, err
 	}
 
-	renderer, err := flow.New(
+	renderer, err := linear.New(
 		palette,
 		os.Stdout,
-		flow.WithIcons(palette.TreeIcons),
+		linear.WithIcons(palette.TreeIcons),
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	return &linear{
+	return &linearPresenter{
 		renderer: renderer,
 		cfg:      cfg,
 		theme:    theme,

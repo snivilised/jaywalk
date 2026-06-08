@@ -70,8 +70,10 @@ var _ = Describe("Banner integration with highway view", func() {
 			m := baseModel(1)
 			info := makeBannerInfo(contract.PositionTop)
 			updated, _ := update(m, OvertureMsg{
-				FlagsRowPosition: contract.PositionBottom,
-				Banner:           info,
+				OvertureMsg: contract.OvertureMsg{
+					FlagsRowPosition: contract.PositionBottom,
+				},
+				Banner: info,
 			})
 			out := viewContent(updated)
 
@@ -108,8 +110,10 @@ var _ = Describe("Banner integration with highway view", func() {
 			m := baseModel(1)
 			info := makeBannerInfo(contract.PositionBottom)
 			updated, _ := update(m, OvertureMsg{
-				FlagsRowPosition: contract.PositionBottom,
-				Banner:           info,
+				OvertureMsg: contract.OvertureMsg{
+					FlagsRowPosition: contract.PositionBottom,
+				},
+				Banner: info,
 			})
 			out := viewContent(updated)
 			lines := strings.Split(out, "\n")
@@ -143,8 +147,10 @@ var _ = Describe("Banner integration with highway view", func() {
 			info := makeBannerInfo(contract.PositionTop)
 			info.Disable = true
 			updated, _ := update(m, OvertureMsg{
-				FlagsRowPosition: contract.PositionBottom,
-				Banner:           info,
+				OvertureMsg: contract.OvertureMsg{
+					FlagsRowPosition: contract.PositionBottom,
+				},
+				Banner: info,
 			})
 			out := viewContent(updated)
 			// The view should not contain the banner's ANSI codes.
@@ -157,8 +163,10 @@ var _ = Describe("Banner integration with highway view", func() {
 			m := baseModel(1)
 			info := makeBannerInfo(contract.PositionTop)
 			updated, _ := update(m, OvertureMsg{
-				FlagsRowPosition: contract.PositionBottom,
-				Banner:           info,
+				OvertureMsg: contract.OvertureMsg{
+					FlagsRowPosition: contract.PositionBottom,
+				},
+				Banner: info,
 			})
 
 			// Drive a single tick through the model.
@@ -179,8 +187,10 @@ var _ = Describe("Banner integration with highway view", func() {
 			m := baseModel(1)
 			info := makeBannerInfo(contract.PositionTop)
 			updated, _ := update(m, OvertureMsg{
-				FlagsRowPosition: contract.PositionBottom,
-				Banner:           info,
+				OvertureMsg: contract.OvertureMsg{
+					FlagsRowPosition: contract.PositionBottom,
+				},
+				Banner: info,
 			})
 			before := updated.bannerTicker.State().Offset
 			// 10 ticks (skipFactor) → 1 advance.

@@ -9,13 +9,11 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/snivilised/jaywalk/src/agenor/core"
-	"github.com/snivilised/jaywalk/src/agenor/enums"
-	"github.com/snivilised/jaywalk/src/agenor/pref"
 	"github.com/snivilised/jaywalk/src/app/report"
 	"github.com/snivilised/jaywalk/src/prism/contract"
 	"github.com/snivilised/jaywalk/src/prism/effects"
-	"github.com/snivilised/jaywalk/src/prism/highway"
 	"github.com/snivilised/jaywalk/src/prism/movies"
+	"github.com/snivilised/jaywalk/src/prism/views/highway"
 	"github.com/snivilised/jaywalk/src/prism/widgets/banner"
 	"github.com/snivilised/jaywalk/src/prism/widgets/track"
 )
@@ -25,29 +23,11 @@ import (
 // implementations are co-located with LoadConfig and New.
 
 type highwayPresenter struct {
-	program    *tea.Program
-	done       chan struct{}
-	cfg        HighwayConfig
-	noW        uint
-	maxDepth   uint
-	totalFiles uint
-	totalDirs  uint
-	theme      contract.Theme
-	noRecurse  bool
-
-	// header is the supplementary flag info carried on the BeginEvent.
-	// Stored on the presenter so tests and lifecycle hooks can introspect
-	// it, and read here when building the OvertureMsg. See
-	// contract.HeaderInfo for field semantics.
-	header contract.HeaderInfo
+	presenter
+	cfg HighwayConfig
 
 	// Job emoji pool state - populated from config, random emoji picked per job arrival.
 	jobEmojiPool []string
-
-	// bannerInfo is built once in OnBegin and sent to the model via
-	// OvertureMsg. It carries the random aspects and gradient
-	// endpoints resolved from the theme.
-	bannerInfo banner.Info
 }
 
 func newHighwayPresenter(palette contract.Palette, hCfg HighwayConfig) (report.Presenter, error) {
@@ -56,29 +36,7 @@ func newHighwayPresenter(palette contract.Palette, hCfg HighwayConfig) (report.P
 	if err != nil {
 		return nil, err
 	}
-	return &highwayPresenter{cfg: hCfg, theme: theme}, nil
-}
-
-func (h *highwayPresenter) OnTraversalOptions(o *pref.Options) {
-	// Read concurrency settings from options - this is structural configuration, not cascade state.
-	h.noW = o.Concurrency.NoW
-}
-
-func subscriptionLabelFor(s enums.Subscription) string {
-	switch s {
-	case enums.SubscribeUndefined:
-		return "undefined"
-	case enums.SubscribeFiles:
-		return "files only"
-	case enums.SubscribeDirectories:
-		return "folders only"
-	case enums.SubscribeDirectoriesWithFiles:
-		return "directories w/ files"
-	case enums.SubscribeUniversal:
-		return "files and folders"
-	default:
-		return "files and folders"
-	}
+	return &highwayPresenter{presenter: presenter{theme: theme}, cfg: hCfg}, nil
 }
 
 // initJobEmojiPool loads the job emoji pool from config or defaults.
@@ -90,10 +48,6 @@ func (h *highwayPresenter) initJobEmojiPool() {
 	}
 	h.jobEmojiPool = make([]string, len(jobEmojis))
 	copy(h.jobEmojiPool, jobEmojis)
-}
-
-func (h *highwayPresenter) SetMaxDepth(maxDepth uint) {
-	h.maxDepth = maxDepth
 }
 
 // OnBegin creates the bubbletea model and starts the program.
@@ -113,7 +67,12 @@ func (h *highwayPresenter) OnBegin(e *report.BeginEvent) {
 	h.bannerInfo = h.buildBannerInfo()
 
 	lanes := BuildHighwayLanes(h.cfg, h.noW)
-	model := highway.NewModel(lanes, highwayTickRate, e.Root, h.maxDepth, h.theme, h.noRecurse)
+	model := highway.NewModel(contract.NewModelParams{
+		RootPath:  e.Root,
+		MaxDepth:  h.maxDepth,
+		Theme:     h.theme,
+		NoRecurse: h.noRecurse,
+	}, lanes, highwayTickRate)
 	h.program = tea.NewProgram(model)
 
 	// Initialize done channel before starting the goroutine that closes it.
@@ -138,24 +97,18 @@ func (h *highwayPresenter) OnBegin(e *report.BeginEvent) {
 	}
 
 	h.program.Send(highway.OvertureMsg{
-		Root:              e.Root,
-		Caption:           e.Caption,
-		SubscriptionLabel: subscriptionLabelFor(e.Subscription),
-		StartedAt:         e.StartedAt,
-		DateFormat:        e.DateFormat,
-		ActionName:        e.ActionName,
-		PipelineName:      e.PipelineName,
-
-		// Header info for filter widgets, cascade display and sampler
-		Header: h.header,
-
-		// Position of the flags row
-		FlagsRowPosition: h.cfg.FlagsRowPosition,
-
-		// Banner info populated once in OnBegin. The model receives
-		// the gradient state pointer and advances it on every banner
-		// tick.
-		Banner: h.bannerInfo,
+		OvertureMsg: contract.OvertureMsg{
+			Root:              e.Root,
+			Caption:           e.Caption,
+			SubscriptionLabel: subscriptionLabelFor(e.Subscription),
+			StartedAt:         e.StartedAt,
+			DateFormat:        e.DateFormat,
+			PipelineName:      e.PipelineName,
+			Header:            h.header,
+			FlagsRowPosition:  h.cfg.FlagsRowPosition,
+		},
+		ActionName: e.ActionName,
+		Banner:     h.bannerInfo,
 	})
 
 	if h.totalFiles > 0 || h.totalDirs > 0 {
@@ -167,43 +120,58 @@ func (h *highwayPresenter) OnBegin(e *report.BeginEvent) {
 	}
 }
 
-func (h *highwayPresenter) NeedsPeerInfo() bool {
-	return true
-}
-
-func (h *highwayPresenter) OnPeerInfoBegin(files, dirs uint, _ map[string]*core.PeerInfo) {
-	h.totalFiles = files
-	h.totalDirs = dirs
-}
-
-func (h *highwayPresenter) OnPeerInfoEnd() {}
-
 func (h *highwayPresenter) OnNodeEvent(e *report.NeutralEvent) {
-	h.sendMotif(e.Node.Path, e.Node.Extension.Name, e.Node.IsDirectory(),
-		uint(e.Node.Extension.Depth), "", "", "", "", false, nil)
+	h.sendMotif(contract.MotifMsg{
+		Path:  e.Node.Path,
+		Name:  e.Node.Extension.Name,
+		IsDir: e.Node.IsDirectory(),
+		Depth: uint(e.Node.Extension.Depth),
+	})
 }
 
 func (h *highwayPresenter) OnActionEvent(e *report.ActionEvent) {
-	h.sendMotif(e.Node.Path, e.Node.Extension.Name, e.Node.IsDirectory(),
-		uint(e.Node.Extension.Depth), e.Name, "", e.CommandOutput, e.ExecutionString, e.DryRun, e.Err)
+	h.sendMotif(contract.MotifMsg{
+		Path:            e.Node.Path,
+		Name:            e.Node.Extension.Name,
+		IsDir:           e.Node.IsDirectory(),
+		Depth:           uint(e.Node.Extension.Depth),
+		ActionName:      e.Name,
+		CommandOutput:   e.CommandOutput,
+		ExecutionString: e.ExecutionString,
+		DryRun:          e.DryRun,
+		Err:             e.Err,
+	})
 }
 
 func (h *highwayPresenter) OnPipelineEvent(e *report.PipelineEvent) {
-	h.sendMotif(e.Node.Path, e.Node.Extension.Name, e.Node.IsDirectory(),
-		uint(e.Node.Extension.Depth), "", e.Name, e.CommandOutput, e.ExecutionString, e.DryRun, e.Err)
+	h.sendMotif(contract.MotifMsg{
+		Path:            e.Node.Path,
+		Name:            e.Node.Extension.Name,
+		IsDir:           e.Node.IsDirectory(),
+		Depth:           uint(e.Node.Extension.Depth),
+		PipelineName:    e.Name,
+		CommandOutput:   e.CommandOutput,
+		ExecutionString: e.ExecutionString,
+		DryRun:          e.DryRun,
+		Err:             e.Err,
+	})
 }
 
 func (h *highwayPresenter) OnSkipEvent(e *report.SkipEvent) {
-	h.sendMotif(e.Node.Path, e.Node.Extension.Name, e.Node.IsDirectory(),
-		uint(e.Node.Extension.Depth), e.Name, "", "", "", false, nil)
+	h.sendMotif(contract.MotifMsg{
+		Path:       e.Node.Path,
+		Name:       e.Node.Extension.Name,
+		IsDir:      e.Node.IsDirectory(),
+		Depth:      uint(e.Node.Extension.Depth),
+		ActionName: e.Name,
+	})
 }
 
 // sendMotif sends a motif message with optional gradient overlay.
 // The gradient is retrieved from the theme's HighlightsComponents using
 // component-based lookup. This ensures gradients configured in themes
 // are properly applied to animation frames.
-func (h *highwayPresenter) sendMotif(path, name string, isDir bool, depth uint,
-	actionName, pipelineName, commandOutput, executionString string, dryRun bool, err error) {
+func (h *highwayPresenter) sendMotif(msg contract.MotifMsg) {
 	select {
 	case <-h.done:
 		return
@@ -228,23 +196,11 @@ func (h *highwayPresenter) sendMotif(path, name string, isDir bool, depth uint,
 		periscopeGrad = &contract.ResolvedGradient{Steps: pg.Steps, Hi: pg.Hi, Lo: pg.Lo}
 	}
 
-	h.program.Send(highway.MotifMsg{
-		Data: highway.MotifData{
-			Path:              path,
-			Name:              name,
-			IsDir:             isDir,
-			Depth:             depth,
-			ActionName:        actionName,
-			PipelineName:      pipelineName,
-			CommandOutput:     commandOutput,
-			ExecutionString:   executionString,
-			DryRun:            dryRun,
-			Err:               err,
-			JobEmoji:          jobEmoji,
-			Gradient:          grad,
-			PeriscopeGradient: periscopeGrad,
-		},
-	})
+	msg.JobEmoji = jobEmoji
+	msg.Gradient = grad
+	msg.PeriscopeGradient = periscopeGrad
+
+	h.program.Send(msg)
 }
 
 func (h *highwayPresenter) OnComplete(t *report.Traversal) {

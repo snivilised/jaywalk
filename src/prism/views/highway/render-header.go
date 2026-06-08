@@ -10,17 +10,17 @@ import (
 )
 
 func (m Model) renderHeader(b *strings.Builder) {
-	borderStyle := m.theme.BorderStyle
-	headerStyle := m.theme.HeaderStyle
-	summaryValueStyle := m.theme.SummaryValueStyle
-	pipelineStyle := m.theme.PipelineStyle
+	borderStyle := m.Theme.BorderStyle
+	headerStyle := m.Theme.HeaderStyle
+	summaryValueStyle := m.Theme.SummaryValueStyle
+	pipelineStyle := m.Theme.PipelineStyle
 
-	dashes := strings.Repeat("─", max(0, m.width-2))
+	dashes := strings.Repeat("─", max(0, m.Width-2))
 
 	// Render Top Border
-	topBorderContent := border.RenderTop(m.rootPath, m.width, border.Styles{
+	topBorderContent := border.RenderTop(m.RootPath, m.Width, border.Styles{
 		BorderStyle: borderStyle,
-		PathStyle:   m.theme.RootStyle,
+		PathStyle:   m.Theme.RootStyle,
 		CornerStyle: borderStyle,
 	})
 	b.WriteString(topBorderContent)
@@ -29,7 +29,7 @@ func (m Model) renderHeader(b *strings.Builder) {
 	// (subscription, date/time) - the cascade (lock/depth) and filter
 	// information have been moved to the flags row renderer to keep all
 	// supplementary flag presentation in one place.
-	introContent := intro.Render(m.subscriptionLabel, m.startedAt, m.dateFormat, intro.Styles{
+	introContent := intro.Render(m.SubscriptionLabel, m.StartedAt, m.DateFormat, intro.Styles{
 		InfoStyle: summaryValueStyle,
 	})
 
@@ -37,12 +37,12 @@ func (m Model) renderHeader(b *strings.Builder) {
 	header := headerStyle.Render("Processing")
 	middle := header + introContent
 
-	row := layout.NewRow(m.width-4).
+	row := layout.NewRow(m.Width-4).
 		Caps(borderStyle.Render("│ "), borderStyle.Render(" │")).
 		Content(middle)
 
 	// Render Pipeline Info
-	pipelineContent := pipeline.Render(m.pipelineName, pipeline.Styles{
+	pipelineContent := pipeline.Render(m.PipelineName, pipeline.Styles{
 		PipelineStyle: pipelineStyle,
 	})
 	if pipelineContent != "" {

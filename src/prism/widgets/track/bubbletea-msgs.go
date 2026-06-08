@@ -2,8 +2,6 @@ package track
 
 import (
 	"time"
-
-	"github.com/snivilised/jaywalk/src/prism/contract"
 )
 
 // Messages understood only by Model.Update. The track widget knows
@@ -21,44 +19,6 @@ type TickMsg time.Time
 // tea.WindowSizeMsg as WidthMsg so the per-lane layout re-flows.
 type WidthMsg struct {
 	Width int
-}
-
-// MotifMsg carries a single per-node event into the widget. The
-// widget applies the data to the current lane, advances
-// currentLaneIdx round-robin, dedups on Path, and increments
-// files/dirs.
-type MotifMsg struct {
-	Data MotifData
-}
-
-// MotifData is the per-node payload. Moved verbatim from the
-// highway package.
-type MotifData struct {
-	Path            string
-	Name            string
-	IsDir           bool
-	Depth           uint
-	ActionName      string
-	PipelineName    string
-	CommandOutput   string
-	ExecutionString string
-	DryRun          bool
-	Err             error
-
-	// JobEmoji is the emoji associated with the incoming job,
-	// rendered after the periscope bar.
-	JobEmoji string
-
-	// Gradient is the optional animation gradient to apply to
-	// this lane's frame. Populated when
-	// HighwayConfig.AnimationGradient is set in config; nil
-	// otherwise.
-	Gradient *contract.ResolvedGradient
-
-	// PeriscopeGradient is the optional gradient for this lane's
-	// periscope bar. Looked up via
-	// theme.GradientFor(GradientComponentPeriscope) in sendMotif.
-	PeriscopeGradient *contract.ResolvedGradient
 }
 
 // CensusMsg declares the maximum tree depth observed during the

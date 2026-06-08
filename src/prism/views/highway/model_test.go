@@ -42,7 +42,12 @@ func baseModel(lanes int) Model {
 	for i := range l {
 		l[i] = baseLane()
 	}
-	return NewModel(l, 50*time.Millisecond, "/root", 5, testTheme(), false)
+	return NewModel(contract.NewModelParams{
+		RootPath:  "/root",
+		MaxDepth:  5,
+		Theme:     testTheme(),
+		NoRecurse: false,
+	}, l, 50*time.Millisecond)
 }
 
 // update is a convenience wrapper that calls Update on the model and
@@ -72,27 +77,27 @@ var _ = Describe("NewModel", func() {
 
 	It("sets the tick rate", func() {
 		m := baseModel(1)
-		Expect(m.tickRate).To(Equal(50 * time.Millisecond))
+		Expect(m.TickRate).To(Equal(50 * time.Millisecond))
 	})
 
 	It("defaults width to 80", func() {
 		m := baseModel(1)
-		Expect(m.width).To(Equal(80))
+		Expect(m.Width).To(Equal(80))
 	})
 
 	It("sets the root path", func() {
 		m := baseModel(1)
-		Expect(m.rootPath).To(Equal("/root"))
+		Expect(m.RootPath).To(Equal("/root"))
 	})
 
 	It("sets maxDepth", func() {
 		m := baseModel(1)
-		Expect(m.maxDepth).To(Equal(uint(5)))
+		Expect(m.MaxDepth).To(Equal(uint(5)))
 	})
 
 	It("stores the theme", func() {
 		m := baseModel(1)
-		Expect(m.theme).NotTo(Equal(contract.Theme{}))
+		Expect(m.Theme).NotTo(Equal(contract.Theme{}))
 	})
 
 	It("initialises the status widget", func() {
@@ -148,7 +153,7 @@ var _ = Describe("Model.Update - WindowSizeMsg", func() {
 		m := baseModel(1)
 		updated, cmd := update(m, tea.WindowSizeMsg{Width: 120})
 		Expect(cmd).To(BeNil())
-		Expect(updated.width).To(Equal(120))
+		Expect(updated.Width).To(Equal(120))
 	})
 
 	It("forwards WidthMsg to the track child", func() {
@@ -174,7 +179,7 @@ var _ = Describe("Model.Update - KeyMsg", func() {
 
 	It("ignores any key after done (non-space)", func() {
 		m := baseModel(1)
-		m.done = true
+		m.Done = true
 		_, cmd := update(m, tea.KeyPressMsg{})
 		Expect(cmd).To(BeNil())
 	})
@@ -193,7 +198,7 @@ var _ = Describe("Model.Update - KeyMsg", func() {
 
 	It("returns tea.Quit on ctrl+c after done", func() {
 		m := baseModel(1)
-		m.done = true
+		m.Done = true
 		_, cmd := update(m, tea.KeyPressMsg{Code: 'c', Mod: tea.ModCtrl})
 		Expect(cmd).NotTo(BeNil())
 	})
@@ -228,7 +233,7 @@ var _ = Describe("Model.Update - tickMsg", func() {
 
 	It("does not reschedule when done", func() {
 		m := baseModel(1)
-		m.done = true
+		m.Done = true
 		_, cmd := update(m, tickMsg(core.Now()))
 		Expect(cmd).To(BeNil())
 	})
@@ -237,17 +242,17 @@ var _ = Describe("Model.Update - tickMsg", func() {
 		m := baseModel(1)
 		m.realMode = true
 		updated, cmd := update(m, tickMsg(core.Now()))
-		Expect(updated.start.IsZero()).To(BeTrue())
+		Expect(updated.Start.IsZero()).To(BeTrue())
 		_ = cmd
 	})
 
 	It("starts the timer in demo mode when start is zero", func() {
 		m := baseModel(1)
 		m.realMode = false
-		Expect(m.start.IsZero()).To(BeTrue())
+		Expect(m.Start.IsZero()).To(BeTrue())
 
 		updated, cmd := update(m, tickMsg(core.Now()))
-		Expect(updated.start.IsZero()).To(BeFalse())
+		Expect(updated.Start.IsZero()).To(BeFalse())
 		_ = cmd
 	})
 
@@ -255,7 +260,12 @@ var _ = Describe("Model.Update - tickMsg", func() {
 		fast := track.Lane{Emoji: "🔍", Label: "fast", FrameFn: noopFrame}
 		slow := track.Lane{Emoji: "🐢", Label: "slow", FrameFn: noopFrame, IntervalMs: 500}
 		lanes := []track.Lane{fast, slow}
-		m := NewModel(lanes, 50*time.Millisecond, "/root", 5, testTheme(), false)
+		m := NewModel(contract.NewModelParams{
+			RootPath:  "/root",
+			MaxDepth:  5,
+			Theme:     testTheme(),
+			NoRecurse: false,
+		}, lanes, 50*time.Millisecond)
 
 		// After 10 ticks at 50ms:
 		//   fast (skip=0) → tick = 10
@@ -274,13 +284,15 @@ var _ = Describe("Model.Update - tickMsg", func() {
 		// jumped to the final value on CompleteMsg. The elapsed
 		// is real in both modes and must tick up.
 		m := baseModel(1)
-		// OvertureMsg sets realMode and m.start = now.
+		// OvertureMsg sets realMode and m.Start = now.
 		m, _ = update(m, OvertureMsg{
-			Root:    "/root",
-			Caption: "files",
+			OvertureMsg: contract.OvertureMsg{
+				Root:    "/root",
+				Caption: "files",
+			},
 		})
 		Expect(m.realMode).To(BeTrue())
-		Expect(m.start.IsZero()).To(BeFalse())
+		Expect(m.Start.IsZero()).To(BeFalse())
 		Expect(m.status.Elapsed()).To(Equal(time.Duration(0)),
 			"no tick yet, status elapsed stays at 0")
 
@@ -306,7 +318,7 @@ var _ = Describe("Model.Update - tickMsg", func() {
 		Expect(m.realMode).To(BeFalse())
 		Expect(m.status.Elapsed()).To(Equal(time.Duration(0)))
 
-		// First tick sets m.start (demo mode), so subsequent
+		// First tick sets m.Start (demo mode), so subsequent
 		// ticks can produce a non-zero elapsed.
 		m, _ = update(m, tickMsg(core.Now()))
 		first := m.status.Elapsed()
@@ -346,21 +358,23 @@ var _ = Describe("Model.Update - OvertureMsg", func() {
 	It("sets rootPath, realMode, start time and pipelineName", func() {
 		m := baseModel(1)
 		Expect(m.realMode).To(BeFalse())
-		Expect(m.start.IsZero()).To(BeTrue())
+		Expect(m.Start.IsZero()).To(BeTrue())
 
 		updated, cmd := update(m, OvertureMsg{
-			Root:         "/project/src",
-			Caption:      "files",
-			ActionName:   "build",
-			PipelineName: "ci",
-			DateFormat:   "Mon, 02 Jan 2006 15:04:05 MST",
+			OvertureMsg: contract.OvertureMsg{
+				Root:         "/project/src",
+				Caption:      "files",
+				PipelineName: "ci",
+				DateFormat:   "Mon, 02 Jan 2006 15:04:05 MST",
+			},
+			ActionName: "build",
 		})
 		Expect(cmd).To(BeNil())
 
-		Expect(updated.rootPath).To(Equal("/project/src"))
+		Expect(updated.RootPath).To(Equal("/project/src"))
 		Expect(updated.realMode).To(BeTrue())
-		Expect(updated.start.IsZero()).To(BeFalse())
-		Expect(updated.pipelineName).To(Equal("ci"))
+		Expect(updated.Start.IsZero()).To(BeFalse())
+		Expect(updated.PipelineName).To(Equal("ci"))
 	})
 })
 
@@ -390,11 +404,11 @@ var _ = Describe("Model.Update - CensusMsg", func() {
 
 	It("increases maxDepth when a larger value is seen", func() {
 		m := baseModel(1)
-		Expect(m.maxDepth).To(Equal(uint(5)))
+		Expect(m.MaxDepth).To(Equal(uint(5)))
 
 		updated, cmd := update(m, CensusMsg{MaxDepth: 10})
 		Expect(cmd).To(BeNil())
-		Expect(updated.maxDepth).To(Equal(uint(10)))
+		Expect(updated.MaxDepth).To(Equal(uint(10)))
 	})
 
 	It("forwards MaxDepth to the track child", func() {
@@ -405,11 +419,11 @@ var _ = Describe("Model.Update - CensusMsg", func() {
 
 	It("does not decrease maxDepth", func() {
 		m := baseModel(1)
-		Expect(m.maxDepth).To(Equal(uint(5)))
+		Expect(m.MaxDepth).To(Equal(uint(5)))
 
 		updated, cmd := update(m, CensusMsg{MaxDepth: 3})
 		Expect(cmd).To(BeNil())
-		Expect(updated.maxDepth).To(Equal(uint(5)))
+		Expect(updated.MaxDepth).To(Equal(uint(5)))
 	})
 })
 
@@ -422,9 +436,9 @@ var _ = Describe("Model.Update - MotifMsg", func() {
 		m := baseModel(2)
 		Expect(m.track.CurrentLaneIdx()).To(Equal(0))
 
-		first := MotifMsg{Data: MotifData{
+		first := contract.MotifMsg{
 			Path: "/root/a.txt", Name: "a.txt", IsDir: false, Depth: 1,
-		}}
+		}
 		updated1, _ := update(m, first)
 		// cmd is the status spring's first-frame cmd; the
 		// MotifMsg increment re-targets the bar to (done/total).
@@ -434,17 +448,17 @@ var _ = Describe("Model.Update - MotifMsg", func() {
 		Expect(updated1.track.Lanes()[0].Depth).To(Equal(uint(1)))
 		Expect(updated1.track.CurrentLaneIdx()).To(Equal(1))
 
-		second := MotifMsg{Data: MotifData{
+		second := contract.MotifMsg{
 			Path: "/root/b.txt", Name: "b.txt", IsDir: false, Depth: 2,
-		}}
+		}
 		updated2, _ := update(updated1, second)
 		Expect(updated2.track.Lanes()[1].Path).To(Equal("/root/b.txt"))
 		Expect(updated2.track.CurrentLaneIdx()).To(Equal(0))
 
 		// Third wraps around to lane 0
-		third := MotifMsg{Data: MotifData{
+		third := contract.MotifMsg{
 			Path: "/root/c.txt", Name: "c.txt", IsDir: false, Depth: 3,
-		}}
+		}
 		updated3, _ := update(updated2, third)
 		Expect(updated3.track.Lanes()[0].Path).To(Equal("/root/c.txt"))
 		Expect(updated3.track.CurrentLaneIdx()).To(Equal(1))
@@ -459,24 +473,24 @@ var _ = Describe("Model.Update - MotifMsg", func() {
 		Expect(updated.status.Total()).To(Equal(10))
 
 		// First unique path
-		updated, _ = update(m, MotifMsg{Data: MotifData{
+		updated, _ = update(m, contract.MotifMsg{
 			Path: "/root/a.txt", IsDir: false,
-		}})
+		})
 		Expect(updated.track.Files()).To(Equal(1))
 		Expect(updated.status.Done()).To(Equal(1))
 
 		// Same path again - not counted (no IncDoneMsg, no
 		// spring re-target, cmd is nil).
-		updated, cmd := update(updated, MotifMsg{Data: MotifData{
+		updated, cmd := update(updated, contract.MotifMsg{
 			Path: "/root/a.txt", IsDir: false,
-		}})
+		})
 		Expect(cmd).To(BeNil(), "duplicate path must not re-target the spring")
 		Expect(updated.track.Files()).To(Equal(1))
 
 		// Different path - counted
-		updated, _ = update(updated, MotifMsg{Data: MotifData{
+		updated, _ = update(updated, contract.MotifMsg{
 			Path: "/root/b.txt", IsDir: false,
-		}})
+		})
 		Expect(updated.track.Files()).To(Equal(2))
 	})
 
@@ -484,9 +498,9 @@ var _ = Describe("Model.Update - MotifMsg", func() {
 		m := baseModel(1)
 		Expect(m.track.Dirs()).To(Equal(0))
 
-		updated, _ := update(m, MotifMsg{Data: MotifData{
+		updated, _ := update(m, contract.MotifMsg{
 			Path: "/root/src", IsDir: true,
-		}})
+		})
 		Expect(updated.track.Dirs()).To(Equal(1))
 		Expect(updated.track.Files()).To(Equal(0))
 	})
@@ -494,11 +508,11 @@ var _ = Describe("Model.Update - MotifMsg", func() {
 	It("sets action and pipeline info on the lane", func() {
 		m := baseModel(1)
 
-		updated, _ := update(m, MotifMsg{Data: MotifData{
+		updated, _ := update(m, contract.MotifMsg{
 			Path: "/root/f.txt", ActionName: "encode", PipelineName: "pipe",
 			CommandOutput: "ok", ExecutionString: "ffmpeg", DryRun: true,
 			Err: errors.New("boom"),
-		}})
+		})
 
 		Expect(updated.track.Lanes()[0].ActionName).To(Equal("encode"))
 		Expect(updated.track.Lanes()[0].PipelineName).To(Equal("pipe"))
@@ -518,18 +532,18 @@ var _ = Describe("Model.Update - MotifMsg", func() {
 		// via status.TotalMsg.
 		updated, _ := update(m, CensusMsg{TotalFiles: 10})
 
-		updated, _ = update(updated, MotifMsg{Data: MotifData{
+		updated, _ = update(updated, contract.MotifMsg{
 			Path: "/root/1.txt", IsDir: false,
-		}})
+		})
 		// 1 file traversed; done=1, total=10 → 10%.
 		Expect(updated.status.Done()).To(Equal(1))
 		Expect(updated.status.HasTotal()).To(BeTrue())
 		Expect(updated.status.Percent()).To(Equal(10))
 		Expect(updated.status.View().Content).To(ContainSubstring("10%"))
 
-		updated, _ = update(updated, MotifMsg{Data: MotifData{
+		updated, _ = update(updated, contract.MotifMsg{
 			Path: "/root/2.txt", IsDir: false,
-		}})
+		})
 		// 2 files traversed; 2/10 → 20%.
 		Expect(updated.status.Done()).To(Equal(2))
 		Expect(updated.status.Percent()).To(Equal(20))
@@ -539,9 +553,9 @@ var _ = Describe("Model.Update - MotifMsg", func() {
 	It("handles empty lanes gracefully", func() {
 		m := baseModel(0)
 
-		_, _ = update(m, MotifMsg{Data: MotifData{
+		_, _ = update(m, contract.MotifMsg{
 			Path: "/root/f.txt",
-		}})
+		})
 		// No assertion on cmd: with zero lanes the path is
 		// still counted (drives the spring), so cmd is non-nil.
 	})
@@ -558,25 +572,25 @@ var _ = Describe("Model.Update - MotifMsg", func() {
 
 		// Visit all 3 files. Done climbs to 3 of 5 → 60%.
 		for _, p := range []string{"/r/a.txt", "/r/b.txt", "/r/c.txt"} {
-			updated, _ = update(updated, MotifMsg{Data: MotifData{
+			updated, _ = update(updated, contract.MotifMsg{
 				Path: p, IsDir: false,
-			}})
+			})
 		}
 		Expect(updated.status.Done()).To(Equal(3))
 		Expect(updated.status.Percent()).To(Equal(60),
 			"with files complete but dirs pending, the bar must NOT be at 100%")
 
 		// Visit 1 of 2 dirs. Done climbs to 4 of 5 → 80%.
-		updated, _ = update(updated, MotifMsg{Data: MotifData{
+		updated, _ = update(updated, contract.MotifMsg{
 			Path: "/r/sub1", IsDir: true,
-		}})
+		})
 		Expect(updated.status.Done()).To(Equal(4))
 		Expect(updated.status.Percent()).To(Equal(80))
 
 		// Visit final dir. Done climbs to 5 of 5 → 100%.
-		updated, _ = update(updated, MotifMsg{Data: MotifData{
+		updated, _ = update(updated, contract.MotifMsg{
 			Path: "/r/sub2", IsDir: true,
-		}})
+		})
 		Expect(updated.status.Done()).To(Equal(5))
 		Expect(updated.status.Percent()).To(Equal(100))
 	})
@@ -589,12 +603,12 @@ var _ = Describe("Model.Update - MotifMsg", func() {
 var _ = Describe("Model.Update - CompleteMsg", func() {
 	It("marks the model as done", func() {
 		m := baseModel(1)
-		Expect(m.done).To(BeFalse())
+		Expect(m.Done).To(BeFalse())
 
 		updated, _ := update(m, CompleteMsg{})
 		// cmd is tea.Batch wrapping the status spring's
 		// first-frame cmd (re-targeted to 100% via DoneMsg).
-		Expect(updated.done).To(BeTrue())
+		Expect(updated.Done).To(BeTrue())
 	})
 
 	It("sets files, dirs, errors and elapsed on the status widget", func() {
@@ -626,8 +640,8 @@ var _ = Describe("Model.Update - CompleteMsg", func() {
 			},
 		})
 
-		Expect(updated.errMsg).To(Equal("first error"))
-		Expect(updated.errors).To(Equal(2))
+		Expect(updated.ErrMsg).To(Equal("first error"))
+		Expect(updated.Errors).To(Equal(2))
 	})
 
 	It("shows 100% on completion regardless of totalFiles", func() {
@@ -679,9 +693,9 @@ var _ = Describe("Model.Update - FrameMsg forwarding", func() {
 		// Drive percent to 100% via a MotifMsg increment with a
 		// total set; this re-targets the spring well away from
 		// its current percentShown=0.
-		updated, cmd = update(updated, MotifMsg{Data: MotifData{
+		updated, cmd = update(updated, contract.MotifMsg{
 			Path: "/root/f.txt", IsDir: false,
-		}})
+		})
 		Expect(cmd).NotTo(BeNil())
 
 		msg := cmd()
@@ -717,8 +731,8 @@ var _ = Describe("RenderLandingStrip", func() {
 	It("returns the command output wrapped in branch/landing-strip styles", func() {
 		m := baseModel(1)
 		styles := landing.Styles{
-			BranchStyle:       m.theme.BranchStyle,
-			LandingStripStyle: m.theme.LandingStripStyle,
+			BranchStyle:       m.Theme.BranchStyle,
+			LandingStripStyle: m.Theme.LandingStripStyle,
 		}
 		result := landing.Render(landing.Config{
 			CommandOutput: "ffmpeg -i input.mp4",
@@ -730,8 +744,8 @@ var _ = Describe("RenderLandingStrip", func() {
 	It("returns the execution string when DryRun is true", func() {
 		m := baseModel(1)
 		styles := landing.Styles{
-			BranchStyle:       m.theme.BranchStyle,
-			LandingStripStyle: m.theme.LandingStripStyle,
+			BranchStyle:       m.Theme.BranchStyle,
+			LandingStripStyle: m.Theme.LandingStripStyle,
 		}
 		result := landing.Render(landing.Config{
 			CommandOutput:   "real command",
@@ -746,8 +760,8 @@ var _ = Describe("RenderLandingStrip", func() {
 	It("returns empty string when CommandOutput is empty and not DryRun", func() {
 		m := baseModel(1)
 		styles := landing.Styles{
-			BranchStyle:       m.theme.BranchStyle,
-			LandingStripStyle: m.theme.LandingStripStyle,
+			BranchStyle:       m.Theme.BranchStyle,
+			LandingStripStyle: m.Theme.LandingStripStyle,
 		}
 		result := landing.Render(landing.Config{}, styles)
 		Expect(result).To(BeEmpty())
@@ -756,8 +770,8 @@ var _ = Describe("RenderLandingStrip", func() {
 	It("returns empty string when ExecutionString is empty and DryRun is true", func() {
 		m := baseModel(1)
 		styles := landing.Styles{
-			BranchStyle:       m.theme.BranchStyle,
-			LandingStripStyle: m.theme.LandingStripStyle,
+			BranchStyle:       m.Theme.BranchStyle,
+			LandingStripStyle: m.Theme.LandingStripStyle,
 		}
 		result := landing.Render(landing.Config{
 			DryRun: true,

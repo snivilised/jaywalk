@@ -1,4 +1,4 @@
-package flow_test
+package linear
 
 import (
 	"bytes"
@@ -9,7 +9,6 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/snivilised/jaywalk/src/prism/contract"
-	"github.com/snivilised/jaywalk/src/prism/flow"
 )
 
 var _ = Describe("LinearRenderer", func() {
@@ -17,7 +16,7 @@ var _ = Describe("LinearRenderer", func() {
 		w := &bytes.Buffer{}
 		palette := contract.Palette{}
 
-		renderer, err := flow.New(palette, w)
+		renderer, err := New(palette, w)
 		Expect(err).To(Succeed())
 		Expect(renderer).NotTo(BeNil())
 
@@ -55,7 +54,7 @@ var _ = Describe("LinearRenderer", func() {
 		w := &bytes.Buffer{}
 		palette := contract.Palette{}
 
-		renderer, err := flow.New(palette, w, flow.WithIcons(map[string]string{
+		renderer, err := New(palette, w, WithIcons(map[string]string{
 			contract.TreeIconRoot:           "R",
 			contract.TreeIconDirectory:      "D",
 			contract.TreeIconFile:           "F",
@@ -91,7 +90,7 @@ var _ = Describe("LinearRenderer", func() {
 		w := &bytes.Buffer{}
 		palette := contract.Palette{}
 
-		renderer, err := flow.New(palette, w)
+		renderer, err := New(palette, w)
 		Expect(err).To(Succeed())
 
 		renderer.End(contract.Summary{
@@ -114,7 +113,7 @@ var _ = Describe("LinearRenderer", func() {
 		// ⏱️ this emoji is 2 columns wide and breaks width calculation
 		// probably because some lipgloss internal processing is not performing
 		// correct rune width calculations
-		renderer, err := flow.New(palette, w, flow.WithIcons(map[string]string{
+		renderer, err := New(palette, w, WithIcons(map[string]string{
 			contract.TreeIconElapsed: "🦋",
 		}))
 		Expect(err).To(Succeed())
@@ -138,7 +137,7 @@ var _ = Describe("LinearRenderer", func() {
 		w := &bytes.Buffer{}
 		palette := contract.Palette{}
 
-		renderer, err := flow.New(palette, w, flow.WithIcons(nil))
+		renderer, err := New(palette, w, WithIcons(nil))
 		Expect(err).To(Succeed())
 		Expect(renderer).NotTo(BeNil())
 		Expect(renderer).To(Not(BeNil()))
@@ -150,7 +149,7 @@ var _ = Describe("LinearRenderer", func() {
 		w := &bytes.Buffer{}
 		palette := contract.Palette{}
 
-		renderer, err := flow.New(palette, w)
+		renderer, err := New(palette, w)
 		Expect(err).To(Succeed())
 
 		renderer.Begin(contract.Overture{
@@ -178,7 +177,7 @@ var _ = Describe("LinearRenderer", func() {
 		w := &bytes.Buffer{}
 		palette := contract.Palette{}
 
-		renderer, err := flow.New(palette, w)
+		renderer, err := New(palette, w)
 		Expect(err).To(Succeed())
 
 		renderer.Show(contract.Motif{Name: "src", IsDir: true, Depth: 0, VisualDepth: 0, IsLast: true})
@@ -197,7 +196,7 @@ var _ = Describe("LinearRenderer", func() {
 		palette := contract.SystemPalette()
 		palette.Branch = contract.SemanticColour{ANSI16: "green"}
 
-		renderer, err := flow.New(palette, w)
+		renderer, err := New(palette, w)
 		Expect(err).To(Succeed())
 		Expect(renderer).NotTo(BeNil())
 

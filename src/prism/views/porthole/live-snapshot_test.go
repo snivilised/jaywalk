@@ -1,4 +1,4 @@
-package scroll_test
+package porthole_test
 
 import (
 	"strings"
@@ -10,8 +10,8 @@ import (
 
 	"github.com/snivilised/jaywalk/src/agenor/core"
 	"github.com/snivilised/jaywalk/src/prism/contract"
-	"github.com/snivilised/jaywalk/src/prism/flow"
-	"github.com/snivilised/jaywalk/src/prism/scroll"
+	"github.com/snivilised/jaywalk/src/prism/views/linear"
+	"github.com/snivilised/jaywalk/src/prism/views/porthole"
 	"github.com/snivilised/jaywalk/src/prism/widgets/banner"
 )
 
@@ -44,18 +44,21 @@ var _ = Describe("Live snapshot", func() {
 
 	// buildModel constructs a Model with the given terminal size and
 	// the OvertureMsg populated with a sample header/banner.
-	buildModel := func(width, height int) scroll.Model {
-		model := scroll.NewModel("/test", 0, theme, false)
-		model, _ = update(model, tea.WindowSizeMsg{
+	buildModel := func(width, height int) porthole.Model {
+		model := porthole.NewModel(contract.NewModelParams{RootPath: "/test", MaxDepth: 0, Theme: theme, NoRecurse: false})
+		model = update(model, tea.WindowSizeMsg{
 			Width: width, Height: height,
 		})
-		model, _ = update(model, scroll.OvertureMsg{
-			Root:      "/Users/x/project",
-			Caption:   "Snapshot",
-			StartedAt: core.Now(),
-			Header: contract.HeaderInfo{
-				FilesGlob: "*|.go",
-				DirsRegex: ".",
+		model = update(model, porthole.OvertureMsg{
+			OvertureMsg: contract.OvertureMsg{
+				Root:      "/Users/x/project",
+				Caption:   "Snapshot",
+				StartedAt: core.Now(),
+				Header: contract.HeaderInfo{
+					FilesGlob: "*|.go",
+					DirsRegex: ".",
+				},
+				FlagsRowPosition: contract.PositionBottom,
 			},
 			Banner: banner.Info{
 				Disable:  true,
@@ -63,7 +66,6 @@ var _ = Describe("Live snapshot", func() {
 				Width:    width,
 				Gradient: &grad,
 			},
-			FlagsRowPosition: contract.PositionBottom,
 		})
 		return model
 	}
@@ -137,7 +139,7 @@ var _ = Describe("Live snapshot", func() {
 	}
 
 	// buildAndFeed rebuilds the model and feeds the supplied items
-	// through flow.RenderLine, sending each rendered line as a
+	// through linear.RenderLine, sending each rendered line as a
 	// ContentLineMsg. The model is closed with CompleteMsg before
 	// the view is rendered.
 	type feeder struct {
@@ -159,19 +161,27 @@ var _ = Describe("Live snapshot", func() {
 					break
 				}
 			}
-			result := flow.RenderLine(
-				it.name, it.name, fi.isDir, uint(fi.depth),
-				it.actionName, "", it.commandOut, "", false, nil,
-				fi.isLast, false, false, visualDepth(fi.depth, fi.isDir),
-				stack,
-				uint(width-3), // bodyWidth for right-justification
-				theme,
-				"", // activityFrame
-			)
+			result := linear.RenderLine(linear.LineParams{
+				NodeParams: contract.NodeParams{
+					Path:          it.name,
+					Name:          it.name,
+					IsDir:         fi.isDir,
+					Depth:         uint(fi.depth),
+					ActionName:    it.actionName,
+					CommandOutput: it.commandOut,
+					IsLast:        fi.isLast,
+					VisualDepth:   visualDepth(fi.depth, fi.isDir),
+				},
+				RenderParams: contract.RenderParams{
+					BodyWidth: uint(width - 3),
+					Theme:     theme,
+				},
+				BranchStack: stack,
+			})
 			stack = result.BranchStack
-			model, _ = update(model, scroll.ContentLineMsg{Line: result.Line})
+			model = update(model, porthole.ContentLineMsg{Line: result.Line})
 		}
-		model, _ = update(model, scroll.CompleteMsg{
+		model = update(model, porthole.CompleteMsg{
 			Files: 2, Dirs: 3, Elapsed: time.Second,
 		})
 		return model.View().Content
@@ -190,7 +200,7 @@ var _ = Describe("Live snapshot", func() {
 
 	// toActionFeeders projects actionItems to feeders so the
 	// action name and command output are passed through to
-	// flow.RenderLine.
+	// linear.RenderLine.
 	toActionFeeders := func() []feeder {
 		out := make([]feeder, len(actionItems))
 		for i, it := range actionItems {

@@ -1,4 +1,4 @@
-package flow
+package linear
 
 import (
 	"fmt"
@@ -9,10 +9,10 @@ import (
 )
 
 // New constructs a linear renderer for linear-style output.
-func New(palette contract.Palette, writer io.Writer, opts ...LinearOption) (contract.Renderer, error) {
+func New(palette contract.Palette, writer io.Writer, opts ...Option) (contract.Renderer, error) {
 	theme, err := contract.NewTheme(palette, writer)
 	if err != nil {
-		return nil, fmt.Errorf("flow.New: %w", err)
+		return nil, fmt.Errorf("linear.New: %w", err)
 	}
 
 	width := 80

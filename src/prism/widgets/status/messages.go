@@ -7,7 +7,7 @@ import "time"
 // the highway root translates them into the messages defined here.
 
 // WidthMsg updates the rendered row width. The root forwards
-// tea.WindowSizeMsg as WidthMsg so the row caps re-flow.
+// tea.WindowSizeMsg as WidthMsg so the row caps re-linear.
 type WidthMsg struct {
 	Width int
 }
