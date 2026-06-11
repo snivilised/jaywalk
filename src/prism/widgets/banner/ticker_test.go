@@ -109,6 +109,6 @@ var _ = Describe("Ticker.Advance", func() {
 // for these tests - only the Offset counter.
 func newTestState() *effects.GradientState {
 	st := effects.NewGradientState()
-	st.SetSteps([]contract.Colour{{}, {}, {}, {}})
+	st.SetSteps([]contract.Color{{}, {}, {}, {}})
 	return st
 }

@@ -3,6 +3,7 @@ package effects
 import (
 	"image/color"
 
+	"charm.land/lipgloss/v2"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/snivilised/jaywalk/src/prism/contract"
@@ -30,19 +31,19 @@ var _ = Describe("Highway Gradient Rendering", func() {
 			Expect(state.stepsArray).To(HaveLen(4))
 
 			// Verify first run colour matches start endpoint (Red)
-			Expect(runs[0].Colour.R).To(Equal(uint8(255)))
-			Expect(runs[0].Colour.G).To(Equal(uint8(0)))
-			Expect(runs[0].Colour.B).To(Equal(uint8(0)))
+			Expect(runs[0].Color.R).To(Equal(uint8(255)))
+			Expect(runs[0].Color.G).To(Equal(uint8(0)))
+			Expect(runs[0].Color.B).To(Equal(uint8(0)))
 
 			// Verify last run colour matches end endpoint (Blue)
-			Expect(runs[3].Colour.R).To(Equal(uint8(0)))
-			Expect(runs[3].Colour.G).To(Equal(uint8(0)))
-			Expect(runs[3].Colour.B).To(Equal(uint8(255)))
+			Expect(runs[3].Color.R).To(Equal(uint8(0)))
+			Expect(runs[3].Color.G).To(Equal(uint8(0)))
+			Expect(runs[3].Color.B).To(Equal(uint8(255)))
 		})
 
 		It("advances offset and reverses direction on Update", func() {
 			state := NewGradientState()
-			steps := []contract.Colour{
+			steps := []contract.Color{
 				{R: 255, G: 0, B: 0},
 				{R: 170, G: 0, B: 85},
 				{R: 85, G: 0, B: 170},
@@ -72,11 +73,11 @@ var _ = Describe("Highway Gradient Rendering", func() {
 
 		It("GetEffectiveIndex produces a smooth ping-pong (no wrap-around sharp jumps)", func() {
 			state := NewGradientState()
-			steps := []contract.Colour{
-				{R: 255, G: 0, B: 0},   // 0: Hi (red)
-				{R: 170, G: 0, B: 85},  // 1
-				{R: 85, G: 0, B: 170},  // 2
-				{R: 0, G: 0, B: 255},   // 3: Lo (blue)
+			steps := []contract.Color{
+				{R: 255, G: 0, B: 0},  // 0: Hi (red)
+				{R: 170, G: 0, B: 85}, // 1
+				{R: 85, G: 0, B: 170}, // 2
+				{R: 0, G: 0, B: 255},  // 3: Lo (blue)
 			}
 			state.SetSteps(steps)
 
@@ -114,18 +115,18 @@ var _ = Describe("Highway Gradient Rendering", func() {
 
 	Context("ANSI Formatting", func() {
 		It("formats runs into valid TrueColor ANSI escape sequences with decimal values", func() {
-			runs := []RunWithColour{
+			runs := []RunWithColor{
 				{
-					Rune:   'A',
-					Colour: contract.Colour{R: 255, G: 128, B: 64},
+					Rune:  'A',
+					Color: contract.Color{R: 255, G: 128, B: 64},
 				},
 				{
-					Rune:   ' ',
-					Colour: contract.Colour{R: 0, G: 0, B: 0},
+					Rune:  ' ',
+					Color: contract.Color{R: 0, G: 0, B: 0},
 				},
 				{
-					Rune:   'B',
-					Colour: contract.Colour{R: 0, G: 255, B: 0},
+					Rune:  'B',
+					Color: contract.Color{R: 0, G: 255, B: 0},
 				},
 			}
 
@@ -133,7 +134,17 @@ var _ = Describe("Highway Gradient Rendering", func() {
 			// Expected sequence for 'A': \x1b[38;2;255;128;64mA\x1b[0m
 			// Expected sequence for ' ': Keep space as-is without escape codes
 			// Expected sequence for 'B': \x1b[38;2;0;255;0mB\x1b[0m
-			Expect(styled).To(Equal("\x1b[38;2;255;128;64mA\x1b[0m \x1b[38;2;0;255;0mB\x1b[0m"))
+			// Expect(styled).To(Equal("\x1b[38;2;255;128;64mA\x1b[0m \x1b[38;2;0;255;0mB\x1b[0m"))
+
+			expected := lipgloss.NewStyle().
+				Foreground(lipgloss.Color("#ff8040")).
+				Render("A") +
+				" " +
+				lipgloss.NewStyle().
+					Foreground(lipgloss.Color("#00ff00")).
+					Render("B")
+
+			Expect(styled).To(Equal(expected))
 		})
 	})
 })
