@@ -87,7 +87,7 @@ var _ = Describe("TopBorder", func() {
 
 		N := max(0, width-7)
 		expect := theme.BorderStyle.Render(
-			contract.Static.Borders.TopLeftCorner + strings.Repeat("─", N) + contract.Static.Borders.TopRight,
+			contract.Static.Borders.TopLeftCorner+strings.Repeat("─", N)+contract.Static.Borders.TopRight,
 		) + "\n"
 
 		result := RenderTop("", width, styles)

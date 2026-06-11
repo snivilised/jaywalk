@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/snivilised/jaywalk/src/prism/contract"
+	"github.com/snivilised/jaywalk/src/prism/contract/ansi"
 	"github.com/snivilised/jaywalk/src/prism/effects"
 )
 
@@ -181,7 +182,7 @@ func policyFor(isFace bool, a Aspects) colourPolicy {
 // runeColour returns the RGB colour for the rune at global position
 // pos in the art, based on its face/shadow class and the active unity
 // aspect.
-func runeColour(pos int, r rune, effect Effect, steps []contract.Colour, rows []int) contract.Colour {
+func runeColour(pos int, r rune, effect Effect, steps []contract.Color, rows []int) contract.Color {
 	isFace := r == faceRune
 	p := policyFor(isFace, effect.Aspects)
 	if p.fixed {
@@ -218,7 +219,7 @@ func runeColour(pos int, r rune, effect Effect, steps []contract.Colour, rows []
 // writeColouredLine emits the ANSI-styled version of one line. lineStart
 // is the global rune index of the first character of the line in the
 // un-justified art, used by Horizontal orientation.
-func writeColouredLine(b *strings.Builder, line string, lineStart int, rows []int, effect Effect, steps []contract.Colour) {
+func writeColouredLine(b *strings.Builder, line string, lineStart int, rows []int, effect Effect, steps []contract.Color) {
 	runes := []rune(line)
 	for localIdx, r := range runes {
 		if r == ' ' || r == '\n' || r == '\t' {
@@ -275,7 +276,7 @@ func applyJustification(lines []string, width int, justify string) []string {
 // gradient, lazily populating the state's steps array the first time it
 // is called. This mirrors the lazy population in effects.ApplyGradient
 // (see gradient-state.go:108-112).
-func paletteSteps(g *contract.ResolvedGradient, st *effects.GradientState) []contract.Colour {
+func paletteSteps(g *contract.ResolvedGradient, st *effects.GradientState) []contract.Color {
 	if g == nil || st == nil {
 		return nil
 	}
@@ -298,13 +299,13 @@ func paletteSteps(g *contract.ResolvedGradient, st *effects.GradientState) []con
 	return steps
 }
 
-// rgbOf converts a color.Color to an 8-bit-per-channel contract.Colour.
-func rgbOf(c color.Color) contract.Colour {
+// rgbOf converts a color.Color to an 8-bit-per-channel contract.Color.
+func rgbOf(c color.Color) contract.Color {
 	if c == nil {
-		return contract.Colour{}
+		return contract.Color{}
 	}
 	r, g, b, _ := c.RGBA()
-	return contract.Colour{
+	return contract.Color{
 		R: uint8(r >> 8), //nolint:gosec
 		G: uint8(g >> 8), //nolint:gosec
 		B: uint8(b >> 8), //nolint:gosec
@@ -319,8 +320,8 @@ func rgbOf(c color.Color) contract.Colour {
 // escape codes. The escape sequence mirrors the one used by
 // effects.ApplyGradientStyled (see gradient-state.go:212) so the
 // output is compatible with every other widget.
-func emitAnsiRune(b *strings.Builder, r rune, col contract.Colour) {
-	_, _ = fmt.Fprintf(b, "\x1b[38;2;%d;%d;%dm", col.R, col.G, col.B)
+func emitAnsiRune(b *strings.Builder, r rune, col contract.Color) {
+	_, _ = fmt.Fprint(b, ansi.EscapedTrueColor(col.R, col.G, col.B))
 	b.WriteRune(r)
 	b.WriteString("\x1b[0m")
 }

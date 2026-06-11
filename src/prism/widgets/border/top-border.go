@@ -31,7 +31,7 @@ func RenderTop(content string, width int, styles Styles) string {
 	if content == "" {
 		N := max(0, width-7)
 		return styles.CornerStyle.Render(
-			contract.Static.Borders.TopLeftCorner + strings.Repeat("─", N) + contract.Static.Borders.TopRight,
+			contract.Static.Borders.TopLeftCorner+strings.Repeat("─", N)+contract.Static.Borders.TopRight,
 		) + "\n"
 	}
 
