@@ -6,7 +6,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/snivilised/jaywalk/src/prism/contract"
-	"github.com/snivilised/jaywalk/src/prism/widgets/banner"
+	"github.com/snivilised/jaywalk/src/prism/views/shared"
 	"github.com/snivilised/jaywalk/src/prism/widgets/legend"
 )
 
@@ -17,7 +17,7 @@ func (m Model) View() tea.View {
 	// top border. This is independent of the flags row position
 	// because the flags row lives INSIDE the border.
 	if m.bannerInfo.Position == contract.PositionTop {
-		m.writeBanner(&b)
+		shared.WriteBanner(&b, m.bannerInfo, m.Width)
 	}
 
 	m.renderHeader(&b)
@@ -32,7 +32,8 @@ func (m Model) View() tea.View {
 	// own styling and rendering.
 	b.WriteString(m.track.View().Content)
 
-	if (m.FlagsRowPosition == contract.PositionBottom || m.FlagsRowPosition == "") && m.hasFlags() {
+	if (m.FlagsRowPosition == contract.PositionBottom || m.FlagsRowPosition == "") &&
+		m.hasFlags() {
 		m.WriteSeparator(&b)
 		m.writeLegend(&b)
 		m.WriteSeparator(&b)
@@ -45,7 +46,7 @@ func (m Model) View() tea.View {
 	// keep the banner from overwriting the border.
 	if m.bannerInfo.Position == contract.PositionBottom {
 		b.WriteByte('\n')
-		m.writeBanner(&b)
+		shared.WriteBanner(&b, m.bannerInfo, m.Width)
 	}
 
 	v := tea.NewView(b.String())
@@ -53,75 +54,32 @@ func (m Model) View() tea.View {
 	return v
 }
 
-// hasFlags reports whether the legend section will render any
-// content. Used to skip emitting the surrounding separator borders
-// when there are no active flags, so the layout collapses cleanly.
+// hasFlags reports whether the legend section will render any content.
+// Used to skip emitting the surrounding separator borders when there
+// are no active flags, so the layout collapses cleanly.
 func (m Model) hasFlags() bool {
-	lm := legend.NewModel(
-		legend.WithInfo(legend.Info{
-			Position: m.FlagsRowPosition,
-			Header:   m.Header,
-		}),
-		legend.WithWidth(m.Width),
-		legend.WithStyles(legend.Styles{
-			LabelStyle:  m.Theme.SummaryLabelStyle.Width(0),
-			ValueStyle:  m.Theme.SummaryValueStyle,
-			BorderStyle: m.Theme.BorderStyle,
-		}),
-	)
-	return lm.Height() > 0
+	return shared.LegendHeight(m.legendParams()) > 0
 }
 
-// writeBanner constructs a banner.Model on the fly using the
-// frozen-per-session bannerInfo plus the current terminal width,
-// calls View(), and writes the result to b. The transient model
-// pattern matches the user's guidance: maximum reuse of the
-// existing Render function, no long-lived banner child on the
-// highway root.
-//
-// The view only calls this when bannerInfo.Position is top or
-// bottom; an unknown position value means "no banner" (see the
-// Risk note in make-banner-its-own-child-widget.implementation-plan.issue-606.md).
-// Disabled is also checked so the highway does not emit ANSI codes
-// when the gradient binding is absent.
-func (m Model) writeBanner(b *strings.Builder) {
-	bm := banner.NewModel(
-		banner.WithInfo(m.bannerInfo),
-		banner.WithWidth(m.Width),
-	)
-	if bm.Disabled() {
-		return
-	}
-	if out := bm.View(); out != "" {
-		b.WriteString(out)
-	}
-}
-
-// writeLegend constructs a legend.Model on the fly using the
-// frozen-per-session headerInfo plus the current terminal width
-// and the theme's flags-row styles, calls View(), and writes the
-// result to b. The transient model pattern mirrors writeBanner:
-// no long-lived legend child on the highway root.
-//
-// The view only calls this when FlagsRowPosition is top or bottom;
-// an unknown / empty value (which the model has already coerced
-// to bottom) means "render the row at the bottom". The legend
-// widget itself short-circuits to "" when no flag is active, so
-// callers do not need to guard.
+// writeLegend renders the flags/legend row into b using the shared
+// chrome utility. The row is a no-op when no flag is active.
 func (m Model) writeLegend(b *strings.Builder) {
-	lm := legend.NewModel(
-		legend.WithInfo(legend.Info{
+	shared.WriteLegend(b, m.legendParams())
+}
+
+// legendParams returns the LegendParams for the current model state.
+// Centralised here so hasFlags and writeLegend stay consistent.
+func (m Model) legendParams() shared.LegendParams {
+	return shared.LegendParams{
+		Info: legend.Info{
 			Position: m.FlagsRowPosition,
 			Header:   m.Header,
-		}),
-		legend.WithWidth(m.Width),
-		legend.WithStyles(legend.Styles{
+		},
+		Width: m.Width,
+		Styles: legend.Styles{
 			LabelStyle:  m.Theme.SummaryLabelStyle.Width(0),
 			ValueStyle:  m.Theme.SummaryValueStyle,
 			BorderStyle: m.Theme.BorderStyle,
-		}),
-	)
-	if out := lm.View(); out != "" {
-		b.WriteString(out)
+		},
 	}
 }
