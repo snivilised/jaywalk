@@ -10,10 +10,11 @@ import (
 	"github.com/snivilised/jaywalk/src/prism/contract"
 	"github.com/snivilised/jaywalk/src/prism/layout"
 	"github.com/snivilised/jaywalk/src/prism/views/linear"
+	"github.com/snivilised/jaywalk/src/prism/views/shared"
 	"github.com/snivilised/jaywalk/src/prism/widgets/activity"
-	"github.com/snivilised/jaywalk/src/prism/widgets/banner"
 	"github.com/snivilised/jaywalk/src/prism/widgets/border"
 	"github.com/snivilised/jaywalk/src/prism/widgets/intro"
+	"github.com/snivilised/jaywalk/src/prism/widgets/legend"
 	"github.com/snivilised/jaywalk/src/prism/widgets/pipeline"
 	"github.com/snivilised/jaywalk/src/prism/widgets/scrollbar"
 )
@@ -21,8 +22,11 @@ import (
 func (m *Model) View() tea.View {
 	var b strings.Builder
 
+	// Banner at top: rendered OUTSIDE the bordered region, above the
+	// top border. This is independent of the flags row position
+	// because the flags row lives INSIDE the border.
 	if m.bannerInfo.Position == contract.PositionTop {
-		m.writeBanner(&b)
+		shared.WriteBanner(&b, m.bannerInfo, m.Width)
 	}
 
 	m.renderHeader(&b)
@@ -54,22 +58,18 @@ func (m *Model) View() tea.View {
 		b.WriteString(m.Theme.MutedStyle.Render(" • press space to exit"))
 	}
 
+	// Banner at bottom: rendered OUTSIDE the bordered region, below
+	// the summary. The summary's last line is the bottom border
+	// (no trailing newline), so we emit a separator newline to
+	// keep the banner from overwriting the border.
+	if m.bannerInfo.Position == contract.PositionBottom {
+		b.WriteByte('\n')
+		shared.WriteBanner(&b, m.bannerInfo, m.Width)
+	}
+
 	v := tea.NewView(b.String())
 	v.AltScreen = true
 	return v
-}
-
-func (m Model) writeBanner(b *strings.Builder) {
-	bm := banner.NewModel(
-		banner.WithInfo(m.bannerInfo),
-		banner.WithWidth(m.Width),
-	)
-	if bm.Disabled() {
-		return
-	}
-	if out := bm.View(); out != "" {
-		b.WriteString(out)
-	}
 }
 
 func (m Model) renderHeader(b *strings.Builder) {
@@ -255,4 +255,42 @@ func (m Model) renderActivity() string {
 		Gradient: m.activityGradient,
 		State:    m.gradientState,
 	})
+}
+
+// writeLegend renders the flags/legend row into b using the shared
+// chrome utility. The row is a no-op when no flag is active.
+func (m Model) writeLegend(b *strings.Builder) {
+	shared.WriteLegend(b, m.legendParams())
+}
+
+// legendHeight returns the number of terminal rows the legend will
+// occupy (entry lines only). Returns 0 when no flags are active so
+// the viewport can claim the full available height.
+func (m Model) legendHeight() int {
+	return shared.LegendHeight(m.legendParams())
+}
+
+// legendSectionHeight returns the total number of rows the legend
+// section will occupy in the view: entry lines plus the two separator
+// borders that frame it (one above, one below). Returns 0 when no
+// flags are active so callers can skip the section entirely.
+func (m Model) legendSectionHeight() int {
+	return shared.LegendSectionHeight(m.legendParams())
+}
+
+// legendParams returns the LegendParams for the current model state.
+// Centralised here so all legend-related methods stay consistent.
+func (m Model) legendParams() shared.LegendParams {
+	return shared.LegendParams{
+		Info: legend.Info{
+			Position: m.FlagsRowPosition,
+			Header:   m.Header,
+		},
+		Width: m.Width,
+		Styles: legend.Styles{
+			LabelStyle:  m.Theme.SummaryLabelStyle.Width(0),
+			ValueStyle:  m.Theme.SummaryValueStyle,
+			BorderStyle: m.Theme.BorderStyle,
+		},
+	}
 }

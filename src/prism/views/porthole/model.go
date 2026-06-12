@@ -11,7 +11,6 @@ import (
 	"github.com/snivilised/jaywalk/src/prism/effects"
 	"github.com/snivilised/jaywalk/src/prism/views/linear"
 	"github.com/snivilised/jaywalk/src/prism/widgets/banner"
-	"github.com/snivilised/jaywalk/src/prism/widgets/legend"
 	"github.com/snivilised/jaywalk/src/prism/widgets/scrollbar"
 	"github.com/snivilised/jaywalk/src/prism/widgets/status"
 )
@@ -394,62 +393,6 @@ func (m *Model) rerender() {
 		}
 	}
 	m.contentBuf = newBuf
-}
-
-// legendHeight returns the number of terminal rows the legend will
-// occupy (entry lines only) given the current flags configuration.
-// Returns 0 when the legend is hidden or has no flags active so the
-// viewport can claim the full body height in that case. Surrounding
-// borders are the view's responsibility - use legendSectionHeight
-// for the total section size including the two framing separators.
-func (m Model) legendHeight() int {
-	lm := legend.NewModel(
-		legend.WithInfo(legend.Info{
-			Position: m.FlagsRowPosition,
-			Header:   m.Header,
-		}),
-		legend.WithWidth(m.Width),
-		legend.WithStyles(legend.Styles{
-			LabelStyle:  m.Theme.SummaryLabelStyle.Width(0),
-			ValueStyle:  m.Theme.SummaryValueStyle,
-			BorderStyle: m.Theme.BorderStyle,
-		}),
-	)
-	return lm.Height()
-}
-
-// legendSectionHeight returns the total number of rows the legend
-// section will occupy in the view: entry lines + 2 separator borders
-// (one above and one below the flags). Returns 0 when no flags are
-// active so callers can simply skip the section.
-func (m Model) legendSectionHeight() int {
-	h := m.legendHeight()
-	if h == 0 {
-		return 0
-	}
-	return h + 2
-}
-
-// writeLegend renders the flags/legend row (cascade, filter, sampler)
-// into the builder. It mirrors the highway's writeLegend pattern:
-// construct a transient legend.Model on the fly, render, and write.
-// The row is a no-op when no flag is active.
-func (m Model) writeLegend(b *strings.Builder) {
-	lm := legend.NewModel(
-		legend.WithInfo(legend.Info{
-			Position: m.FlagsRowPosition,
-			Header:   m.Header,
-		}),
-		legend.WithWidth(m.Width),
-		legend.WithStyles(legend.Styles{
-			LabelStyle:  m.Theme.SummaryLabelStyle.Width(0),
-			ValueStyle:  m.Theme.SummaryValueStyle,
-			BorderStyle: m.Theme.BorderStyle,
-		}),
-	)
-	if out := lm.View(); out != "" {
-		b.WriteString(out)
-	}
 }
 
 // truncateStyled truncates a lipgloss-styled string to maxVisible visible
