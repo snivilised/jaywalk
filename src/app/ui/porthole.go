@@ -126,6 +126,14 @@ func (p *portholePresenter) OnBegin(e *report.BeginEvent) {
 		},
 		Banner: p.bannerInfo,
 	})
+
+	if p.totalFiles > 0 || p.totalDirs > 0 {
+		p.program.Send(porthole.CensusMsg{
+			TotalFiles: p.totalFiles,
+			TotalDirs:  p.totalDirs,
+			MaxDepth:   p.maxDepth,
+		})
+	}
 }
 
 func (p *portholePresenter) OnNodeEvent(e *report.NeutralEvent) {

@@ -4,6 +4,7 @@ import (
 	"strings"
 	"time"
 
+	bp "charm.land/bubbles/v2/progress"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
@@ -28,7 +29,7 @@ func statusFieldSet() status.FieldSelectors {
 		ShowDirs:     true,
 		ShowErrors:   true,
 		ShowSkipped:  true,
-		ShowProgress: false,
+		ShowProgress: true,
 		ShowComplete: true,
 		ShowElapsed:  true,
 	}
@@ -92,6 +93,13 @@ type Model struct {
 	activityFrame    string
 	activityGradient *contract.ResolvedGradient
 	gradientState    *effects.GradientState
+
+	// countedFiles and countedDirs track how many unique nodes have
+	// been visited via ContentLineMsg. Used to dispatch CountsMsg to
+	// the status widget for the running file/dir tally and to drive
+	// the IncDoneMsg that advances the progress bar.
+	countedFiles int
+	countedDirs  int
 }
 
 func NewModel(params contract.NewModelParams) Model {
@@ -267,6 +275,22 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		return &m, nil
 
+	case CensusMsg:
+		if msg.MaxDepth > m.MaxDepth {
+			m.MaxDepth = msg.MaxDepth
+		}
+
+		// Seed the status widget's total with files + dirs. The
+		// progress bar ratio is done / (files + dirs) because
+		// every ContentLineMsg (file OR dir) increments done.
+		total := int(msg.TotalFiles + msg.TotalDirs) //nolint:gosec // ok
+		var cmd tea.Cmd
+		m.status, cmd = m.dispatchStatus(status.TotalMsg{Total: total})
+		if cmd != nil {
+			return &m, tea.Batch(cmd)
+		}
+		return &m, nil
+
 	case CompleteMsg:
 		m.ApplyCompletion(msg.Errs, msg.Elapsed)
 
@@ -310,6 +334,39 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if len(m.contentBuf) > MaxContentBufferLines {
 			m.contentBuf = m.contentBuf[len(m.contentBuf)-ContentBufferTruncateStep:]
 		}
+
+		// Count this node for the progress bar. Each ContentLineMsg
+		// corresponds to one node event (file or dir). We track
+		// running tallies for the status CountsMsg and increment
+		// the done counter by 1 for every node.
+		if msg.Params.IsDir {
+			m.countedDirs++
+		} else {
+			m.countedFiles++
+		}
+
+		cmds := make([]tea.Cmd, 0, 2)
+		var incCmd tea.Cmd
+		m.status, incCmd = m.dispatchStatus(status.IncDoneMsg{N: 1})
+		if incCmd != nil {
+			cmds = append(cmds, incCmd)
+		}
+		m.status, _ = m.dispatchStatus(status.CountsMsg{
+			Files: m.countedFiles, Dirs: m.countedDirs, Errors: m.Errors,
+		})
+		if len(cmds) > 0 {
+			return &m, tea.Batch(cmds...)
+		}
+
+	case bp.FrameMsg:
+		// Forward the bubbles progress spring's animation
+		// frames to the status widget. Without this, the spring
+		// cmd returned from status.Update loops back through the
+		// bubbletea program but is dropped at the default arm,
+		// so the bar never advances past its first frame.
+		var cmd tea.Cmd
+		m.status, cmd = m.dispatchStatus(msg)
+		return &m, cmd
 
 	default:
 		return &m, nil
