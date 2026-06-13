@@ -12,12 +12,16 @@ import (
 	"github.com/snivilised/jaywalk/src/prism/views/linear"
 	"github.com/snivilised/jaywalk/src/prism/views/shared"
 	"github.com/snivilised/jaywalk/src/prism/widgets/activity"
+	"github.com/snivilised/jaywalk/src/prism/widgets/banner"
 	"github.com/snivilised/jaywalk/src/prism/widgets/border"
 	"github.com/snivilised/jaywalk/src/prism/widgets/intro"
 	"github.com/snivilised/jaywalk/src/prism/widgets/legend"
 	"github.com/snivilised/jaywalk/src/prism/widgets/pipeline"
 	"github.com/snivilised/jaywalk/src/prism/widgets/scrollbar"
 )
+
+// Any significant changes to the porthole Model/View api should reflected in the
+// documentation in docs/bubbletea-view-layout.md
 
 func (m *Model) View() tea.View {
 	var b strings.Builder
@@ -123,7 +127,15 @@ func (m *Model) renderBody() string {
 	// entry lines + 2 separator borders framing it (one above, one
 	// below). legendSectionHeight returns 0 when no flags are present
 	// so the body claims the full available space in that case.
-	bodyHeight := max(m.height-6-m.legendSectionHeight(), 1)
+	bannerH := 0
+	if !m.bannerInfo.Disable {
+		bm := banner.NewModel(banner.WithInfo(m.bannerInfo), banner.WithWidth(m.Width))
+		bannerH = bm.Height()
+		if m.bannerInfo.Position == contract.PositionBottom {
+			bannerH++ // account for the separator newline emitted in View()
+		}
+	}
+	bodyHeight := max(m.height-6-m.legendSectionHeight()-bannerH, 1)
 
 	truncated := make([]string, len(m.contentBuf))
 	for i, entry := range m.contentBuf {

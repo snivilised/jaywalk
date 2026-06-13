@@ -7,6 +7,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
+	"github.com/snivilised/jaywalk/src/agenor/core"
 	"github.com/snivilised/jaywalk/src/prism/contract"
 	"github.com/snivilised/jaywalk/src/prism/effects"
 	"github.com/snivilised/jaywalk/src/prism/views/linear"
@@ -60,8 +61,9 @@ type Model struct {
 	// at a time to keep navigation responsive.
 	contentBuf []bufEntry
 
-	status     status.Model
-	bannerInfo banner.Info
+	status       status.Model
+	bannerInfo   banner.Info
+	bannerTicker *banner.Ticker
 
 	// autoScroll tracks whether the viewport should automatically
 	// follow new content. Set to true initially and when new content
@@ -225,7 +227,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return &m, nil
 		}
 		if m.Start.IsZero() {
-			m.Start = time.Now()
+			m.Start = core.Now()
 		}
 
 		// Advance the activity animation.
@@ -235,6 +237,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.gradientState != nil {
 				m.gradientState.Update(1)
 			}
+		}
+
+		if m.bannerTicker != nil {
+			m.bannerTicker.Advance()
 		}
 
 		tickCmd := tea.Tick(m.TickRate, func(t time.Time) tea.Msg {
@@ -253,6 +259,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case OvertureMsg:
 		m.ApplyOverture(&msg.OvertureMsg)
 		m.bannerInfo = msg.Banner
+		if !msg.Banner.Disable && msg.Banner.State != nil && msg.Banner.Gradient != nil {
+			m.bannerTicker = banner.NewTicker(msg.Banner.State, msg.Banner.Tick, m.TickRate)
+		} else {
+			m.bannerTicker = nil
+		}
 
 		return &m, nil
 

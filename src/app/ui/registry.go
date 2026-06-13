@@ -290,7 +290,7 @@ func LoadConfig(mode string, source ViewConfigSource, palette contract.Palette) 
 func loadPortholeConfig(source ViewConfigSource, palette contract.Palette) (ViewConfig, error) {
 	var raw bedrock.HighwayConfig // porthole uses highway config shape minus lane fields
 	if source != nil {
-		if err := source.Load("highway", &raw); err != nil {
+		if err := source.Load("porthole", &raw); err != nil {
 			return nil, err
 		}
 	}

@@ -11,6 +11,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/snivilised/jaywalk/src/agenor/core"
 	"github.com/snivilised/jaywalk/src/prism/contract"
 	"github.com/snivilised/jaywalk/src/prism/effects"
 	"github.com/snivilised/jaywalk/src/prism/widgets/banner"
@@ -171,7 +172,7 @@ var _ = Describe("Banner integration with highway view", func() {
 
 			// Drive a single tick through the model.
 			before := updated.bannerTicker.State().Offset
-			updated, _ = update(updated, tickMsg(time.Now()))
+			updated, _ = update(updated, tickMsg(core.Now()))
 			after := updated.bannerTicker.State().Offset
 
 			// 50ms global tick / 500ms banner tick = 10 → skipFactor=10
@@ -195,7 +196,7 @@ var _ = Describe("Banner integration with highway view", func() {
 			before := updated.bannerTicker.State().Offset
 			// 10 ticks (skipFactor) → 1 advance.
 			for i := 0; i < 10; i++ {
-				updated, _ = update(updated, tickMsg(time.Now()))
+				updated, _ = update(updated, tickMsg(core.Now()))
 			}
 			after := updated.bannerTicker.State().Offset
 			Expect(after).To(Equal(before + 1))

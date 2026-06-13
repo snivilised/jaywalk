@@ -145,7 +145,7 @@ func (b *Broker) Emit(ctx context.Context,
 		ID:         b.gen(),
 		Topic:      topic,
 		Data:       data,
-		OccurredAt: time.Now(),
+		OccurredAt: core.Now(),
 		TxID:       txID,
 		Source:     source,
 	}
