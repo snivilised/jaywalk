@@ -11,6 +11,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/snivilised/jaywalk/src/agenor/core"
 	"github.com/snivilised/jaywalk/src/prism/contract"
 )
 
@@ -57,7 +58,7 @@ func update(m Model, msg tea.Msg) (Model, tea.Cmd) {
 }
 
 // tickNow returns a fresh TickMsg value.
-func tickNow() TickMsg { return TickMsg(time.Now()) }
+func tickNow() TickMsg { return TickMsg(core.Now()) }
 
 // countOccurrences counts the non-overlapping occurrences of sub
 // in s.

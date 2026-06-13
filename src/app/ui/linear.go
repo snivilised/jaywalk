@@ -4,7 +4,6 @@ import (
 	"math/rand/v2"
 	"os"
 	"sync"
-	"time"
 
 	"github.com/snivilised/jaywalk/src/agenor/core"
 	"github.com/snivilised/jaywalk/src/agenor/enums"
@@ -263,7 +262,7 @@ func (l *linearPresenter) buildBannerInfo() *contract.BannerInfo {
 	info.Gradient = grad
 
 	// Pick the random aspects ONCE here, not per-render
-	rng := rand.New(rand.NewPCG(uint64(os.Getpid()), uint64(time.Now().UnixNano()))) //nolint:gosec // non-security
+	rng := rand.New(rand.NewPCG(uint64(os.Getpid()), uint64(core.Now().UnixNano()))) //nolint:gosec // non-security
 	aspects := banner.RandomiseAspects(rng)
 	info.Aspects = contract.BannerAspects{
 		Orientation: int(aspects.Orientation),

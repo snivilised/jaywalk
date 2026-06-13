@@ -7,6 +7,9 @@ import (
 	"github.com/snivilised/jaywalk/src/prism/contract"
 )
 
+// Any changes to the Row api should be reflected in the documentation in
+// docs/layout-row-api.md
+
 // SegType describes how a segment's width is determined.
 type SegType int
 

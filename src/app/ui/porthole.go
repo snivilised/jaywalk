@@ -1,7 +1,7 @@
 package ui
 
 import (
-	"math/rand"
+	"math/rand/v2"
 	"os"
 	"strings"
 	"time"
@@ -9,8 +9,10 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/term"
 
+	"github.com/snivilised/jaywalk/src/agenor/core"
 	"github.com/snivilised/jaywalk/src/app/report"
 	"github.com/snivilised/jaywalk/src/prism/contract"
+	"github.com/snivilised/jaywalk/src/prism/effects"
 	"github.com/snivilised/jaywalk/src/prism/movies"
 	"github.com/snivilised/jaywalk/src/prism/views/linear"
 	"github.com/snivilised/jaywalk/src/prism/views/porthole"
@@ -82,7 +84,7 @@ func (p *portholePresenter) OnBegin(e *report.BeginEvent) {
 	if len(names) == 0 {
 		names = []string{movies.SpinnerTypeWave}
 	}
-	name := names[rand.Intn(len(names))] //nolint:gosec // selecting a random animation, not for security
+	name := names[rand.IntN(len(names))] //nolint:gosec // selecting a random animation, not for security
 	if def, ok := movies.Lookup(name); ok {
 		var grad *contract.ResolvedGradient
 		if g, has := p.theme.GradientFor(contract.GradientComponentActivity); has && g.Steps > 0 {
@@ -344,21 +346,52 @@ func (p *portholePresenter) OnComplete(traversal *report.Traversal) {
 }
 
 func (p *portholePresenter) buildBannerInfo() banner.Info {
-	grad, _ := p.theme.GradientFor(contract.GradientComponentBanner)
-
-	return banner.Info{
-		Disable:  false,
-		Position: contract.PositionTop,
-		Justify:  banner.JustifyRight,
-		Width:    80,
-		Aspects: banner.Aspects{
-			Orientation: banner.OrientationHorizontal,
-			Banding:     banner.BandingWithout,
-			Unity:       banner.UnityUnified,
-			FixedEnd:    banner.FixedEndUnfixed,
-		},
-		Gradient: &grad,
-		State:    nil, // state is managed by the model's ticker
-		Tick:     500 * time.Millisecond,
+	info := banner.Info{
+		Disable:  p.cfg.Banner.Disable,
+		Position: p.cfg.Banner.Position,
+		Justify:  p.cfg.Banner.Justify,
 	}
+
+	if p.cfg.Banner.Disable {
+		return info
+	}
+
+	// Resolve the gradient from the theme. The "banner-control"
+	// component must be bound to a gradient in the theme YAML;
+	// when missing the banner renders as plain text.
+	//
+	// StepsOverride (from ui.porthole.banner.steps) lets the user
+	// keep sharing the gradient's colour endpoints with other
+	// widgets (so the colour scheme stays consistent) but tune
+	// the banner's sweep smoothness independently. Zero means
+	// "use the gradient's own steps".
+	var grad *contract.ResolvedGradient
+	if g, ok := p.theme.GradientFor(contract.GradientComponentBanner); ok && g.Steps > 0 {
+		steps := g.Steps
+		if p.cfg.Banner.StepsOverride > 0 {
+			steps = p.cfg.Banner.StepsOverride
+		}
+		grad = &contract.ResolvedGradient{Steps: steps, Hi: g.Hi, Lo: g.Lo}
+	}
+	info.Gradient = grad
+
+	if grad != nil {
+		st := effects.NewGradientState()
+		st.TotalSteps = grad.Steps
+		info.State = st
+	}
+
+	// Pick the random aspects ONCE here, not per-render. Use the
+	// package-level random source (math/rand/v2) which is fine for
+	// non-security purposes.
+	rng := rand.New(rand.NewPCG(uint64(os.Getpid()), uint64(core.Now().UnixNano()))) //nolint:gosec // non-security
+	info.Aspects = banner.RandomiseAspects(rng)
+
+	tick := p.cfg.Banner.Tick
+	if tick <= 0 {
+		tick = 500 // Default banner tick in ms
+	}
+	info.Tick = time.Duration(tick) * time.Millisecond
+
+	return info
 }

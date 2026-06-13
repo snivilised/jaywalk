@@ -111,7 +111,7 @@ var _ = Describe("Porthole Presenter", func() {
 				Root:         "/test/root",
 				Caption:      "Test Caption",
 				Subscription: enums.SubscribeUniversal,
-				StartedAt:    time.Now(),
+				StartedAt:    core.Now(),
 				Cancel:       nil,
 			}
 
@@ -129,7 +129,7 @@ var _ = Describe("Porthole Presenter", func() {
 				Root:         "/test/root",
 				Caption:      "Test Caption",
 				Subscription: enums.SubscribeFiles,
-				StartedAt:    time.Now(),
+				StartedAt:    core.Now(),
 				Cancel:       nil,
 			}
 
@@ -139,18 +139,24 @@ var _ = Describe("Porthole Presenter", func() {
 		})
 
 		It("sets banner info with correct defaults", func() {
-			cfg := PortholeConfig{}
+			cfg := PortholeConfig{
+				Banner: BannerConfig{
+					Position: contract.PositionTop,
+				},
+			}
 			p, err := newPortholePresenter(palette, cfg)
 			Expect(err).To(BeNil())
 
 			bannerInfo := p.(*portholePresenter).buildBannerInfo() //nolint:errcheck // ok
 			Expect(bannerInfo.Position).To(Equal(contract.PositionTop))
-			Expect(bannerInfo.Justify).To(Equal("right"))
-			Expect(bannerInfo.Width).To(Equal(80))
 		})
 
 		It("populates bannerInfo on the presenter during OnBegin", func() {
-			cfg := PortholeConfig{}
+			cfg := PortholeConfig{
+				Banner: BannerConfig{
+					Position: contract.PositionTop,
+				},
+			}
 			p, err := newPortholePresenter(palette, cfg)
 			Expect(err).To(BeNil())
 
@@ -162,14 +168,13 @@ var _ = Describe("Porthole Presenter", func() {
 				Root:         "/test/root",
 				Caption:      "Test Caption",
 				Subscription: enums.SubscribeUniversal,
-				StartedAt:    time.Now(),
+				StartedAt:    core.Now(),
 			}
 			pp.OnBegin(e)
 			defer killProgram(p)
 
 			Expect(pp.bannerInfo.Position).To(Equal(contract.PositionTop),
 				"OnBegin must call buildBannerInfo and store result")
-			Expect(pp.bannerInfo.Width).To(Equal(80))
 		})
 	})
 
@@ -183,7 +188,7 @@ var _ = Describe("Porthole Presenter", func() {
 				Root:         "/test/root",
 				Caption:      "Test Caption",
 				Subscription: enums.SubscribeUniversal,
-				StartedAt:    time.Now(),
+				StartedAt:    core.Now(),
 			}
 			p.OnBegin(beginEvent)
 			defer killProgram(p)
@@ -209,7 +214,7 @@ var _ = Describe("Porthole Presenter", func() {
 				Root:         "/test/root",
 				Caption:      "Test Caption",
 				Subscription: enums.SubscribeUniversal,
-				StartedAt:    time.Now(),
+				StartedAt:    core.Now(),
 			}
 			p.OnBegin(beginEvent)
 
@@ -282,7 +287,7 @@ var _ = Describe("Porthole Presenter", func() {
 				Root:         "/test/root",
 				Caption:      "Test Caption",
 				Subscription: enums.SubscribeUniversal,
-				StartedAt:    time.Now(),
+				StartedAt:    core.Now(),
 			}
 			p.OnBegin(beginEvent)
 			defer killProgram(p)
@@ -313,7 +318,7 @@ var _ = Describe("Porthole Presenter", func() {
 				Root:         "/test/root",
 				Caption:      "Test Caption",
 				Subscription: enums.SubscribeUniversal,
-				StartedAt:    time.Now(),
+				StartedAt:    core.Now(),
 			}
 			p.OnBegin(beginEvent)
 			defer killProgram(p)
@@ -344,7 +349,7 @@ var _ = Describe("Porthole Presenter", func() {
 				Root:         "/test/root",
 				Caption:      "Test Caption",
 				Subscription: enums.SubscribeUniversal,
-				StartedAt:    time.Now(),
+				StartedAt:    core.Now(),
 			}
 			p.OnBegin(beginEvent)
 			defer killProgram(p)

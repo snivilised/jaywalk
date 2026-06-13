@@ -10,6 +10,9 @@ import (
 	"github.com/snivilised/jaywalk/src/prism/widgets/legend"
 )
 
+// Any significant changes to the highway Model/View api should reflected in the
+// documentation in docs/bubbletea-view-layout.md
+
 func (m Model) View() tea.View {
 	var b strings.Builder
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image/color"
 	"io"
+	"maps"
 
 	"charm.land/lipgloss/v2"
 )
@@ -329,9 +330,7 @@ func NewTheme(palette Palette, writer io.Writer) (Theme, error) {
 	}
 	// Store component-to-gradient bindings (may be empty).
 	highlightsComponents := make(map[string]string)
-	for k, v := range palette.Highlights.Components {
-		highlightsComponents[k] = v
-	}
+	maps.Copy(highlightsComponents, palette.Highlights.Components)
 
 	return Theme{
 		DirStyle: lipgloss.NewStyle().

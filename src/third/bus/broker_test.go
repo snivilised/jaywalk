@@ -133,7 +133,7 @@ var _ = Describe("Bus", func() {
 						bus.WithTxID("tx"),
 						bus.WithID("id"),
 						bus.WithSource("source"),
-						bus.WithOccurredAt(time.Now()),
+						bus.WithOccurredAt(core.Now()),
 					)
 
 					Expect(err).To(Succeed())
