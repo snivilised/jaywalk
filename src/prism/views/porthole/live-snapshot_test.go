@@ -181,7 +181,7 @@ var _ = Describe("Live snapshot", func() {
 			stack = result.BranchStack
 			model = update(model, porthole.ContentLineMsg{Line: result.Line})
 		}
-		model = update(model, porthole.CompleteMsg{
+		model = update(model, contract.CompleteMsg{
 			Files: 2, Dirs: 3, Elapsed: time.Second,
 		})
 		return model.View().Content

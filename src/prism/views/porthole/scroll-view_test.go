@@ -121,7 +121,7 @@ var _ = Describe("Porthole View", func() {
 
 		It("sets done flag from CompleteMsg", func() {
 			model := porthole.NewModel(contract.NewModelParams{RootPath: "/root", MaxDepth: 0, Theme: theme, NoRecurse: false})
-			msg := porthole.CompleteMsg{
+			msg := contract.CompleteMsg{
 				Files:   10,
 				Dirs:    5,
 				Elapsed: time.Second,
@@ -202,7 +202,7 @@ var _ = Describe("Porthole View", func() {
 			model := porthole.NewModel(contract.NewModelParams{RootPath: "/root", MaxDepth: 0, Theme: theme, NoRecurse: false})
 			model = update(model, tea.WindowSizeMsg{Width: 80, Height: 24})
 			model = update(model, porthole.ContentLineMsg{Line: "content\n"})
-			model = update(model, porthole.CompleteMsg{
+			model = update(model, contract.CompleteMsg{
 				Files:   5,
 				Dirs:    2,
 				Elapsed: time.Second,
@@ -366,7 +366,7 @@ var _ = Describe("Porthole View", func() {
 				},
 			})
 			model = update(model, porthole.ContentLineMsg{Line: "content\n"})
-			model = update(model, porthole.CompleteMsg{
+			model = update(model, contract.CompleteMsg{
 				Files:   1,
 				Dirs:    1,
 				Elapsed: time.Second,

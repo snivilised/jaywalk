@@ -69,7 +69,7 @@ var _ = Describe("Porthole Model", Ordered, func() {
 			m := baseModel()
 			m = applyOverture(m)
 
-			m, _ = update(m, CensusMsg{TotalFiles: 10, TotalDirs: 0})
+			m, _ = update(m, contract.CensusMsg{TotalFiles: 10, TotalDirs: 0})
 			Expect(m.status.HasTotal()).To(BeTrue())
 			Expect(m.status.Total()).To(Equal(10))
 
@@ -88,7 +88,7 @@ var _ = Describe("Porthole Model", Ordered, func() {
 			m := baseModel()
 			m = applyOverture(m)
 
-			m, _ = update(m, CensusMsg{TotalFiles: 3, TotalDirs: 2})
+			m, _ = update(m, contract.CensusMsg{TotalFiles: 3, TotalDirs: 2})
 			Expect(m.status.Total()).To(Equal(5))
 
 			for _, p := range []string{"/r/a.txt", "/r/b.txt", "/r/c.txt"} {
@@ -130,7 +130,7 @@ var _ = Describe("Porthole Model", Ordered, func() {
 			m := baseModel()
 			m = applyOverture(m)
 
-			updated, cmd := update(m, CensusMsg{TotalFiles: 10})
+			updated, cmd := update(m, contract.CensusMsg{TotalFiles: 10})
 			Expect(cmd).NotTo(BeNil(), "CensusMsg must propagate the spring cmd")
 
 			updated, cmd = update(updated, contentLine("/root/f.txt", "f.txt"))
@@ -149,9 +149,9 @@ var _ = Describe("Porthole Model", Ordered, func() {
 			m := baseModel()
 			m = applyOverture(m)
 
-			m, _ = update(m, CensusMsg{TotalFiles: 100})
+			m, _ = update(m, contract.CensusMsg{TotalFiles: 100})
 
-			m, cmd := update(m, CompleteMsg{Files: 80, Dirs: 5, Elapsed: 2 * time.Second})
+			m, cmd := update(m, contract.CompleteMsg{Files: 80, Dirs: 5, Elapsed: 2 * time.Second})
 			_ = cmd
 
 			Expect(m.status.IsDone()).To(BeTrue())

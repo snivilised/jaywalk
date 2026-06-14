@@ -88,3 +88,25 @@ type MotifMsg struct {
 	// theme.GradientFor(GradientComponentPeriscope) in sendMotif.
 	PeriscopeGradient *ResolvedGradient
 }
+
+// CensusMsg carries the total file/dir counts from a preview
+// traversal. The porthole model uses this to seed the status
+// widget's progress bar so it can display a meaningful done/total
+// ratio during navigation. When both totals are zero (no preview),
+// the progress bar is omitted until the next CensusMsg arrives.
+type CensusMsg struct {
+	TotalFiles uint
+	TotalDirs  uint
+	MaxDepth   uint
+}
+
+// CompleteMsg marks end-of-navigation. The porthole view uses this
+// to stop receiving content lines and render the closing summary.
+// It carries file/dir counts, error list, elapsed time, and whether
+// the traversal completed successfully (no errors).
+type CompleteMsg struct {
+	Files   int
+	Dirs    int
+	Errs    []error
+	Elapsed time.Duration
+}

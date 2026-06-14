@@ -128,7 +128,7 @@ func (p *portholePresenter) OnBegin(e *report.BeginEvent) {
 	})
 
 	if p.totalFiles > 0 || p.totalDirs > 0 {
-		p.program.Send(porthole.CensusMsg{
+		p.program.Send(contract.CensusMsg{
 			TotalFiles: p.totalFiles,
 			TotalDirs:  p.totalDirs,
 			MaxDepth:   p.maxDepth,
@@ -336,7 +336,7 @@ func (p *portholePresenter) OnComplete(traversal *report.Traversal) {
 		errs = append(errs, traversal.Err)
 	}
 
-	p.program.Send(porthole.CompleteMsg{
+	p.program.Send(contract.CompleteMsg{
 		Files:   int(traversal.FilesVisited),
 		Dirs:    int(traversal.DirsVisited),
 		Errs:    errs,

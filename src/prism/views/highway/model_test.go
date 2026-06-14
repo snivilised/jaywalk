@@ -385,7 +385,7 @@ var _ = Describe("Model.Update - OvertureMsg", func() {
 var _ = Describe("Model.Update - CensusMsg", func() {
 	It("sets totalFiles and totalDirs", func() {
 		m := baseModel(1)
-		updated, _ := update(m, CensusMsg{TotalFiles: 100, TotalDirs: 20})
+		updated, _ := update(m, contract.CensusMsg{TotalFiles: 100, TotalDirs: 20})
 		// cmd is the status spring's first-frame cmd (non-nil)
 		// because CensusMsg seeds the total and re-targets the
 		// embedded progress bar to 0.
@@ -406,14 +406,14 @@ var _ = Describe("Model.Update - CensusMsg", func() {
 		m := baseModel(1)
 		Expect(m.MaxDepth).To(Equal(uint(5)))
 
-		updated, cmd := update(m, CensusMsg{MaxDepth: 10})
+		updated, cmd := update(m, contract.CensusMsg{MaxDepth: 10})
 		Expect(cmd).To(BeNil())
 		Expect(updated.MaxDepth).To(Equal(uint(10)))
 	})
 
 	It("forwards MaxDepth to the track child", func() {
 		m := baseModel(1)
-		updated, _ := update(m, CensusMsg{TotalFiles: 5, MaxDepth: 12})
+		updated, _ := update(m, contract.CensusMsg{TotalFiles: 5, MaxDepth: 12})
 		Expect(updated.track.MaxDepth()).To(Equal(uint(12)))
 	})
 
@@ -421,7 +421,7 @@ var _ = Describe("Model.Update - CensusMsg", func() {
 		m := baseModel(1)
 		Expect(m.MaxDepth).To(Equal(uint(5)))
 
-		updated, cmd := update(m, CensusMsg{MaxDepth: 3})
+		updated, cmd := update(m, contract.CensusMsg{MaxDepth: 3})
 		Expect(cmd).To(BeNil())
 		Expect(updated.MaxDepth).To(Equal(uint(5)))
 	})
@@ -466,7 +466,7 @@ var _ = Describe("Model.Update - MotifMsg", func() {
 
 	It("counts each unique path once for progress", func() {
 		m := baseModel(1)
-		updated, _ := update(m, CensusMsg{TotalFiles: 10})
+		updated, _ := update(m, contract.CensusMsg{TotalFiles: 10})
 		// totalFiles = 10, but the new code seeds
 		// status.Total() with TotalFiles + TotalDirs. With
 		// TotalDirs = 0, total = 10.
@@ -530,7 +530,7 @@ var _ = Describe("Model.Update - MotifMsg", func() {
 		m := baseModel(1)
 		// CensusMsg forwards totalFiles into the status widget
 		// via status.TotalMsg.
-		updated, _ := update(m, CensusMsg{TotalFiles: 10})
+		updated, _ := update(m, contract.CensusMsg{TotalFiles: 10})
 
 		updated, _ = update(updated, contract.MotifMsg{
 			Path: "/root/1.txt", IsDir: false,
@@ -567,7 +567,7 @@ var _ = Describe("Model.Update - MotifMsg", func() {
 		// MotifMsg (file OR dir) increments done. Seeding
 		// total with files+dirs keeps the ratio accurate.
 		m := baseModel(1)
-		updated, _ := update(m, CensusMsg{TotalFiles: 3, TotalDirs: 2})
+		updated, _ := update(m, contract.CensusMsg{TotalFiles: 3, TotalDirs: 2})
 		Expect(updated.status.Total()).To(Equal(5))
 
 		// Visit all 3 files. Done climbs to 3 of 5 → 60%.
@@ -605,7 +605,7 @@ var _ = Describe("Model.Update - CompleteMsg", func() {
 		m := baseModel(1)
 		Expect(m.Done).To(BeFalse())
 
-		updated, _ := update(m, CompleteMsg{})
+		updated, _ := update(m, contract.CompleteMsg{})
 		// cmd is tea.Batch wrapping the status spring's
 		// first-frame cmd (re-targeted to 100% via DoneMsg).
 		Expect(updated.Done).To(BeTrue())
@@ -614,7 +614,7 @@ var _ = Describe("Model.Update - CompleteMsg", func() {
 	It("sets files, dirs, errors and elapsed on the status widget", func() {
 		m := baseModel(1)
 
-		updated, cmd := update(m, CompleteMsg{
+		updated, cmd := update(m, contract.CompleteMsg{
 			Files: 42, Dirs: 7, Elapsed: 5 * time.Second,
 		})
 		// Cmd is tea.Batch wrapping the status spring's
@@ -633,7 +633,7 @@ var _ = Describe("Model.Update - CompleteMsg", func() {
 	It("captures the first error message", func() {
 		m := baseModel(1)
 
-		updated, _ := update(m, CompleteMsg{
+		updated, _ := update(m, contract.CompleteMsg{
 			Errs: []error{
 				errors.New("first error"),
 				errors.New("second error"),
@@ -653,9 +653,9 @@ var _ = Describe("Model.Update - CompleteMsg", func() {
 		// "bar fills at completion" semantic.
 		m := baseModel(1)
 		// Seed the total via CensusMsg (preview estimate).
-		updated, _ := update(m, CensusMsg{TotalFiles: 100})
+		updated, _ := update(m, contract.CensusMsg{TotalFiles: 100})
 
-		updated, cmd := update(updated, CompleteMsg{Files: 80, Dirs: 5})
+		updated, cmd := update(updated, contract.CompleteMsg{Files: 80, Dirs: 5})
 		// The status widget returns nil cmd for DoneMsg (no
 		// animation driver in this PR), so the tea.Batch
 		// collapses to nil.
@@ -687,7 +687,7 @@ var _ = Describe("Model.Update - FrameMsg forwarding", func() {
 		// Re-target to a non-zero percent so the spring has
 		// somewhere to travel and the frame's next-frame cmd
 		// is non-nil.
-		updated, cmd := update(m, CensusMsg{TotalFiles: 100})
+		updated, cmd := update(m, contract.CensusMsg{TotalFiles: 100})
 		Expect(cmd).NotTo(BeNil(), "CensusMsg must propagate the spring cmd")
 
 		// Drive percent to 100% via a MotifMsg increment with a

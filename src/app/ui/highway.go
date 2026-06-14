@@ -112,7 +112,7 @@ func (h *highwayPresenter) OnBegin(e *report.BeginEvent) {
 	})
 
 	if h.totalFiles > 0 || h.totalDirs > 0 {
-		h.program.Send(highway.CensusMsg{
+		h.program.Send(contract.CensusMsg{
 			TotalFiles: h.totalFiles,
 			TotalDirs:  h.totalDirs,
 			MaxDepth:   h.maxDepth,
@@ -217,7 +217,7 @@ func (h *highwayPresenter) OnComplete(t *report.Traversal) {
 		errs = []error{t.Err}
 	}
 
-	h.program.Send(highway.CompleteMsg{
+	h.program.Send(contract.CompleteMsg{
 		Files:   int(t.FilesVisited),
 		Dirs:    int(t.DirsVisited),
 		Errs:    errs,
