@@ -191,7 +191,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		return m, nil
 
-	case CensusMsg:
+	case contract.CensusMsg:
 		m.totalFiles = msg.TotalFiles
 		m.totalDirs = msg.TotalDirs
 		if msg.MaxDepth > m.MaxDepth {
@@ -258,7 +258,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		})
 		return m, tea.Batch(cmds...)
 
-	case CompleteMsg:
+	case contract.CompleteMsg:
 		// Capture the first non-nil error message for the
 		// "press space to exit" footer (still rendered by the
 		// highway chrome; see renderSummary).

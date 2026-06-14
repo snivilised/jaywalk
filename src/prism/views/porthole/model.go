@@ -275,7 +275,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		return &m, nil
 
-	case CensusMsg:
+	case contract.CensusMsg:
 		if msg.MaxDepth > m.MaxDepth {
 			m.MaxDepth = msg.MaxDepth
 		}
@@ -291,7 +291,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return &m, nil
 
-	case CompleteMsg:
+	case contract.CompleteMsg:
 		m.ApplyCompletion(msg.Errs, msg.Elapsed)
 
 		m.status, _ = m.dispatchStatus(status.CountsMsg{
