@@ -12,6 +12,8 @@ import (
 
 // handleServant dispatches to the appropriate per-node handler based on
 // whether an action, pipeline, or neither is configured on the request.
+// When c.poolExec is non-nil (concurrent mode), actions are submitted
+// asynchronously to the worker pool and the handler returns immediately.
 func (c *Coordinator) handleServant(
 	ctx context.Context,
 	servant core.Servant,
@@ -34,6 +36,9 @@ func (c *Coordinator) handleServant(
 		return c.executePipeline(ctx, node, req, isLast, traversal)
 
 	case req.ActionName != "":
+		if c.poolExec != nil {
+			return c.executeActionAsync(ctx, node, req, isLast, traversal)
+		}
 		e := c.executeAction(ctx, node, req.ActionName, req.Root, req.DryRun)
 		if e.Skipped {
 			traversal.ActionsSkipped.Tick()
@@ -61,6 +66,68 @@ func (c *Coordinator) handleServant(
 		})
 		return nil
 	}
+}
+
+// executeActionAsync validates and expands the action, then submits the
+// command to the async pool without waiting for completion. The output
+// handler goroutine processes results and dispatches UI events.
+func (c *Coordinator) executeActionAsync(
+	ctx context.Context,
+	node *core.Node,
+	req *Request,
+	isLast bool,
+	traversal *report.Traversal,
+) error {
+	action, ok := c.config.Raw.Actions[req.ActionName]
+	if !ok {
+		req.UI.OnActionEvent(&report.ActionEvent{
+			DisplayEvent: report.DisplayEvent{Node: node, Name: req.ActionName},
+			Err:          locale.NewActionNotFoundError(req.ActionName),
+		})
+		return nil
+	}
+
+	expResult := Expand(action.Cmd, req.Root, node)
+	if expResult.Skipped {
+		traversal.ActionsSkipped.Tick()
+		req.UI.OnSkipEvent(&report.SkipEvent{
+			DisplayEvent: report.DisplayEvent{
+				Node:   node,
+				IsLast: isLast,
+				Name:   req.ActionName,
+			},
+			Placeholder:  expResult.Placeholder,
+			ResolvedPath: expResult.ResolvedPath,
+		})
+		return nil
+	}
+
+	event := &report.ActionEvent{
+		DisplayEvent:    report.DisplayEvent{Node: node, Name: req.ActionName},
+		ExecutionString: expResult.Cmd,
+		DryRun:          req.DryRun,
+	}
+
+	if req.DryRun {
+		event.IsLast = isLast
+		req.UI.OnActionEvent(event)
+		return nil
+	}
+
+	if err := c.poolExec.Post(ctx, expResult.Cmd, func(workerID string, output []byte, err error) {
+		if err != nil {
+			event.Err = err
+		}
+		event.CommandOutput = c.processOutput(output, c.actionRegexes[req.ActionName])
+		event.WorkerID = workerID
+		event.IsLast = isLast
+		req.UI.OnActionEvent(event)
+	}); err != nil {
+		event.Err = err
+		req.UI.OnActionEvent(event)
+	}
+
+	return nil
 }
 
 // actionResult is the outcome of executeAction. Either Skipped is true
@@ -114,6 +181,7 @@ func (c *Coordinator) executeAction(
 			event.Err = err
 		}
 		event.CommandOutput = c.processOutput(output, c.actionRegexes[name])
+		event.WorkerID = c.lastWorkerID
 	}
 
 	return actionResult{

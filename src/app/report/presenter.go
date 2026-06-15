@@ -2,6 +2,7 @@ package report
 
 import (
 	"github.com/snivilised/jaywalk/src/agenor/core"
+	"github.com/snivilised/jaywalk/src/agenor/enums"
 	"github.com/snivilised/jaywalk/src/agenor/pref"
 )
 
@@ -45,6 +46,10 @@ type Presenter interface {
 	// OnComplete is called once at the end of a traversal with the full
 	// structured outcome.
 	OnComplete(t *Traversal)
+
+	// OnWorkerState is called when a pool worker's activity state changes.
+	// workerID is the pool-assigned goroutine ID, formatted as "W#N".
+	OnWorkerState(state enums.WorkerState, workerID string)
 }
 
 // PeerAware is an optional interface that a Presenter can implement to

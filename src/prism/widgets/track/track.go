@@ -1,6 +1,9 @@
 package track
 
 import (
+	"strconv"
+
+	"github.com/snivilised/jaywalk/src/agenor/enums"
 	"github.com/snivilised/jaywalk/src/prism/contract"
 	"github.com/snivilised/jaywalk/src/prism/effects"
 )
@@ -49,12 +52,36 @@ type Lane struct {
 
 	// PeriscopeGradientState holds in-memory state for this lane's periscope gradient animation.
 	PeriscopeGradientState *effects.GradientState
+
+	// WorkerID is the pool-assigned goroutine ID that last updated
+	// this lane, formatted as "W#N". Displayed in the worker-id column.
+	// TODO: once pants exposes a proper user-facing worker ID,
+	// replace this with that value (currently derived from the
+	// internal pants/ants RoutineID).
+	WorkerID string
+
+	// State indicates whether the worker associated with this lane
+	// is idle or working. The track update loop uses this to decide
+	// whether to advance the lane's tick (and therefore the activity
+	// animation frame). Defaults to idle at construction (zero value).
+	State enums.WorkerState
 }
 
 // WindowSize returns the gradient window size appropriate for the
 // lane's current content. The same heuristic that previously lived
 // on the highway Lane type: command output length when present,
 // otherwise 6 for action animations on files, otherwise 4.
+// WorkerIndex extracts the numeric worker index from a "W#N" formatted
+// WorkerID string. Returns 0 if the string cannot be parsed.
+func WorkerIndex(workerID string) int {
+	if len(workerID) > 2 && workerID[:2] == "W#" {
+		if n, err := strconv.Atoi(workerID[2:]); err == nil {
+			return n
+		}
+	}
+	return 0
+}
+
 func (l *Lane) WindowSize() int {
 	if len(l.CommandOutput) > 0 {
 		return len([]rune(l.CommandOutput))

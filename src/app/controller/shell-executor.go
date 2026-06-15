@@ -16,9 +16,15 @@ import (
 	"github.com/snivilised/pants"
 )
 
+// shellCallback is invoked when a job completes. workerID is the
+// pool-assigned goroutine ID from the pool's JobOutput.WorkerID,
+// formatted as "W#N".
+type shellCallback func(workerID string, output []byte, err error)
+
 type shellResult struct {
-	output []byte
-	err    error
+	workerID string
+	output   []byte
+	err      error
 }
 
 // jayShellSession is a non-interactive persistent shell session that uses
@@ -175,63 +181,82 @@ func newJayShellPool(
 	)
 }
 
-// shellPoolExecutor wraps a ManifoldStatePool and provides a synchronous
-// Execute method that submits commands to the pool and waits for results.
+// shellPoolExecutor wraps a ManifoldStatePool and provides both
+// synchronous (Execute) and asynchronous (Post) submission of shell
+// commands. The internal observe goroutine matches pool output markers
+// to pending callbacks.
 type shellPoolExecutor struct {
 	pool    *pants.ManifoldStatePool[string, string, pants.ShellSession]
 	counter uint64
 	once    sync.Once
 	done    chan struct{}
 	mux     sync.Mutex
-	pending map[string]chan shellResult
+	pending map[string]shellCallback
 }
 
 func newShellPoolExecutor(pool *pants.ManifoldStatePool[string, string, pants.ShellSession]) *shellPoolExecutor {
 	return &shellPoolExecutor{
 		pool:    pool,
 		done:    make(chan struct{}),
-		pending: make(map[string]chan shellResult),
+		pending: make(map[string]shellCallback),
 	}
 }
 
+// Execute submits a command and blocks until the result is available.
+// Returns (workerID, output, error) where workerID is formatted as
+// "W#N". This is the synchronous API.
 func (e *shellPoolExecutor) Execute(
 	ctx context.Context,
 	command string,
-) ([]byte, error) {
+) (string, []byte, error) {
+	resultCh := make(chan shellResult, 1)
+
+	err := e.Post(ctx, command, func(workerID string, output []byte, err error) {
+		resultCh <- shellResult{workerID: workerID, output: output, err: err}
+	})
+	if err != nil {
+		return "", nil, err
+	}
+
+	select {
+	case result := <-resultCh:
+		return result.workerID, result.output, result.err
+
+	case <-ctx.Done():
+		return "", nil, ctx.Err()
+
+	case <-e.done:
+		return "", nil, nil
+	}
+}
+
+// Post submits a command asynchronously. The callback is invoked when
+// the job completes (on the observe goroutine). Returns an error if
+// submission to the pool fails.
+func (e *shellPoolExecutor) Post(
+	ctx context.Context,
+	command string,
+	callback shellCallback,
+) error {
 	id := strconv.FormatUint(atomic.AddUint64(&e.counter, 1), 36)
 	marker := fmt.Sprintf("__JAYWALK_SHELL_STATUS_%s__:", id)
-	resultCh := make(chan shellResult, 1)
 
 	e.once.Do(func() {
 		go e.observe()
 	})
 
 	e.mux.Lock()
-	e.pending[marker] = resultCh
+	e.pending[marker] = callback
 	e.mux.Unlock()
 
 	if err := e.pool.Post(ctx, wrapShellCommand(command, marker)); err != nil {
 		e.mux.Lock()
 		delete(e.pending, marker)
 		e.mux.Unlock()
-
-		return nil, err
+		return err
 	}
 
-	select {
-	case result := <-resultCh:
-		return result.output, result.err
-
-	case <-ctx.Done():
-		e.mux.Lock()
-		delete(e.pending, marker)
-		e.mux.Unlock()
-
-		return nil, ctx.Err()
-
-	case <-e.done:
-		return nil, nil
-	}
+	return nil
 }
 
 func (e *shellPoolExecutor) observe() {
@@ -239,17 +264,20 @@ func (e *shellPoolExecutor) observe() {
 
 	for output := range e.pool.Observe() {
 		payload := output.Payload
+		workerID := fmt.Sprintf("W#%d", output.WorkerID)
 
 		e.mux.Lock()
-		for marker, resultCh := range e.pending {
+		for marker, callback := range e.pending {
 			if result, ok := parseShellResult(payload, marker, output.Error); ok {
 				delete(e.pending, marker)
-				resultCh <- result
-				close(resultCh)
-				break
+				e.mux.Unlock()
+				callback(workerID, result.output, result.err)
+				goto next
 			}
 		}
 		e.mux.Unlock()
+
+	next:
 	}
 }
 

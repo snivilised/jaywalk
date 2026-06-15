@@ -6,6 +6,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/snivilised/jaywalk/src/agenor/enums"
 	"github.com/snivilised/jaywalk/src/prism/layout"
 	"github.com/snivilised/jaywalk/src/prism/widgets/action"
 	"github.com/snivilised/jaywalk/src/prism/widgets/activity"
@@ -29,7 +30,8 @@ import (
 //	 4. Job emoji indicator (changes per job arrival)
 //	 5. Node icon (file/folder tree icon, if path is present)
 //	 6. Action info (error message / action name / pipeline name)
-//	 7. Spinner column (fixed width label for spinner type: "default", "bounce", etc.)
+//	 7. Worker-ID column (fixed width label: "W#1", "W#2", etc. Shows pool-assigned
+//	    goroutine ID; replaced by a proper user-facing ID once pants exposes one.)
 //	 8. Styled path or label (files get DirStyle/FileStyle, empty lanes get MutedStyle)
 //	 9. Animation frame (frame content from FrameFunc in quotes)
 //
@@ -73,7 +75,7 @@ func (m Model) renderLanes(b *strings.Builder) {
 	borderStyle := m.styles.BorderStyle
 	mutedStyle := m.styles.MutedStyle
 
-	for i, lane := range m.lanes {
+	for i, lane := range m.lanes[:m.visibleCount] {
 		emojiPart := lane.Emoji
 
 		periscopeContent := m.renderPeriscopeBar(lane, i, laneBarWidth, periscopeStyles)
@@ -84,8 +86,17 @@ func (m Model) renderLanes(b *strings.Builder) {
 			PipelineName: lane.PipelineName,
 		}, actionStyles)
 
-		spinnerNameCol := fmt.Sprintf("%-*s", SpinnerNameWidth, lane.SpinnerName)
-		spinnerNameCol = mutedStyle.Render(spinnerNameCol)
+		// Apply idle/working style based on worker state.
+		if actionContent != "" {
+			stateStyle := m.styles.WorkingStyle
+			if lane.State == enums.WorkerStateIdle || lane.State == enums.WorkerStateUndefined {
+				stateStyle = m.styles.IdleStyle
+			}
+			actionContent = stateStyle.Render(actionContent)
+		}
+
+		workerIDCol := fmt.Sprintf("%-*s", SpinnerNameWidth, lane.WorkerID)
+		workerIDCol = mutedStyle.Render(workerIDCol)
 
 		frame := m.renderActivityFrame(lane, activityStyles)
 
@@ -107,7 +118,7 @@ func (m Model) renderLanes(b *strings.Builder) {
 			row.Content(actionContent).Gap(2)
 		}
 		row.
-			Fixed(SpinnerNameWidth, spinnerNameCol).
+			Fixed(SpinnerNameWidth, workerIDCol).
 			Flex(true).Gap(2).
 			Content(frame).Gap(1).
 			RightContent(landingStripContent)

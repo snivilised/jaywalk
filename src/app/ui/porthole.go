@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/x/term"
 
 	"github.com/snivilised/jaywalk/src/agenor/core"
+	"github.com/snivilised/jaywalk/src/agenor/enums"
 	"github.com/snivilised/jaywalk/src/app/report"
 	"github.com/snivilised/jaywalk/src/prism/contract"
 	"github.com/snivilised/jaywalk/src/prism/effects"
@@ -351,6 +352,10 @@ func (p *portholePresenter) OnComplete(traversal *report.Traversal) {
 	// command would exit, and the process would be torn down before
 	// the user sees the completion state.
 	<-p.done
+}
+
+func (p *portholePresenter) OnWorkerState(_ enums.WorkerState, _ string) {
+	// No-op: porthole view has no per-worker animation to control.
 }
 
 func (p *portholePresenter) buildBannerInfo() banner.Info {
