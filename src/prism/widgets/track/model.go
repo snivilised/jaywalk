@@ -30,17 +30,25 @@ const SpinnerNameWidth = 18
 // The widget does NOT own its ticker; the highway root drives
 // tea.Tick and forwards TickMsg to Update.
 type Model struct {
-	lanes          []Lane
-	skip           []int
-	width          int
-	currentLaneIdx int
-	counted        map[string]bool
-	files          int
-	dirs           int
-	maxDepth       uint
-	noRecurse      bool
-	tickRate       time.Duration
-	styles         Styles
+	lanes     []Lane
+	skip      []int
+	width     int
+	counted   map[string]bool
+	files     int
+	dirs      int
+	maxDepth  uint
+	noRecurse bool
+	tickRate  time.Duration
+	styles    Styles
+
+	// visibleCount controls how many lanes are rendered. Starts at 1
+	// and grows as unique pool WorkerIDs are observed, up to the total
+	// number of pre-allocated lanes (len(lanes)).
+	visibleCount int
+
+	// seenWorkers tracks which pool WorkerIDs have been observed. Each
+	// new WorkerID triggers a potential visibleCount expansion.
+	seenWorkers map[string]struct{}
 }
 
 // Option configures Model at construction time. Mirrors the
@@ -57,7 +65,15 @@ func WithLanes(lanes []Lane) Option {
 		m.lanes = lanes
 		m.skip = initLaneSkip(lanes, m.tickRate)
 		m.counted = make(map[string]bool)
-		m.currentLaneIdx = 0
+		m.seenWorkers = make(map[string]struct{})
+
+		// Start with a single visible lane. The view will render up
+		// to visibleCount lanes; remaining lanes are revealed as new
+		// pool WorkerIDs are observed.
+		m.visibleCount = 1
+		if m.visibleCount > len(lanes) {
+			m.visibleCount = len(lanes)
+		}
 	}
 }
 
@@ -120,6 +136,8 @@ func WithTheme(t contract.Theme) Option {
 			BorderStyle:       t.BorderStyle,
 			BranchStyle:       t.BranchStyle,
 			LandingStripStyle: t.LandingStripStyle,
+			IdleStyle:         t.WorkerIdleStyle,
+			WorkingStyle:      t.WorkerStyle,
 		}
 	}
 }
@@ -165,12 +183,12 @@ func (m Model) Tick(idx int) int {
 	return m.lanes[idx].tick
 }
 
-// CurrentLaneIdx returns the index of the lane that the next
-// MotifMsg would write to. Exposed for tests.
-func (m Model) CurrentLaneIdx() int { return m.currentLaneIdx }
-
 // MaxDepth returns the maximum tree depth observed via CensusMsg.
 func (m Model) MaxDepth() uint { return m.maxDepth }
+
+// VisibleCount returns the number of lanes currently rendered. Exposed
+// for tests and the highway model to inspect expansion state.
+func (m Model) VisibleCount() int { return m.visibleCount }
 
 // initLaneSkip computes the per-lane skip factor from each lane's
 // IntervalMs. The skip factor = IntervalMs / tickRate (in ms). A

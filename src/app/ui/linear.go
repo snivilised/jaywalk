@@ -172,6 +172,10 @@ func (l *linearPresenter) OnComplete(traversal *report.Traversal) {
 	})
 }
 
+func (l *linearPresenter) OnWorkerState(_ enums.WorkerState, _ string) {
+	// No-op: linear view has no per-worker animation to control.
+}
+
 // NeedsPeerInfo reports whether this view requires peer position data.
 // Returning true causes the coordinator to run a preview traversal.
 func (l *linearPresenter) NeedsPeerInfo() bool {

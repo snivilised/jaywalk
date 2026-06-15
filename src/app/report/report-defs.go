@@ -19,6 +19,12 @@ type DisplayEvent struct {
 	IsPipelineHeader bool
 	IsPipelineStep   bool
 	IsLastStep       bool
+
+	// WorkerID is the pool-assigned goroutine ID that processed this
+	// job, formatted as "W#N". Populated by the coordinator from the
+	// executor output. Empty means unknown (e.g. neutral events with
+	// no pool dispatch).
+	WorkerID string
 }
 
 // BeginEvent carries the metadata known at the start of a traversal.
@@ -112,6 +118,15 @@ type SkipEvent struct {
 
 	// ResolvedPath is the path the offending placeholder resolved to.
 	ResolvedPath string
+}
+
+// WorkerEvent is emitted when a pool worker's activity state changes.
+type WorkerEvent struct {
+	// WorkerID is the pool-assigned goroutine ID, formatted as "W#N".
+	WorkerID string
+
+	// State is the new activity state of the worker.
+	State enums.WorkerState
 }
 
 // Traversal captures the outcome of a completed directory traversal.

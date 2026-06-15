@@ -217,6 +217,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case contract.WorkerStateMsg:
+		m.track, _ = m.dispatchTrack(track.WorkerStateMsg{
+			LaneID: msg.LaneID,
+			State:  msg.State,
+		})
+		return m, nil
+
 	case contract.MotifMsg:
 		// Track the pre-dispatch file/dir counts so we can
 		// detect whether the motif was new (i.e. the track

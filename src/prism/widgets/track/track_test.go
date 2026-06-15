@@ -12,6 +12,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/snivilised/jaywalk/src/agenor/core"
+	"github.com/snivilised/jaywalk/src/agenor/enums"
 	"github.com/snivilised/jaywalk/src/prism/contract"
 )
 
@@ -32,6 +33,7 @@ func noopFrame(_ int) string { return "•" }
 func baseLane() Lane {
 	return Lane{
 		Emoji: "🔍", JobEmoji: "🍎", Label: "test", FrameFn: noopFrame,
+		State: enums.WorkerStateWorking,
 	}
 }
 
@@ -88,11 +90,6 @@ var _ = Describe("New", func() {
 			Path: "/a", IsDir: false,
 		})
 		Expect(updated.files).To(Equal(1))
-	})
-
-	It("initialises currentLaneIdx to 0", func() {
-		m := baseModel(1)
-		Expect(m.currentLaneIdx).To(Equal(0))
 	})
 
 	It("initialises tickRate to the supplied value", func() {
@@ -293,18 +290,27 @@ var _ = Describe("Model.Update - MotifMsg", func() {
 		Expect(updated.lanes[0].Depth).To(Equal(uint(1)))
 	})
 
-	It("rotates currentLaneIdx round-robin", func() {
-		m := baseModel(2)
+	It("routes motifs to the lane derived from WorkerID % NoW", func() {
+		m := baseModel(3)
+		// WorkerID "W#4" → workerIndex("W#4") = 4 → 4 % 3 = 1
 		updated, _ := update(m, contract.MotifMsg{
-			Path: "/root/a.txt", IsDir: false,
+			Path: "/root/a.txt", IsDir: false, WorkerID: "W#4",
 		})
-		Expect(updated.currentLaneIdx).To(Equal(1))
+		Expect(updated.lanes[1].Path).To(Equal("/root/a.txt"))
+		Expect(updated.lanes[0].Path).To(BeEmpty())
+		Expect(updated.lanes[2].Path).To(BeEmpty())
 
+		// WorkerID "W#8" → workerIndex("W#8") = 8 → 8 % 3 = 2
 		updated, _ = update(updated, contract.MotifMsg{
-			Path: "/root/b.txt", IsDir: false,
+			Path: "/root/b.txt", IsDir: false, WorkerID: "W#8",
 		})
-		Expect(updated.lanes[1].Path).To(Equal("/root/b.txt"))
-		Expect(updated.currentLaneIdx).To(Equal(0))
+		Expect(updated.lanes[2].Path).To(Equal("/root/b.txt"))
+
+		// WorkerID "W#3" → workerIndex("W#3") = 3 → 3 % 3 = 0
+		updated, _ = update(updated, contract.MotifMsg{
+			Path: "/root/c.txt", IsDir: false, WorkerID: "W#3",
+		})
+		Expect(updated.lanes[0].Path).To(Equal("/root/c.txt"))
 	})
 
 	It("dedupes via the counted map", func() {
@@ -459,6 +465,18 @@ var _ = Describe("View", func() {
 			WithTheme(testTheme()),
 			WithWidth(80),
 		)
+		// Expand all 3 lanes by sending motifs with distinct
+		// WorkerIDs that map to different lanes
+		// (workerIndex("W#N") % 3).
+		m, _ = update(m, contract.MotifMsg{
+			Path: "/a", Name: "a", IsDir: false, WorkerID: "W#3",
+		})
+		m, _ = update(m, contract.MotifMsg{
+			Path: "/b", Name: "b", IsDir: false, WorkerID: "W#1",
+		})
+		m, _ = update(m, contract.MotifMsg{
+			Path: "/c", Name: "c", IsDir: false, WorkerID: "W#2",
+		})
 		v := m.View()
 		// Three lanes means three `├──` separators.
 		Expect(v.Content).To(ContainSubstring("├"))

@@ -23,4 +23,12 @@ type Styles struct {
 	BorderStyle       lipgloss.Style
 	BranchStyle       lipgloss.Style
 	LandingStripStyle lipgloss.Style
+
+	// IdleStyle is applied to lane content when the worker is idle.
+	// Typically a muted/dimmed style. Wired from theme.WorkerIdleStyle.
+	IdleStyle lipgloss.Style
+
+	// WorkingStyle is applied to lane content when the worker is
+	// working. Wired from theme.WorkerStyle.
+	WorkingStyle lipgloss.Style
 }
