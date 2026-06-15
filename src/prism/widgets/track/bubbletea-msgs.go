@@ -2,6 +2,8 @@ package track
 
 import (
 	"time"
+
+	"github.com/snivilised/jaywalk/src/agenor/enums"
 )
 
 // Messages understood only by Model.Update. The track widget knows
@@ -33,3 +35,14 @@ type CensusMsg struct {
 // navigation. The track widget clears its counted map so any
 // further MotifMsg re-becomes a no-op dedup-wise.
 type CompleteMsg struct{}
+
+// WorkerStateMsg carries a per-lane worker state update from the
+// highway root. The track widget updates the specified lane's state.
+// The gradient is NOT reset on transition to working — it continues
+// from its current position to avoid harsh visual contrast.
+type WorkerStateMsg struct {
+	LaneID int
+	State  enums.WorkerState
+}
+
+// enums imported from github.com/snivilised/jaywalk/src/agenor/enums

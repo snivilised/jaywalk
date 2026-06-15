@@ -36,6 +36,26 @@ type Coordinator struct {
 	actionRegexes map[string]*regexp.Regexp
 	adminPath     string
 	logger        *slog.Logger
+
+	// poolExec is the shell pool executor that submits commands to the
+	// pants worker pool asynchronously. Non-nil only when concurrent mode
+	// is active (IsConcurrent && !DryRun && action/pipeline configured).
+	// When non-nil, handleServant uses poolExec.Post for async submission
+	// instead of the synchronous c.exec path.
+	poolExec *shellPoolExecutor
+
+	// workerStateTracker tracks per-worker activity state and notifies
+	// the UI presenter when each worker completes a job. Created when
+	// the shell pool executor is wired up; nil otherwise (non-concurrent
+	// traversals, dry runs, tests).
+	workerStateTracker *WorkerStateTracker
+
+	// lastWorkerID is the pool-assigned goroutine ID from the most recent
+	// shell command execution, formatted as "W#N". Populated by the shell
+	// pool executor after each Execute call, read by executeAction to
+	// propagate WorkerID into the event chain. Empty when no command has
+	// been executed yet.
+	lastWorkerID string
 }
 
 // AdminPath returns the configured admin path for resume state files.
@@ -366,16 +386,23 @@ func (c *Coordinator) useShellPoolExec(
 		return nil, err
 	}
 
-	pool := newShellPoolExecutor(manifold)
+	executor := newShellPoolExecutor(manifold)
+	c.poolExec = executor
+	c.workerStateTracker = NewWorkerStateTracker(req.UI, options.Concurrency.NoW)
 
+	// Keep the synchronous wrapper for pipelines and non-async callers.
 	previousExec := c.exec
 	c.exec = func(_ context.Context, command string) ([]byte, error) {
-		return pool.Execute(ctx, command)
+		workerID, output, err := executor.Execute(ctx, command)
+		c.lastWorkerID = workerID
+		return output, err
 	}
 
 	return func() {
+		c.poolExec = nil
+		c.workerStateTracker = nil
 		c.exec = previousExec
-		pool.closeAll()
+		executor.closeAll()
 	}, nil
 }
 

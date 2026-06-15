@@ -2,6 +2,8 @@ package contract
 
 import (
 	"time"
+
+	"github.com/snivilised/jaywalk/src/agenor/enums"
 )
 
 // NodeParams holds the data for a single tree node being rendered.
@@ -59,6 +61,18 @@ type OvertureMsg struct {
 	FlagsRowPosition  string
 }
 
+// WorkerStateMsg carries a per-lane worker state update. Sent from the
+// highway presenter to the model when a pool worker's activity state
+// changes. The highway model dispatches this to the track widget which
+// controls per-lane animation.
+type WorkerStateMsg struct {
+	// LaneID is the index of the lane (derived from WorkerID % NoW).
+	LaneID int
+
+	// State is the worker's current activity state.
+	State enums.WorkerState
+}
+
 // MotifMsg carries a single per-node event. It is the shared payload
 // embedded by both the highway and track MotifMsg types. The highway
 // root constructs it; the track widget consumes it to update lanes,
@@ -74,6 +88,11 @@ type MotifMsg struct {
 	ExecutionString string
 	DryRun          bool
 	Err             error
+
+	// WorkerID is the pool-assigned goroutine ID that processed this
+	// job, formatted as "W#N". Used to route the motif to the correct
+	// lane.
+	WorkerID string
 
 	// JobEmoji is the emoji associated with the incoming job,
 	// rendered after the periscope bar.

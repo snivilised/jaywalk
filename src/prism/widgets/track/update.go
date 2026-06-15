@@ -3,6 +3,7 @@ package track
 import (
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/snivilised/jaywalk/src/agenor/enums"
 	"github.com/snivilised/jaywalk/src/prism/contract"
 	"github.com/snivilised/jaywalk/src/prism/effects"
 )
@@ -19,12 +20,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case TickMsg:
-		// Advance each lane's frame counter independently.
-		// Lanes with a skip factor > 0 (set via IntervalMs
-		// override) only advance their tick every N global
-		// ticks, producing a visibly slower animation. Lanes
-		// with skip factor 0 advance every tick (full speed).
+		// Advance each lane's frame counter independently, but only
+		// for lanes whose worker is currently working. Idle lanes
+		// freeze their animation frame and gradient position until
+		// their worker becomes active again.
 		for i := range m.lanes {
+			if m.lanes[i].State != enums.WorkerStateWorking {
+				continue
+			}
+
 			if m.skip != nil && i < len(m.skip) && m.skip[i] > 0 {
 				m.lanes[i].skipCounter++
 				if m.lanes[i].skipCounter >= m.skip[i] {
@@ -75,6 +79,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// CompleteMsg, to preserve the pre-refactor behaviour
 		// where late motifs were still applied to the lane.)
 		m.counted = make(map[string]bool)
+
+		// Freeze all lanes: the traversal is done, so no more
+		// MotifMsg will arrive to re-activate any lane. Setting
+		// every lane to Idle stops their tick advance so the
+		// animation frame freezes on the last displayed frame.
+		for i := range m.lanes {
+			m.lanes[i].State = enums.WorkerStateIdle
+		}
+		return m, nil
+
+	case WorkerStateMsg:
+		if msg.LaneID >= 0 && msg.LaneID < len(m.lanes) {
+			m.lanes[msg.LaneID].State = msg.State
+		}
 		return m, nil
 
 	default:
@@ -100,7 +118,27 @@ func (m Model) applyMotifData(msg contract.MotifMsg) Model {
 		}
 	}
 	if len(m.lanes) > 0 {
-		idx := m.currentLaneIdx
+		// Route the motif to the lane that corresponds to the
+		// pool worker that produced this result. The lane index
+		// is derived from the numeric part of the WorkerID
+		// ("W#N") modulo the number of lanes. This assignment is
+		// stable for the lifetime of the pool.
+		idx := WorkerIndex(msg.WorkerID) % len(m.lanes)
+
+		// Expand visible lanes when a previously unseen worker ID is
+		// observed. This reveals the lane for the new pool worker.
+		if _, seen := m.seenWorkers[msg.WorkerID]; !seen {
+			m.seenWorkers[msg.WorkerID] = struct{}{}
+			if needed := idx + 1; needed > m.visibleCount {
+				if needed > len(m.lanes) {
+					needed = len(m.lanes)
+				}
+				m.visibleCount = needed
+			}
+		}
+
+		m.lanes[idx].WorkerID = msg.WorkerID
+		m.lanes[idx].State = enums.WorkerStateWorking
 		m.lanes[idx].JobEmoji = msg.JobEmoji
 		m.lanes[idx].Path = msg.Path
 		m.lanes[idx].Name = msg.Name
@@ -131,7 +169,6 @@ func (m Model) applyMotifData(msg contract.MotifMsg) Model {
 			}
 			m.lanes[idx].PeriscopeGradientState.TotalSteps = msg.PeriscopeGradient.Steps
 		}
-		m.currentLaneIdx = (m.currentLaneIdx + 1) % len(m.lanes)
 	}
 	return m
 }

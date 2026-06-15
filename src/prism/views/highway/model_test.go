@@ -11,6 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/snivilised/jaywalk/src/agenor/core"
+	"github.com/snivilised/jaywalk/src/agenor/enums"
 	"github.com/snivilised/jaywalk/src/prism/contract"
 	"github.com/snivilised/jaywalk/src/prism/movies"
 	"github.com/snivilised/jaywalk/src/prism/widgets/landing"
@@ -34,6 +35,7 @@ func noopFrame(_ int) string { return "•" }
 func baseLane() track.Lane {
 	return track.Lane{
 		Emoji: "🔍", JobEmoji: "🍎", Label: "test", FrameFn: noopFrame,
+		State: enums.WorkerStateWorking,
 	}
 }
 
@@ -257,8 +259,8 @@ var _ = Describe("Model.Update - tickMsg", func() {
 	})
 
 	It("advances slow lane fewer ticks than fast lane based on IntervalMs", func() {
-		fast := track.Lane{Emoji: "🔍", Label: "fast", FrameFn: noopFrame}
-		slow := track.Lane{Emoji: "🐢", Label: "slow", FrameFn: noopFrame, IntervalMs: 500}
+		fast := track.Lane{Emoji: "🔍", Label: "fast", FrameFn: noopFrame, State: enums.WorkerStateWorking}
+		slow := track.Lane{Emoji: "🐢", Label: "slow", FrameFn: noopFrame, IntervalMs: 500, State: enums.WorkerStateWorking}
 		lanes := []track.Lane{fast, slow}
 		m := NewModel(contract.NewModelParams{
 			RootPath:  "/root",
@@ -432,36 +434,33 @@ var _ = Describe("Model.Update - CensusMsg", func() {
 // ---------------------------------------------------------------------------
 
 var _ = Describe("Model.Update - MotifMsg", func() {
-	It("updates the current lane and advances the index round-robin", func() {
-		m := baseModel(2)
-		Expect(m.track.CurrentLaneIdx()).To(Equal(0))
-
+	It("routes the motif to the lane derived from WorkerID % NoW", func() {
+		m := baseModel(3)
+		// WorkerID "W#4" → workerIndex("W#4") = 4 → 4 % 3 = 1
 		first := contract.MotifMsg{
-			Path: "/root/a.txt", Name: "a.txt", IsDir: false, Depth: 1,
+			Path: "/root/a.txt", Name: "a.txt", IsDir: false, Depth: 1, WorkerID: "W#4",
 		}
 		updated1, _ := update(m, first)
-		// cmd is the status spring's first-frame cmd; the
-		// MotifMsg increment re-targets the bar to (done/total).
-		Expect(updated1.track.Lanes()[0].Path).To(Equal("/root/a.txt"))
-		Expect(updated1.track.Lanes()[0].Name).To(Equal("a.txt"))
-		Expect(updated1.track.Lanes()[0].IsDir).To(BeFalse())
-		Expect(updated1.track.Lanes()[0].Depth).To(Equal(uint(1)))
-		Expect(updated1.track.CurrentLaneIdx()).To(Equal(1))
+		Expect(updated1.track.Lanes()[1].Path).To(Equal("/root/a.txt"))
+		Expect(updated1.track.Lanes()[1].Name).To(Equal("a.txt"))
+		Expect(updated1.track.Lanes()[1].IsDir).To(BeFalse())
+		Expect(updated1.track.Lanes()[1].Depth).To(Equal(uint(1)))
+		Expect(updated1.track.Lanes()[0].Path).To(BeEmpty(), `WorkerID "W#4" should not affect lane 0`)
+		Expect(updated1.track.Lanes()[2].Path).To(BeEmpty(), `WorkerID "W#4" should not affect lane 2`)
 
+		// WorkerID "W#8" → workerIndex("W#8") = 8 → 8 % 3 = 2
 		second := contract.MotifMsg{
-			Path: "/root/b.txt", Name: "b.txt", IsDir: false, Depth: 2,
+			Path: "/root/b.txt", Name: "b.txt", IsDir: false, Depth: 2, WorkerID: "W#8",
 		}
 		updated2, _ := update(updated1, second)
-		Expect(updated2.track.Lanes()[1].Path).To(Equal("/root/b.txt"))
-		Expect(updated2.track.CurrentLaneIdx()).To(Equal(0))
+		Expect(updated2.track.Lanes()[2].Path).To(Equal("/root/b.txt"))
 
-		// Third wraps around to lane 0
+		// WorkerID "W#3" → workerIndex("W#3") = 3 → 3 % 3 = 0
 		third := contract.MotifMsg{
-			Path: "/root/c.txt", Name: "c.txt", IsDir: false, Depth: 3,
+			Path: "/root/c.txt", Name: "c.txt", IsDir: false, Depth: 3, WorkerID: "W#3",
 		}
 		updated3, _ := update(updated2, third)
 		Expect(updated3.track.Lanes()[0].Path).To(Equal("/root/c.txt"))
-		Expect(updated3.track.CurrentLaneIdx()).To(Equal(1))
 	})
 
 	It("counts each unique path once for progress", func() {

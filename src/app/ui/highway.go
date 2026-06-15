@@ -9,6 +9,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/snivilised/jaywalk/src/agenor/core"
+	"github.com/snivilised/jaywalk/src/agenor/enums"
 	"github.com/snivilised/jaywalk/src/app/report"
 	"github.com/snivilised/jaywalk/src/prism/contract"
 	"github.com/snivilised/jaywalk/src/prism/effects"
@@ -131,6 +132,7 @@ func (h *highwayPresenter) OnNodeEvent(e *report.NeutralEvent) {
 
 func (h *highwayPresenter) OnActionEvent(e *report.ActionEvent) {
 	h.sendMotif(contract.MotifMsg{
+		WorkerID:        e.WorkerID,
 		Path:            e.Node.Path,
 		Name:            e.Node.Extension.Name,
 		IsDir:           e.Node.IsDirectory(),
@@ -145,6 +147,7 @@ func (h *highwayPresenter) OnActionEvent(e *report.ActionEvent) {
 
 func (h *highwayPresenter) OnPipelineEvent(e *report.PipelineEvent) {
 	h.sendMotif(contract.MotifMsg{
+		WorkerID:        e.WorkerID,
 		Path:            e.Node.Path,
 		Name:            e.Node.Extension.Name,
 		IsDir:           e.Node.IsDirectory(),
@@ -159,6 +162,7 @@ func (h *highwayPresenter) OnPipelineEvent(e *report.PipelineEvent) {
 
 func (h *highwayPresenter) OnSkipEvent(e *report.SkipEvent) {
 	h.sendMotif(contract.MotifMsg{
+		WorkerID:   e.WorkerID,
 		Path:       e.Node.Path,
 		Name:       e.Node.Extension.Name,
 		IsDir:      e.Node.IsDirectory(),
@@ -201,6 +205,27 @@ func (h *highwayPresenter) sendMotif(msg contract.MotifMsg) {
 	msg.PeriscopeGradient = periscopeGrad
 
 	h.program.Send(msg)
+}
+
+func (h *highwayPresenter) OnWorkerState(state enums.WorkerState, workerID string) {
+	select {
+	case <-h.done:
+		return
+	default:
+	}
+
+	defer func() { _ = recover() }()
+
+	laneCount := int(h.noW) //nolint:gosec // bounded by config
+	if laneCount < 1 {
+		laneCount = defaultLaneCount
+	}
+	laneIndex := track.WorkerIndex(workerID) % laneCount
+
+	h.program.Send(contract.WorkerStateMsg{
+		LaneID: laneIndex,
+		State:  state,
+	})
 }
 
 func (h *highwayPresenter) OnComplete(t *report.Traversal) {
