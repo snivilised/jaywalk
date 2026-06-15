@@ -1,6 +1,8 @@
 package contract
 
-import "time"
+import (
+	"time"
+)
 
 // NodeParams holds the data for a single tree node being rendered.
 // It is used by the flow package's RenderLine function and shared

@@ -60,7 +60,7 @@ ui:
       #   starlight, infantry, heart-throb, barcode, bounce, spinner,
       #   braille, braillewave, dna, scan, rain, scanline, braille-pulse,
       #   snake, sparkle, cascade, columns, orbit, breathe, waverows,
-      #   checkerboard, helix, fillsweep, diagswipe, car,
+      #   checkerboard, helix, fillsweep, diagswipe,
       #   classic-waveform, particle-drift, pulsing-rings, ascii-landscape,
       #   matrix-rain, gradient-flow, breathing-circles, network-graph,
       #   dot, jump, pulse, points, globe, moon, monkey, meter,
@@ -75,3 +75,12 @@ ui:
             interval: 120
           braille:
             interval: 60
+  porthole:
+    banner:
+      position: bottom
+      tick: 100
+      # Optional: override the number of gradient steps used by the
+      # banner only. Omit to inherit steps from the gradient bound to
+      # "banner-control" in the theme.
+      steps: 64
+    flags-row-position: top

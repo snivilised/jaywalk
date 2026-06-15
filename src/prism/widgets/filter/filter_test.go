@@ -14,7 +14,9 @@ var _ = Describe("Filter.Render", func() {
 	}
 
 	It("returns empty when no filters active", func() {
-		result := Render("", "", "", "", "", "", noStyles)
+		result := Render(RenderParams{
+			Styles: noStyles,
+		})
 		Expect(result).To(Equal(""))
 	})
 
@@ -22,7 +24,11 @@ var _ = Describe("Filter.Render", func() {
 		filesGlob := "*.go"
 		filesRegex := `.*\.go`
 		expect := "files glob: *.go"
-		result := Render(filesGlob, filesRegex, "", "", "", "", noStyles)
+		result := Render(RenderParams{
+			FilesGlob:  filesGlob,
+			FilesRegex: filesRegex,
+			Styles:     noStyles,
+		})
 		Expect(result).To(Equal(expect))
 	})
 
@@ -30,7 +36,12 @@ var _ = Describe("Filter.Render", func() {
 		dirsGlob := "src/*"
 		dirsRegex := "src/.*"
 		expect := "dirs glob: src/*"
-		result := Render("", "", dirsGlob, dirsRegex, "", "", noStyles)
+
+		result := Render(RenderParams{
+			DirsGlob:  dirsGlob,
+			DirsRegex: dirsRegex,
+			Styles:    noStyles,
+		})
 		Expect(result).To(Equal(expect))
 	})
 
@@ -38,13 +49,20 @@ var _ = Describe("Filter.Render", func() {
 		filesGlob := "*.go"
 		dirsRegex := "src/.*"
 		expect := "files glob: *.go | dirs regex: src/.*"
-		result := Render(filesGlob, "", "", dirsRegex, "", "", noStyles)
+		result := Render(RenderParams{
+			FilesGlob: filesGlob,
+			DirsRegex: dirsRegex,
+			Styles:    noStyles,
+		})
 		Expect(result).To(Equal(expect))
 	})
 
 	It("uses spaces in labels (not CLI dash form)", func() {
 		filesGlob := "*.js"
-		result := Render(filesGlob, "", "", "", "", "", noStyles)
+		result := Render(RenderParams{
+			FilesGlob: filesGlob,
+			Styles:    noStyles,
+		})
 		Expect(result).To(Equal("files glob: *.js"))
 		Expect(result).NotTo(ContainSubstring("files-glob"))
 		Expect(result).NotTo(ContainSubstring("dirs-glob"))
@@ -57,9 +75,11 @@ var _ = Describe("Filter.Render", func() {
 			LabelStyle: labelStyle,
 			ValueStyle: valueStyle,
 		}
-		filesGlob := "*.js"
 		expect := labelStyle.Render("files glob") + ": " + valueStyle.Render("*.js")
-		result := Render(filesGlob, "", "", "", "", "", styles)
+		result := Render(RenderParams{
+			FilesGlob: "*.js",
+			Styles:    styles,
+		})
 		Expect(result).To(Equal(expect))
 	})
 
@@ -70,7 +90,10 @@ var _ = Describe("Filter.Render", func() {
 			LabelStyle: labelStyle,
 			ValueStyle: valueStyle,
 		}
-		result := Render("*.js", "", "", "", "", "", styles)
+		result := Render(RenderParams{
+			FilesGlob: "*.js",
+			Styles:    styles,
+		})
 		Expect(result).To(ContainSubstring(": "))
 		// The ": " between label and value is intentionally uncoloured
 		// so that the boundary between them is visually clean.

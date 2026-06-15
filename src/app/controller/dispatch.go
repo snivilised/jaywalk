@@ -20,7 +20,6 @@ func (c *Coordinator) handleServant(
 	peerInfoMap PeerInfoMap,
 ) error {
 	node := servant.Node()
-	_ = ctx
 
 	var isLast bool
 

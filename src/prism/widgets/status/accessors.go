@@ -3,7 +3,7 @@ package status
 import (
 	"time"
 
-	bp "charm.land/bubbles/v2/progress"
+	"charm.land/bubbles/v2/progress"
 )
 
 // Public accessors for Model state. These exist so callers
@@ -43,4 +43,4 @@ func (m Model) ErrMsg() string { return m.errMsg }
 // Inner returns a pointer to the embedded bubbles progress model
 // for tests and callers that need to inspect it directly. Not
 // intended for production use.
-func (m Model) Inner() *bp.Model { return &m.inner }
+func (m Model) Inner() *progress.Model { return &m.inner }

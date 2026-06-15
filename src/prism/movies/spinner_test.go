@@ -70,7 +70,7 @@ var _ = Describe("SpinnerFrames", func() {
 			Expect(fn(0)).To(Equal(expected))
 		},
 		Entry("braille", frameArraySpinner(spinner.MiniDot.Frames), "⠋"),
-		Entry("braillewave", brailleWaveSpinner, "⠁⠂⠄⡀"),
+		Entry("braille-wave", brailleWaveSpinner, "⠁⠂⠄⡀"),
 		Entry("dna", dnaSpinner, "⠋⠉⠙⠚"),
 		Entry("scan", scanSpinner, "⠀⠀⠀⠀"),
 		Entry("rain", rainSpinner, "⢁⠂⠔⠈"),

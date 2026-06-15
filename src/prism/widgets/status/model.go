@@ -3,7 +3,7 @@ package status
 import (
 	"time"
 
-	bp "charm.land/bubbles/v2/progress"
+	"charm.land/bubbles/v2/progress"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
@@ -35,7 +35,7 @@ type Model struct {
 	elapsed time.Duration
 
 	// progress (embedded bubbles v2 progress). Drives the spring animation.
-	inner    bp.Model
+	inner    progress.Model
 	width    int
 	percent  int
 	total    int
@@ -100,10 +100,10 @@ func WithTheme(t contract.Theme) Option {
 // defaultInnerWidth; both can be overridden via options.
 func New(opts ...Option) Model {
 	m := Model{
-		inner: bp.New(
-			bp.WithColors(lipgloss.Color(defaultInnerFill)),
-			bp.WithoutPercentage(),
-			bp.WithWidth(defaultInnerWidth),
+		inner: progress.New(
+			progress.WithColors(lipgloss.Color(defaultInnerFill)),
+			progress.WithoutPercentage(),
+			progress.WithWidth(defaultInnerWidth),
 		),
 		width: defaultInnerWidth,
 	}

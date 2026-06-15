@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	bp "charm.land/bubbles/v2/progress"
+	"charm.land/bubbles/v2/progress"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	. "github.com/onsi/ginkgo/v2"
@@ -578,11 +578,11 @@ var _ = Describe("Model.Update - FrameMsg forwarding", func() {
 	// cannot construct one synthetically. Instead, we drive the
 	// spring via SetPercent, capture the cmd it returns, and
 	// execute the cmd to obtain a real FrameMsg.
-	frameFromCmd := func(cmd tea.Cmd) bp.FrameMsg {
+	frameFromCmd := func(cmd tea.Cmd) progress.FrameMsg {
 		GinkgoHelper()
 		Expect(cmd).NotTo(BeNil(), "cmd needed to produce a FrameMsg")
 		msg := cmd()
-		frame, ok := msg.(bp.FrameMsg)
+		frame, ok := msg.(progress.FrameMsg)
 		Expect(ok).To(BeTrue(), "cmd must produce a FrameMsg, got %T", msg)
 		return frame
 	}
@@ -642,7 +642,7 @@ var _ = Describe("Model.View - reflects spring's animated percentShown", func() 
 
 		// Execute the cmd to get a FrameMsg, forward it once.
 		msg := cmd()
-		frame, ok := msg.(bp.FrameMsg)
+		frame, ok := msg.(progress.FrameMsg)
 		Expect(ok).To(BeTrue())
 		updated, _ = update(updated, frame)
 

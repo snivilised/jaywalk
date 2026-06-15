@@ -1,7 +1,7 @@
 package status
 
 import (
-	bp "charm.land/bubbles/v2/progress"
+	"charm.land/bubbles/v2/progress"
 	tea "charm.land/bubbletea/v2"
 )
 
@@ -79,7 +79,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmd := m.inner.SetPercent(0.0)
 		return m, cmd
 
-	case bp.FrameMsg:
+	case progress.FrameMsg:
 		// Forward animation frames to the inner spring. The
 		// inner Update returns the next-frame cmd while the
 		// spring is still moving and nil once it has reached

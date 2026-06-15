@@ -1,6 +1,8 @@
 package banner
 
-import "strings"
+import (
+	"strings"
+)
 
 // Model is a thin rendering wrapper around the existing Render
 // function. It is value-typed and intended to be constructed on the

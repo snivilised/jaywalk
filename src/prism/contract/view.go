@@ -13,7 +13,7 @@ const (
 	// and vertically scrolling content between them.
 	PortholeView ViewKind = "porthole"
 
-	// LanesView is a bubbletea view showing parallel lanes of activity,
+	// HighwayView is a bubbletea view showing parallel lanes of activity,
 	// suited to concurrent worker output.
-	LanesView ViewKind = "lanes"
+	HighwayView ViewKind = "highway"
 )

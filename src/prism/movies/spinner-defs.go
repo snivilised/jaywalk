@@ -4,7 +4,7 @@ const (
 	SpinnerTypeDefault = "spinner"
 
 	SpinnerTypeBraille      = "braille"
-	SpinnerTypeBrailleWave  = "braillewave"
+	SpinnerTypeBrailleWave  = "braille-wave"
 	SpinnerTypeDNA          = "dna"
 	SpinnerTypeScan         = "scan"
 	SpinnerTypeRain         = "rain"

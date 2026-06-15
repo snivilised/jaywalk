@@ -1,6 +1,8 @@
 package status
 
-import "time"
+import (
+	"time"
+)
 
 // Config is the one-shot stateless input set for Render. The
 // highway view does NOT use Render — it constructs a Model, drives

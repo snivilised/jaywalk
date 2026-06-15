@@ -1,6 +1,8 @@
 package banner
 
-import "math/rand/v2"
+import (
+	"math/rand/v2"
+)
 
 // RandomiseAspectsForTest is a thin alias for RandomiseAspects that
 // exists for symmetry with other test exports in the codebase. Both

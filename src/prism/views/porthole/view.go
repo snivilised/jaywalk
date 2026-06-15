@@ -3,7 +3,7 @@ package porthole
 import (
 	"strings"
 
-	bp "charm.land/bubbles/v2/viewport"
+	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
@@ -142,21 +142,21 @@ func (m *Model) renderBody() string {
 		truncated[i] = truncateStyled(entry.line, bodyWidth)
 	}
 	content := strings.Join(truncated, "\n")
-	viewport := bp.New(
-		bp.WithWidth(bodyWidth),
-		bp.WithHeight(bodyHeight),
+	vp := viewport.New(
+		viewport.WithWidth(bodyWidth),
+		viewport.WithHeight(bodyHeight),
 	)
-	viewport.SetContent(content)
+	vp.SetContent(content)
 	if m.autoScroll {
-		viewport.GotoBottom()
+		vp.GotoBottom()
 	} else {
-		viewport.SetYOffset(m.yOffset)
+		vp.SetYOffset(m.yOffset)
 	}
 
 	scrollbarState := scrollbar.State{
-		Height:       viewport.Height(),
-		ContentLines: viewport.TotalLineCount(),
-		Offset:       viewport.YOffset(),
+		Height:       vp.Height(),
+		ContentLines: vp.TotalLineCount(),
+		Offset:       vp.YOffset(),
 	}
 
 	// Collect gutter lines (one per row).
@@ -167,14 +167,14 @@ func (m *Model) renderBody() string {
 	}
 
 	// Collect viewport lines.
-	vpLines := strings.Split(viewport.View(), "\n")
+	vpLines := strings.Split(vp.View(), "\n")
 	if len(vpLines) > 0 && vpLines[len(vpLines)-1] == "" {
 		vpLines = vpLines[:len(vpLines)-1]
 	}
 
 	// Persist the viewport's scroll offset so the next render
 	// starts from the same position.
-	m.yOffset = viewport.YOffset()
+	m.yOffset = vp.YOffset()
 
 	// Determine whether the activity spinner should be shown.
 	// It only appears next to the last content line when the
