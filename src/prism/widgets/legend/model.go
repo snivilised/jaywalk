@@ -145,11 +145,18 @@ func (m Model) compose() []string {
 		entries = append(entries, entry)
 	}
 
-	if entry := filter.Render(hdr.FilesGlob, hdr.FilesRegex, hdr.DirsGlob, hdr.DirsRegex,
-		hdr.FileTypeMode, hdr.DirTypeMode, filter.Styles{
+	if entry := filter.Render(filter.RenderParams{
+		FilesGlob:    hdr.FilesGlob,
+		FilesRegex:   hdr.FilesRegex,
+		DirsGlob:     hdr.DirsGlob,
+		DirsRegex:    hdr.DirsRegex,
+		FileTypeMode: hdr.FileTypeMode,
+		DirTypeMode:  hdr.DirTypeMode,
+		Styles: filter.Styles{
 			LabelStyle: labelStyle,
 			ValueStyle: valueStyle,
-		}); entry != "" {
+		},
+	}); entry != "" {
 		entries = append(entries, entry)
 	}
 

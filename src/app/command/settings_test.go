@@ -29,6 +29,7 @@ func buildTestNavFamilies() (*cobra.Command, *navState) {
 	samplingPs.Native.BindAll(samplingPs, cmd.Flags())
 	polyPs := assist.NewParamSet[store.PolyFilterParameterSet](cmd)
 	polyPs.Native.BindAll(polyPs, cmd.Flags())
+
 	return cmd, &navState{
 		navPs:       navPs,
 		cascadeFam:  cascadePs,

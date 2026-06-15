@@ -6,6 +6,7 @@ import (
 	"github.com/snivilised/jaywalk/src/app/bedrock"
 	"github.com/snivilised/jaywalk/src/locale"
 	"github.com/snivilised/jaywalk/src/prism/movies"
+	"github.com/snivilised/jaywalk/src/third/lo"
 	"github.com/snivilised/li18ngo"
 )
 
@@ -147,20 +148,7 @@ var _ = Describe("Validate", Ordered, func() {
 
 		It("accepts all known spinner names", func() {
 			c := bedrock.HighwayConfig{}
-			c.AnimationData.Spinners.Enabled = []string{
-				"wave", "fairlight", "amour", "jamboree", "musical",
-				"trinkets", "morse", "starlight", "infantry", "heart-throb",
-				"barcode", "bounce", "spinner", "braille", "braillewave",
-				"dna", "scan", "rain", "scanline", "braille-pulse",
-				"snake", "sparkle", "cascade", "columns", "orbit",
-				"breathe", "waverows", "checkerboard", "helix",
-				"fillsweep", "diagswipe", "classic-waveform",
-				"particle-drift", "pulsing-rings", "ascii-landscape",
-				"matrix-rain", "gradient-flow", "breathing-circles",
-				"network-graph",
-				"dot", "jump", "pulse", "points", "globe",
-				"moon", "monkey", "meter", "hamburger", "ellipsis",
-			}
+			c.AnimationData.Spinners.Enabled = lo.Keys(bedrock.DefaultSpinnerIntervals)
 			err := c.Validate()
 			Expect(err).NotTo(HaveOccurred())
 		})

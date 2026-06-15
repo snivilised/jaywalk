@@ -21,7 +21,7 @@ import (
 //
 // Rendering order per lane (left to right inside one frame):
 //
-//		🤖  ◼◻◻◻◻◻◻◻◻◻  🍎  📁  • via boo  braillewave       <Path>  ⠁⠂⠄⡀        [👾 sleep 1.0s]
+//		🤖  ◼◻◻◻◻◻◻◻◻◻  🍎  📁  • via boo  braille-wave       <Path>  ⠁⠂⠄⡀        [👾 sleep 1.0s]
 //
 //	 1. Left border segment │
 //	 2. Worker emoji indicator (changes per job arrival)

@@ -1,6 +1,8 @@
 package contract
 
-import "github.com/snivilised/jaywalk/src/agenor/core"
+import (
+	"github.com/snivilised/jaywalk/src/agenor/core"
+)
 
 // Motif is the unit of render-able content passed to Renderer.Show for
 // each item encountered during traversal. Fields are generic filesystem

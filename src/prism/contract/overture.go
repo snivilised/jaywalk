@@ -1,6 +1,8 @@
 package contract
 
-import "time"
+import (
+	"time"
+)
 
 // Overture carries the metadata known at the start of a traversal.
 // Passed to Renderer.Begin to render the opening display.

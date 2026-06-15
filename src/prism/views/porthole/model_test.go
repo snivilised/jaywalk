@@ -4,7 +4,7 @@ import (
 	"io"
 	"time"
 
-	bp "charm.land/bubbles/v2/progress"
+	"charm.land/bubbles/v2/progress"
 	tea "charm.land/bubbletea/v2"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -137,7 +137,7 @@ var _ = Describe("Porthole Model", Ordered, func() {
 			Expect(cmd).NotTo(BeNil())
 
 			msg := cmd()
-			frame, ok := msg.(bp.FrameMsg)
+			frame, ok := msg.(progress.FrameMsg)
 			Expect(ok).To(BeTrue(), "spring cmd must yield a bp.FrameMsg, got %T", msg)
 
 			_, nextCmd := update(updated, frame)

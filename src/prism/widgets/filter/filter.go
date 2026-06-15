@@ -15,6 +15,16 @@ type Styles struct {
 	ValueStyle lipgloss.Style
 }
 
+type RenderParams struct {
+	FilesGlob,
+	FilesRegex,
+	DirsGlob,
+	DirsRegex,
+	FileTypeMode,
+	DirTypeMode string
+	Styles Styles
+}
+
 // Render renders the filter information widget as a list of labelled
 // values for any active filters. Active filters are those whose
 // corresponding pattern is non-empty. Returns an empty string when no
@@ -33,25 +43,24 @@ type Styles struct {
 // expected output:
 //
 //	files glob: *.go | dirs regex: src/.*
-func Render(filesGlob, filesRegex, dirsGlob, dirsRegex string,
-	fileTypeMode, dirTypeMode string, styles Styles) string {
-	if filesGlob == "" && filesRegex == "" &&
-		dirsGlob == "" && dirsRegex == "" {
+func Render(params RenderParams) string {
+	if params.FilesGlob == "" && params.FilesRegex == "" &&
+		params.DirsGlob == "" && params.DirsRegex == "" {
 		return ""
 	}
 
 	var parts []string
 
-	if filesGlob != "" {
-		parts = append(parts, labelValue(styles, "files glob", filesGlob))
-	} else if filesRegex != "" {
-		parts = append(parts, labelValue(styles, "files regex", filesRegex))
+	if params.FilesGlob != "" {
+		parts = append(parts, labelValue(params.Styles, "files glob", params.FilesGlob))
+	} else if params.FilesRegex != "" {
+		parts = append(parts, labelValue(params.Styles, "files regex", params.FilesRegex))
 	}
 
-	if dirsGlob != "" {
-		parts = append(parts, labelValue(styles, "dirs glob", dirsGlob))
-	} else if dirsRegex != "" {
-		parts = append(parts, labelValue(styles, "dirs regex", dirsRegex))
+	if params.DirsGlob != "" {
+		parts = append(parts, labelValue(params.Styles, "dirs glob", params.DirsGlob))
+	} else if params.DirsRegex != "" {
+		parts = append(parts, labelValue(params.Styles, "dirs regex", params.DirsRegex))
 	}
 
 	if len(parts) == 0 {

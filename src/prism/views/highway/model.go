@@ -3,7 +3,7 @@ package highway
 import (
 	"time"
 
-	bp "charm.land/bubbles/v2/progress"
+	"charm.land/bubbles/v2/progress"
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/snivilised/jaywalk/src/agenor/core"
@@ -290,7 +290,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, tea.Batch(cmds...)
 
-	case bp.FrameMsg:
+	case progress.FrameMsg:
 		// Forward the bubbles progress spring's animation
 		// frames to the status widget. Without this, the spring
 		// cmd returned from status.Update loops back through the

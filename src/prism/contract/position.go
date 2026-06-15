@@ -6,7 +6,7 @@ package contract
 // the YAML config vocabulary, the model state and the widget-level
 // constants cannot drift apart.
 //
-// Position is a stringly-typed concept; field types in messages and
+// Position is a strongly-typed concept; field types in messages and
 // configs remain string. The constants below are the only place
 // these literal values are defined.
 const (

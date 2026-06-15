@@ -1,6 +1,8 @@
 package status
 
-import "time"
+import (
+	"time"
+)
 
 // Messages understood only by Model.Update. The status widget knows
 // nothing about highway's MotifMsg/CompleteMsg/CensusMsg vocabulary;
