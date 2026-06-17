@@ -527,9 +527,15 @@ var _ = Describe("Model.Update - MotifMsg", func() {
 		// subsequent MotifMsg increments done. The bar fills
 		// proportionally and the label shows the percent.
 		m := baseModel(1)
+		// Use a wider width (120) so the progress bar has enough
+		// room alongside files+dirs+errors+elapsed. At the default
+		// 80-column width the progress segment is dropped to
+		// prevent overflow (an intentional safety behaviour).
+		updated, _ := update(m, tea.WindowSizeMsg{Width: 120})
+
 		// CensusMsg forwards totalFiles into the status widget
 		// via status.TotalMsg.
-		updated, _ := update(m, contract.CensusMsg{TotalFiles: 10})
+		updated, _ = update(updated, contract.CensusMsg{TotalFiles: 10})
 
 		updated, _ = update(updated, contract.MotifMsg{
 			Path: "/root/1.txt", IsDir: false,

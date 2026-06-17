@@ -86,7 +86,7 @@ func NewModel(params contract.NewModelParams, lanes []track.Lane, tickRate time.
 		status: status.New(
 			status.WithTheme(params.Theme),
 			status.WithFields(statusFieldSet()),
-			status.WithWidth(10),
+			status.WithWidth(80),
 		),
 		track: track.New(
 			track.WithLanes(lanes),

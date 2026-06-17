@@ -25,15 +25,23 @@ type Styles struct {
 // If content is empty, the border is rendered without content or brackets.
 // If the content is too long, it is truncated with an ellipsis.
 func RenderTop(content string, width int, styles Styles) string {
-	contentWidth := lipgloss.Width(content)
-	maxContentWidth := width - 13
+	bareLeft := contract.Static.Borders.TopLeftCorner
+	bareRight := contract.Static.Borders.TopRight
+	leftBracket := "[ "
+	rightBracket := " ]"
 
 	if content == "" {
-		N := max(0, width-7)
+		fixedWidth := lipgloss.Width(bareLeft + bareRight)
+		N := max(0, width-fixedWidth)
 		return styles.CornerStyle.Render(
-			contract.Static.Borders.TopLeftCorner+strings.Repeat("─", N)+contract.Static.Borders.TopRight,
+			bareLeft+strings.Repeat("─", N)+bareRight,
 		) + "\n"
 	}
+
+	contentWidth := lipgloss.Width(content)
+	leftFixedWidth := lipgloss.Width(bareLeft + leftBracket)
+	rightFixedWidth := lipgloss.Width(rightBracket + bareRight)
+	maxContentWidth := width - leftFixedWidth - rightFixedWidth
 
 	if contentWidth > maxContentWidth {
 		keep := max(0, maxContentWidth-3)
@@ -41,17 +49,18 @@ func RenderTop(content string, width int, styles Styles) string {
 		contentWidth = maxContentWidth
 	}
 
-	avail := max(2, width-contentWidth-11)
+	avail := max(2, width-contentWidth-leftFixedWidth-rightFixedWidth)
 	L := avail / 2
 	R := avail - L
 
-	return styles.CornerStyle.Render(contract.Static.Borders.TopLeftCorner+strings.Repeat("─", L)+"[ ") +
+	return styles.CornerStyle.Render(bareLeft+strings.Repeat("─", L)+leftBracket) +
 		styles.PathStyle.Render(content) +
-		styles.CornerStyle.Render(" ]"+strings.Repeat("─", R)+contract.Static.Borders.TopRight) + "\n"
+		styles.CornerStyle.Render(rightBracket+strings.Repeat("─", R)+bareRight) + "\n"
 }
 
 func RenderBottom(width int, styles Styles) string {
-	N := max(0, width-7)
+	fixedWidth := lipgloss.Width(contract.Static.Borders.BottomLeft + contract.Static.Borders.BottomRightCorner)
+	N := max(0, width-fixedWidth)
 	return styles.BorderStyle.Render(
 		contract.Static.Borders.BottomLeft + strings.Repeat("─", N) + contract.Static.Borders.BottomRightCorner,
 	)

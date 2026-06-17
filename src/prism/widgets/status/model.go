@@ -20,6 +20,12 @@ const defaultInnerFill = "#B9FBC0"
 // progress bar. Width is overwritten on receipt of WidthMsg.
 const defaultInnerWidth = 10
 
+// defaultRowWidth is the initial row width used when no WithWidth
+// option is supplied. In practice the host view (highway, porthole)
+// passes its own width; this default primarily exists so unit tests
+// that construct a Model without WithWidth get a realistic width.
+const defaultRowWidth = 80
+
 // Model is the bubbletea Model for the status widget. It owns the
 // state required to render the closing summary row of the highway
 // view: counts, elapsed, the embedded bubbles progress bar and the
@@ -66,12 +72,13 @@ func WithFields(f FieldSelectors) Option {
 	return func(m *Model) { m.fields = f }
 }
 
-// WithWidth sets the initial row width and the embedded bubbles
-// progress bar width. Updated again on receipt of WidthMsg.
+// WithWidth sets the initial row width. Updated again on receipt of
+// WidthMsg. The embedded progress bar keeps its default width (10)
+// regardless of the row width — only the caps and spacing respond
+// to the terminal width.
 func WithWidth(w int) Option {
 	return func(m *Model) {
 		m.width = w
-		m.inner.SetWidth(w)
 	}
 }
 
@@ -105,7 +112,7 @@ func New(opts ...Option) Model {
 			progress.WithoutPercentage(),
 			progress.WithWidth(defaultInnerWidth),
 		),
-		width: defaultInnerWidth,
+		width: defaultRowWidth,
 	}
 	for _, opt := range opts {
 		opt(&m)

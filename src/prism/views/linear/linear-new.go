@@ -15,7 +15,7 @@ func New(palette contract.Palette, writer io.Writer, opts ...Option) (contract.R
 		return nil, fmt.Errorf("linear.New: %w", err)
 	}
 
-	width := 80
+	width := 90
 	if w, _, err := term.GetSize(0); err == nil && w > 0 {
 		width = w
 	}

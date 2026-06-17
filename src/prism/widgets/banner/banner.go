@@ -5,6 +5,7 @@ import (
 	"image/color"
 	"strings"
 
+	"charm.land/lipgloss/v2"
 	"github.com/snivilised/jaywalk/src/prism/contract"
 	"github.com/snivilised/jaywalk/src/prism/contract/ansi"
 	"github.com/snivilised/jaywalk/src/prism/effects"
@@ -247,7 +248,7 @@ func writeColouredLine(b *strings.Builder, line string, lineStart int, rows []in
 func applyJustification(lines []string, width int, justify string) []string {
 	out := make([]string, len(lines))
 	for i, line := range lines {
-		lineWidth := len([]rune(line))
+		lineWidth := lipgloss.Width(line)
 		var pad int
 		switch justify {
 		case JustifyLeft:
