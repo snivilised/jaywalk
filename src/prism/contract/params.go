@@ -89,9 +89,9 @@ type MotifMsg struct {
 	DryRun          bool
 	Err             error
 
-	// WorkerID is the pool-assigned goroutine ID that processed this
-	// job, formatted as "W#N". Used to route the motif to the correct
-	// lane.
+	// WorkerID is the execution ID for this job, formatted as
+	// "<worker-id>-<work-tag>-<job-id>". Used to route the motif to
+	// the correct lane.
 	WorkerID string
 
 	// JobEmoji is the emoji associated with the incoming job,

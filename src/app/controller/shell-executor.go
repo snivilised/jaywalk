@@ -17,9 +17,10 @@ import (
 )
 
 // shellCallback is invoked when a job completes. workerID is the
-// pool-assigned goroutine ID from the pool's JobOutput.WorkerID,
-// formatted as "W#N".
-type shellCallback func(workerID string, output []byte, err error)
+// execution ID formatted as "<worker-id>-<work-tag>-<job-id>"
+// (e.g. "02-baffling-aardvark-102"). jobID is the pants
+// JobOutput.ID (zero-padded 3-digit job ID).
+type shellCallback func(workerID, jobID string, output []byte, err error)
 
 type shellResult struct {
 	workerID string
@@ -178,6 +179,7 @@ func newJayShellPool(
 		pants.WithOutput(outputSize, interval, timeout),
 		pants.WithStateInitialiser(initialiser),
 		pants.WithStateFinaliser(finaliser),
+		pants.WithGenerator(&pants.Sequential{Format: "%03d"}),
 	)
 }
 
@@ -186,32 +188,35 @@ func newJayShellPool(
 // commands. The internal observe goroutine matches pool output markers
 // to pending callbacks.
 type shellPoolExecutor struct {
-	pool    *pants.ManifoldStatePool[string, string, pants.ShellSession]
-	counter uint64
-	once    sync.Once
-	done    chan struct{}
-	mux     sync.Mutex
-	pending map[string]shellCallback
+	pool      *pants.ManifoldStatePool[string, string, pants.ShellSession]
+	allocator *workTagAllocator
+	counter   uint64
+	once      sync.Once
+	done      chan struct{}
+	mux       sync.Mutex
+	pending   map[string]shellCallback
 }
 
 func newShellPoolExecutor(pool *pants.ManifoldStatePool[string, string, pants.ShellSession]) *shellPoolExecutor {
 	return &shellPoolExecutor{
-		pool:    pool,
-		done:    make(chan struct{}),
-		pending: make(map[string]shellCallback),
+		pool:      pool,
+		allocator: newWorkTagAllocator(workTags),
+		done:      make(chan struct{}),
+		pending:   make(map[string]shellCallback),
 	}
 }
 
 // Execute submits a command and blocks until the result is available.
-// Returns (workerID, output, error) where workerID is formatted as
-// "W#N". This is the synchronous API.
+// Returns (workerID, output, error) where workerID is the execution ID
+// formatted as "<worker-id>-<work-tag>-<job-id>". This is the
+// synchronous API.
 func (e *shellPoolExecutor) Execute(
 	ctx context.Context,
 	command string,
 ) (string, []byte, error) {
 	resultCh := make(chan shellResult, 1)
 
-	marker, err := e.Post(ctx, command, func(workerID string, output []byte, err error) {
+	marker, err := e.Post(ctx, command, func(workerID, _ string, output []byte, err error) {
 		resultCh <- shellResult{workerID: workerID, output: output, err: err}
 	})
 	if err != nil {
@@ -271,14 +276,17 @@ func (e *shellPoolExecutor) observe() {
 
 	for output := range e.pool.Observe() {
 		payload := output.Payload
-		workerID := fmt.Sprintf("W#%d", output.WorkerID)
+		numericWorkerID := fmt.Sprintf("%02d", output.WorkerID)
+		workTag := e.allocator.Allocate()
+		numericJobID := output.ID
+		executionID := fmt.Sprintf("%s-%s-%s", numericWorkerID, workTag, numericJobID)
 
 		e.mux.Lock()
 		for marker, callback := range e.pending {
 			if result, ok := parseShellResult(payload, marker, output.Error); ok {
 				delete(e.pending, marker)
 				e.mux.Unlock()
-				callback(workerID, result.output, result.err)
+				callback(executionID, output.ID, result.output, result.err)
 				goto next
 			}
 		}

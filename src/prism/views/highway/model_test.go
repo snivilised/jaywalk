@@ -434,30 +434,30 @@ var _ = Describe("Model.Update - CensusMsg", func() {
 // ---------------------------------------------------------------------------
 
 var _ = Describe("Model.Update - MotifMsg", func() {
-	It("routes the motif to the lane derived from WorkerID % NoW", func() {
+	It("routes the motif to the lane derived from worker-id - 1", func() {
 		m := baseModel(3)
-		// WorkerID "W#4" → workerIndex("W#4") = 4 → 4 % 3 = 1
+		// WorkerID "02-tag-000" → WorkerIndex("02-tag-000") = 2 → 2 - 1 = 1
 		first := contract.MotifMsg{
-			Path: "/root/a.txt", Name: "a.txt", IsDir: false, Depth: 1, WorkerID: "W#4",
+			Path: "/root/a.txt", Name: "a.txt", IsDir: false, Depth: 1, WorkerID: "02-tag-000",
 		}
 		updated1, _ := update(m, first)
 		Expect(updated1.track.Lanes()[1].Path).To(Equal("/root/a.txt"))
 		Expect(updated1.track.Lanes()[1].Name).To(Equal("a.txt"))
 		Expect(updated1.track.Lanes()[1].IsDir).To(BeFalse())
 		Expect(updated1.track.Lanes()[1].Depth).To(Equal(uint(1)))
-		Expect(updated1.track.Lanes()[0].Path).To(BeEmpty(), `WorkerID "W#4" should not affect lane 0`)
-		Expect(updated1.track.Lanes()[2].Path).To(BeEmpty(), `WorkerID "W#4" should not affect lane 2`)
+		Expect(updated1.track.Lanes()[0].Path).To(BeEmpty(), `WorkerID "02-tag-000" should not affect lane 0`)
+		Expect(updated1.track.Lanes()[2].Path).To(BeEmpty(), `WorkerID "02-tag-000" should not affect lane 2`)
 
-		// WorkerID "W#8" → workerIndex("W#8") = 8 → 8 % 3 = 2
+		// WorkerID "03-tag-000" → WorkerIndex("03-tag-000") = 3 → 3 - 1 = 2
 		second := contract.MotifMsg{
-			Path: "/root/b.txt", Name: "b.txt", IsDir: false, Depth: 2, WorkerID: "W#8",
+			Path: "/root/b.txt", Name: "b.txt", IsDir: false, Depth: 2, WorkerID: "03-tag-000",
 		}
 		updated2, _ := update(updated1, second)
 		Expect(updated2.track.Lanes()[2].Path).To(Equal("/root/b.txt"))
 
-		// WorkerID "W#3" → workerIndex("W#3") = 3 → 3 % 3 = 0
+		// WorkerID "01-tag-000" → WorkerIndex("01-tag-000") = 1 → 1 - 1 = 0
 		third := contract.MotifMsg{
-			Path: "/root/c.txt", Name: "c.txt", IsDir: false, Depth: 3, WorkerID: "W#3",
+			Path: "/root/c.txt", Name: "c.txt", IsDir: false, Depth: 3, WorkerID: "01-tag-000",
 		}
 		updated3, _ := update(updated2, third)
 		Expect(updated3.track.Lanes()[0].Path).To(Equal("/root/c.txt"))

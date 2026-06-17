@@ -22,7 +22,7 @@ const LaneBarWidth = 10
 // name column in each lane. Names shorter than this are
 // right-padded so all following columns stay aligned. Mirrors the
 // constant previously declared in the highway package.
-const SpinnerNameWidth = 18
+const SpinnerNameWidth = 27
 
 // Model is the bubbletea Model for the track widget. It owns the
 // per-lane animation state, the per-tick advance, the motif-data

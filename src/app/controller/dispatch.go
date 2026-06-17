@@ -114,7 +114,7 @@ func (c *Coordinator) executeActionAsync(
 		return nil
 	}
 
-	if _, err := c.poolExec.Post(ctx, expResult.Cmd, func(workerID string, output []byte, err error) {
+	if _, err := c.poolExec.Post(ctx, expResult.Cmd, func(workerID, _ string, output []byte, err error) {
 		if err != nil {
 			event.Err = err
 		}
