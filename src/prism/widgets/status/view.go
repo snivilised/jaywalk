@@ -5,6 +5,7 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"github.com/snivilised/jaywalk/src/prism/contract"
 	"github.com/snivilised/jaywalk/src/prism/layout"
@@ -22,16 +23,31 @@ type segment struct {
 // as the previous stateless Render, except the progress bar segment
 // is now driven by the embedded bubbles progress model and the
 // percent/total state lives on the widget.
+//
+// Width management: the widget uses a compact label style (Width(0))
+// to avoid the 16-cell padding from SummaryLabelStyle which would
+// overflow on a standard 80-column terminal when all segments are
+// active. The progress segment is also conditionally removed when
+// the available row width is insufficient.
 func (m Model) View() tea.View {
 	borderStyle := m.styles.BorderStyle
 
+	// Use compact labels with natural width instead of the themed
+	// 16-cell minimum. The themed width is designed for multi-line
+	// alignment in other views; on a single-row status line it only
+	// wastes space and causes overflow.
+	compactLabel := m.styles.SummaryLabelStyle.Width(0)
+
 	segments := make([]segment, 0, 9)
+	// progressIdx tracks at which index (if any) the progress
+	// segment was appended, so we can conditionally drop it.
+	progressIdx := -1
 	var elapsedContent string
 
 	// Files segment
 	if m.fields.ShowFiles {
 		icon := m.styles.TreeIcons[contract.TreeIconFile]
-		label := m.styles.SummaryLabelStyle.Render(icon + " files:")
+		label := compactLabel.Render(icon + " files:")
 		value := m.styles.SummaryValueStyle.Render(fmt.Sprintf("%4d", m.files))
 		segments = append(segments, segment{
 			content:   " " + label + " " + value + " ",
@@ -42,7 +58,7 @@ func (m Model) View() tea.View {
 	// Dirs segment
 	if m.fields.ShowDirs {
 		icon := m.styles.TreeIcons[contract.TreeIconDirectory]
-		label := m.styles.SummaryLabelStyle.Render(icon + " dirs:")
+		label := compactLabel.Render(icon + " dirs:")
 		value := m.styles.SummaryValueStyle.Render(fmt.Sprintf("%3d", m.dirs))
 		segments = append(segments, segment{
 			content:   " " + label + " " + value + " ",
@@ -64,7 +80,7 @@ func (m Model) View() tea.View {
 	// Skipped segment
 	if m.fields.ShowSkipped {
 		icon := m.styles.TreeIcons[contract.TreeIconSkipped]
-		label := m.styles.SummaryLabelStyle.Render(icon + " skipped:")
+		label := compactLabel.Render(icon + " skipped:")
 		value := m.styles.SummaryValueStyle.Render(fmt.Sprintf("%3d", m.skipped))
 		segments = append(segments, segment{
 			content:   " " + label + " " + value + " ",
@@ -73,19 +89,11 @@ func (m Model) View() tea.View {
 	}
 
 	// Progress segment - driven by the embedded bubbles progress.
-	// The bar is shown whenever we have something to display:
-	//   - real mode: a TotalMsg has arrived (m.hasTotal), so the
-	//     bar fills with done/total as MotifMsg deliveries come in.
-	//   - demo mode: PercentMsg has set m.percent > 0 directly.
-	// On a fresh model with neither, the segment is omitted so
-	// the row doesn't render an empty 10-cell track. View() is
-	// used (rather than ViewAs) so the rendered bar reflects the
-	// spring's animated percentShown rather than snapping to the
-	// target.
 	if m.fields.ShowProgress && (m.percent > 0 || (m.hasTotal && m.total > 0)) {
 		progressView := m.inner.View()
 		if progressView != "" {
 			pctLabel := m.styles.ProgressStyle.Render(fmt.Sprintf("%3d%%", m.percent))
+			progressIdx = len(segments)
 			segments = append(segments, segment{
 				content:   " " + progressView + "  " + pctLabel + " ",
 				separator: true,
@@ -114,14 +122,40 @@ func (m Model) View() tea.View {
 	// Elapsed segment (always last, right-aligned)
 	if m.fields.ShowElapsed {
 		icon := m.styles.TreeIcons[contract.TreeIconElapsed]
-		label := m.styles.SummaryLabelStyle.Render(icon + " elapsed:")
+		label := compactLabel.Render(icon + " elapsed:")
 		elapsedStr := formatDuration(m.elapsed)
 		value := m.styles.SummaryValueStyle.Render(elapsedStr)
 		elapsedContent = " " + label + " " + value + " "
 	}
 
+	// Estimate whether the row fits within the available width.
+	// Drop the progress segment only when dropping it makes the
+	// row fit — that is, when without progress the total width
+	// is ≤ rowWidth but with progress it exceeds rowWidth.
+	rowWidth := m.width - 4
+	needWidth := 0
+	for _, seg := range segments {
+		needWidth += lipgloss.Width(seg.content)
+		if seg.separator {
+			needWidth++
+		}
+	}
+	if elapsedContent != "" {
+		needWidth += lipgloss.Width(elapsedContent)
+	}
+
+	if needWidth > rowWidth && progressIdx >= 0 {
+		widthWithoutProgress := needWidth - lipgloss.Width(segments[progressIdx].content)
+		if segments[progressIdx].separator {
+			widthWithoutProgress--
+		}
+		if widthWithoutProgress <= rowWidth {
+			segments = append(segments[:progressIdx], segments[progressIdx+1:]...)
+		}
+	}
+
 	// Build the row using layout.NewRow
-	row := layout.NewRow(m.width-4).
+	row := layout.NewRow(rowWidth).
 		Caps(borderStyle.Render("│ "), borderStyle.Render(" │"))
 
 	for _, seg := range segments {

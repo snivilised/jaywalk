@@ -286,14 +286,28 @@ func (r *Row) RenderTo(b *strings.Builder) {
 	// Filler between left zone and right zone
 	allLeft := leftBeforeTotal + flexContentWidth + flexGap + leftAfterTotal
 	filler := r.width - allLeft - rightTotal
-	if filler > 0 {
-		b.WriteString(strings.Repeat(" ", filler))
+
+	// Right zone — only render when there is room. When filler is
+	// negative the content exceeds the row width; the right zone is
+	// omitted so the row does not overflow past the right cap.
+	// Exception: when the left zone and flex are both empty the
+	// right zone IS the content and should be rendered regardless.
+	if filler >= 0 || (allLeft == 0 && r.flex == nil) {
+		if filler > 0 {
+			b.WriteString(strings.Repeat(" ", filler))
+		}
+		renderSegments(b, r.right)
+	} else if allLeft > 0 {
+		// Right zone dropped: fill remaining space so the right cap
+		// still aligns with the border's right edge. Without this
+		// the row would be shorter than the bordering box above/below,
+		// breaking the visual continuity of the border.
+		if gap := r.width - allLeft; gap > 0 {
+			b.WriteString(strings.Repeat(" ", gap))
+		}
 	}
 
-	// Right zone
-	renderSegments(b, r.right)
-
-	// Right cap
+	// Right cap — always rendered so the border box stays closed.
 	b.WriteString(r.rightCap)
 }
 

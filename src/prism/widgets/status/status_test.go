@@ -85,13 +85,16 @@ var _ = Describe("Render", func() {
 			ShowElapsed:  true,
 		}
 
+		// Width 90 (not 80) — 4 icon-based segments + elapsed
+		// need ~87 cells total with compact labels, and the Row
+		// drops the right-zone (elapsed) when it does not fit.
 		output := status.Render(status.Config{
 			Files:   42,
 			Dirs:    7,
 			Errors:  0,
 			Skipped: 3,
 			Elapsed: 5 * time.Second,
-		}, styles, fields, 80)
+		}, styles, fields, 90)
 
 		Expect(output).To(ContainSubstring("🔖 files:"))
 		Expect(output).To(ContainSubstring("📁 dirs:"))
@@ -214,13 +217,17 @@ var _ = Describe("Model.Update - WidthMsg", func() {
 		Expect(updated.View().Content).NotTo(BeEmpty())
 	})
 
-	It("respects a custom inner width set at construction", func() {
+	It("WithWidth does NOT affect the embedded progress width", func() {
+		// WithWidth sets the row layout width only. The embedded
+		// progress bar keeps its default width (10) so the bar
+		// does not balloon to fill the terminal.
 		m := status.New(status.WithStyles(baseStyles()), status.WithWidth(20))
-		Expect(m.Inner().Width()).To(Equal(20))
+		Expect(m.Inner().Width()).To(Equal(10),
+			"WithWidth must not change the progress bar width")
 
 		updated, _ := update(m, status.WidthMsg{Width: 120})
-		// The custom width must survive WindowSizeMsg.
-		Expect(updated.Inner().Width()).To(Equal(20))
+		Expect(updated.Inner().Width()).To(Equal(10),
+			"WidthMsg must not resize the embedded progress bar")
 	})
 })
 

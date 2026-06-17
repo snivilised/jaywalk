@@ -95,7 +95,11 @@ func (m Model) renderLanes(b *strings.Builder) {
 			actionContent = stateStyle.Render(actionContent)
 		}
 
-		workerIDCol := fmt.Sprintf("%-*s", SpinnerNameWidth, lane.WorkerID)
+		workerID := lane.WorkerID
+		if len([]rune(workerID)) > SpinnerNameWidth {
+			workerID = string([]rune(workerID)[:SpinnerNameWidth])
+		}
+		workerIDCol := fmt.Sprintf("%-*s", SpinnerNameWidth, workerID)
 		workerIDCol = mutedStyle.Render(workerIDCol)
 
 		frame := m.renderActivityFrame(lane, activityStyles)
