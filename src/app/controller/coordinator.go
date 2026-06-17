@@ -50,11 +50,11 @@ type Coordinator struct {
 	// traversals, dry runs, tests).
 	workerStateTracker *WorkerStateTracker
 
-	// lastWorkerID is the pool-assigned goroutine ID from the most recent
-	// shell command execution, formatted as "W#N". Populated by the shell
-	// pool executor after each Execute call, read by executeAction to
-	// propagate WorkerID into the event chain. Empty when no command has
-	// been executed yet.
+	// lastWorkerID is the execution ID from the most recent shell command
+	// execution, formatted as "<worker-id>-<work-tag>-<job-id>".
+	// Populated by the shell pool executor after each Execute call, read
+	// by executeAction to propagate WorkerID into the event chain. Empty
+	// when no command has been executed yet.
 	lastWorkerID string
 }
 

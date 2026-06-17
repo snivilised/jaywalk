@@ -37,7 +37,8 @@ func NewWorkerStateTracker(ui report.Presenter, now uint) *WorkerStateTracker {
 // OnOutput is called when a job output arrives via the executor. It
 // records the worker's last activity time and notifies the UI that this
 // specific worker is now idle.
-// workerID must be formatted as "W#N".
+// workerID is the execution ID formatted as
+// "<worker-id>-<work-tag>-<job-id>".
 func (t *WorkerStateTracker) OnOutput(workerID string) {
 	t.mu.Lock()
 	defer t.mu.Unlock()

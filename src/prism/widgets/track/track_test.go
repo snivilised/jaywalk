@@ -290,25 +290,25 @@ var _ = Describe("Model.Update - MotifMsg", func() {
 		Expect(updated.lanes[0].Depth).To(Equal(uint(1)))
 	})
 
-	It("routes motifs to the lane derived from WorkerID % NoW", func() {
+	It("routes motifs to the lane derived from worker-id - 1", func() {
 		m := baseModel(3)
-		// WorkerID "W#4" → workerIndex("W#4") = 4 → 4 % 3 = 1
+		// WorkerID "02-tag-000" → WorkerIndex("02-tag-000") = 2 → 2 - 1 = 1
 		updated, _ := update(m, contract.MotifMsg{
-			Path: "/root/a.txt", IsDir: false, WorkerID: "W#4",
+			Path: "/root/a.txt", IsDir: false, WorkerID: "02-tag-000",
 		})
 		Expect(updated.lanes[1].Path).To(Equal("/root/a.txt"))
 		Expect(updated.lanes[0].Path).To(BeEmpty())
 		Expect(updated.lanes[2].Path).To(BeEmpty())
 
-		// WorkerID "W#8" → workerIndex("W#8") = 8 → 8 % 3 = 2
+		// WorkerID "03-tag-000" → WorkerIndex("03-tag-000") = 3 → 3 - 1 = 2
 		updated, _ = update(updated, contract.MotifMsg{
-			Path: "/root/b.txt", IsDir: false, WorkerID: "W#8",
+			Path: "/root/b.txt", IsDir: false, WorkerID: "03-tag-000",
 		})
 		Expect(updated.lanes[2].Path).To(Equal("/root/b.txt"))
 
-		// WorkerID "W#3" → workerIndex("W#3") = 3 → 3 % 3 = 0
+		// WorkerID "01-tag-000" → WorkerIndex("01-tag-000") = 1 → 1 - 1 = 0
 		updated, _ = update(updated, contract.MotifMsg{
-			Path: "/root/c.txt", IsDir: false, WorkerID: "W#3",
+			Path: "/root/c.txt", IsDir: false, WorkerID: "01-tag-000",
 		})
 		Expect(updated.lanes[0].Path).To(Equal("/root/c.txt"))
 	})
@@ -467,15 +467,16 @@ var _ = Describe("View", func() {
 		)
 		// Expand all 3 lanes by sending motifs with distinct
 		// WorkerIDs that map to different lanes
-		// (workerIndex("W#N") % 3).
+		// (WorkerIndex("<worker-id>-<work-tag>-<job-id>") with 3 lanes:
+		// worker-id 1 → lane 0, worker-id 2 → lane 1, worker-id 3 → lane 2).
 		m, _ = update(m, contract.MotifMsg{
-			Path: "/a", Name: "a", IsDir: false, WorkerID: "W#3",
+			Path: "/a", Name: "a", IsDir: false, WorkerID: "01-tag-000",
 		})
 		m, _ = update(m, contract.MotifMsg{
-			Path: "/b", Name: "b", IsDir: false, WorkerID: "W#1",
+			Path: "/b", Name: "b", IsDir: false, WorkerID: "02-tag-000",
 		})
 		m, _ = update(m, contract.MotifMsg{
-			Path: "/c", Name: "c", IsDir: false, WorkerID: "W#2",
+			Path: "/c", Name: "c", IsDir: false, WorkerID: "03-tag-000",
 		})
 		v := m.View()
 		// Three lanes means three `├──` separators.

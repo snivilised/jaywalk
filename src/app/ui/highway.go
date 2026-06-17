@@ -220,7 +220,10 @@ func (h *highwayPresenter) OnWorkerState(state enums.WorkerState, workerID strin
 	if laneCount < 1 {
 		laneCount = defaultLaneCount
 	}
-	laneIndex := track.WorkerIndex(workerID) % laneCount
+	laneIndex := track.WorkerIndex(workerID) - 1
+	if laneIndex < 0 || laneIndex >= laneCount {
+		laneIndex = 0
+	}
 
 	h.program.Send(contract.WorkerStateMsg{
 		LaneID: laneIndex,

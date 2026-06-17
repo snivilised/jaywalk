@@ -8,5 +8,5 @@ const (
 	// SpinnerNameWidth is the fixed width allocated for the spinner
 	// name column in each lane. Names shorter than this are right-padded
 	// so all following columns stay aligned.
-	SpinnerNameWidth = 18
+	SpinnerNameWidth = 24
 )

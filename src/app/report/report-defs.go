@@ -20,10 +20,10 @@ type DisplayEvent struct {
 	IsPipelineStep   bool
 	IsLastStep       bool
 
-	// WorkerID is the pool-assigned goroutine ID that processed this
-	// job, formatted as "W#N". Populated by the coordinator from the
-	// executor output. Empty means unknown (e.g. neutral events with
-	// no pool dispatch).
+	// WorkerID is the execution ID for this job, formatted as
+	// "<worker-id>-<work-tag>-<job-id>" (e.g. "02-baffling-aardvark-102").
+	// Populated by the coordinator from the executor output. Empty
+	// means unknown (e.g. neutral events with no pool dispatch).
 	WorkerID string
 }
 
@@ -122,7 +122,8 @@ type SkipEvent struct {
 
 // WorkerEvent is emitted when a pool worker's activity state changes.
 type WorkerEvent struct {
-	// WorkerID is the pool-assigned goroutine ID, formatted as "W#N".
+	// WorkerID is the execution ID, formatted as
+	// "<worker-id>-<work-tag>-<job-id>".
 	WorkerID string
 
 	// State is the new activity state of the worker.

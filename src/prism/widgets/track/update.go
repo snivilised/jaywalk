@@ -120,11 +120,13 @@ func (m Model) applyMotifData(msg contract.MotifMsg) Model {
 	if len(m.lanes) > 0 {
 		// Route the motif to the lane that corresponds to the
 		// pool worker that produced this result. The lane index
-		// is derived from the numeric part of the WorkerID
-		// ("W#N") modulo the number of lanes. This assignment is
-		// stable for the lifetime of the pool.
-		idx := WorkerIndex(msg.WorkerID) % len(m.lanes)
-
+		// is derived from worker-id minus 1 (pants assigns
+		// consecutive IDs starting at 1), giving a 0-based index
+		// that preserves numeric order.
+		idx := WorkerIndex(msg.WorkerID) - 1
+		if idx < 0 || idx >= len(m.lanes) {
+			idx = 0
+		}
 		// Expand visible lanes when a previously unseen worker ID is
 		// observed. This reveals the lane for the new pool worker.
 		if _, seen := m.seenWorkers[msg.WorkerID]; !seen {
