@@ -55,8 +55,8 @@ func createGlobExFilter(def *core.FilterDef,
 
 // GlobEx is a filter that matches files based on a glob pattern. An extended
 // glob pattern allows for multiple patterns to be defined that is applied to
-// the filename itself as well as a pattern that is applied to the file's parent
-// directory.
+// the filename itself: a base glob that must match the filename, and a set of
+// suffixes that must also match the filename.
 type GlobEx struct {
 	Base
 	spec *globSpec
@@ -66,27 +66,25 @@ type GlobEx struct {
 // It returns true if the filter matches the node, false otherwise.
 func (f *GlobEx) IsApplicable(node *core.Node) bool {
 	if f.Base.IsApplicable(node) {
-		return f.isDirectoryMatch(node)
+		return f.isBaseMatch(node)
 	}
 
 	return false
 }
 
-func (f *GlobEx) isDirectoryMatch(node *core.Node) bool {
-	if node.Parent != nil {
-		name := strings.ToLower(node.Parent.Extension.Name)
+func (f *GlobEx) isBaseMatch(node *core.Node) bool {
+	name := strings.ToLower(node.Extension.Name)
 
-		if result, _ := filepath.Match(
-			f.spec.directoryGlob, name,
-		); !result {
-			return false
-		}
+	if result, _ := filepath.Match(
+		f.spec.directoryGlob, name,
+	); !result {
+		return false
+	}
 
-		if excluded, _ := filepath.Match(
-			f.spec.directoryExclusion, name,
-		); excluded {
-			return false
-		}
+	if excluded, _ := filepath.Match(
+		f.spec.directoryExclusion, name,
+	); excluded {
+		return false
 	}
 
 	return true

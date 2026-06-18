@@ -388,12 +388,12 @@ var _ = Describe("filtering", Ordered, func() {
 				Relative:     "rock/PROGRESSIVE-ROCK/Marillion",
 				Subscription: enums.SubscribeFiles,
 				ExpectedNoOf: lab.Quantities{
-					Files: 8,
+					Files: 4,
 				},
 				Mandatory:  []string{"cover-clutching-at-straws.jpg"},
 				Prohibited: []string{"01 - Assassing.flac"},
 			},
-			Description:     "directory starts with c, any extension",
+			Description:     "filename starts with c, any extension",
 			Pattern:         "c*|.*",
 			IfNotApplicable: enums.TriStateBoolFalse,
 		}),
@@ -412,7 +412,7 @@ var _ = Describe("filtering", Ordered, func() {
 				},
 				Mandatory: []string{"cover-clutching-at-straws.jpg"},
 			},
-			Description:     "directory starts with c, any extension",
+			Description:     "filename starts with c, any extension",
 			Pattern:         "c*|.*",
 			IfNotApplicable: enums.TriStateBoolTrue, // see GlobEx.IsMatch description
 		}),
@@ -470,7 +470,7 @@ var _ = Describe("filtering", Ordered, func() {
 				Prohibited: []string{"01 - Hotel Hobbies.flac"},
 			},
 			Description:     "files starting with 0, except 01 items and flac suffix",
-			Pattern:         "*/c*|*.flac",
+			Pattern:         "0*/01*|*.flac",
 			IfNotApplicable: enums.TriStateBoolFalse,
 		}),
 	)

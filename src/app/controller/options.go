@@ -78,11 +78,13 @@ func TranslateFilterIntent(intent FilterIntent) (pref.Option, bool) {
 		case intent.FilesExGlob != "":
 			fileDef.Type = enums.FilterTypeGlobEx
 			fileDef.Pattern = intent.FilesExGlob
-			fileDef.Description = fmt.Sprintf("files-glob:%s", intent.FilesExGlob)
+							fileDef.Description = fmt.Sprintf("files-glob:%s", intent.FilesExGlob)
+				fileDef.IfNotApplicable = enums.TriStateBoolFalse
 		case intent.FilesRegEx != "":
 			fileDef.Type = enums.FilterTypeRegex
 			fileDef.Pattern = intent.FilesRegEx
-			fileDef.Description = fmt.Sprintf("files-regex:%s", intent.FilesRegEx)
+							fileDef.Description = fmt.Sprintf("files-regex:%s", intent.FilesRegEx)
+				fileDef.IfNotApplicable = enums.TriStateBoolFalse
 		}
 	} else {
 		fileDef = core.BenignNodeFilterDef // allow all files when no file filter specified
@@ -97,11 +99,13 @@ func TranslateFilterIntent(intent FilterIntent) (pref.Option, bool) {
 		case intent.DirectoriesGlob != "":
 			dirDef.Type = enums.FilterTypeGlob
 			dirDef.Pattern = intent.DirectoriesGlob
-			dirDef.Description = fmt.Sprintf("dirs-glob:%s", intent.DirectoriesGlob)
+							dirDef.Description = fmt.Sprintf("dirs-glob:%s", intent.DirectoriesGlob)
+				dirDef.IfNotApplicable = enums.TriStateBoolFalse
 		case intent.DirectoriesRegEx != "":
 			dirDef.Type = enums.FilterTypeRegex
 			dirDef.Pattern = intent.DirectoriesRegEx
-			dirDef.Description = fmt.Sprintf("dirs-regex:%s", intent.DirectoriesRegEx)
+							dirDef.Description = fmt.Sprintf("dirs-regex:%s", intent.DirectoriesRegEx)
+				dirDef.IfNotApplicable = enums.TriStateBoolFalse
 		}
 	} else {
 		dirDef = core.BenignNodeFilterDef // allow all directories when no dir filter specified
