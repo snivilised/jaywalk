@@ -145,21 +145,23 @@ var _ = Describe("Porthole Model", Ordered, func() {
 				"FrameMsg must reach the spring and produce a next-frame cmd")
 		})
 
-		It("reaches 100% on CompleteMsg regardless of CensusMsg total", func() {
+		It("shows completion message with bar at natural done/total ratio", func() {
 			m := baseModel()
 			m = applyOverture(m)
 
+			// Preview total (100) overcounts actual (85).
 			m, _ = update(m, contract.CensusMsg{TotalFiles: 100})
-
 			m, cmd := update(m, contract.CompleteMsg{Files: 80, Dirs: 5, Elapsed: 2 * time.Second})
 			_ = cmd
 
 			Expect(m.status.IsDone()).To(BeTrue())
-			Expect(m.status.Percent()).To(Equal(100))
+			// Done = Files + Dirs = 85, total = 100 → 85%.
+			Expect(m.status.Percent()).To(Equal(85))
 			Expect(m.status.Files()).To(Equal(80))
 			Expect(m.status.Dirs()).To(Equal(5))
-			Expect(m.status.View().Content).To(ContainSubstring("100%"))
-			Expect(m.status.View().Content).To(ContainSubstring("✔ complete"))
+			Expect(m.status.View().Content).To(ContainSubstring("85%"))
+			Expect(m.status.View().Content).NotTo(ContainSubstring("✔"),
+				"complete message hidden when percent < 100")
 		})
 	})
 })

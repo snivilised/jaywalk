@@ -303,7 +303,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		var cmd tea.Cmd
 		m.status, cmd = m.dispatchStatus(status.DoneMsg{
-			Done: msg.Files, IsDone: true, Err: m.ErrMsg,
+			Done: msg.Files + msg.Dirs, IsDone: true, Err: m.ErrMsg,
 		})
 		if cmd != nil {
 			return &m, tea.Batch(cmd)

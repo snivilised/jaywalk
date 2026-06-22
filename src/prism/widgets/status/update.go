@@ -24,8 +24,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case CountsMsg:
-		m.files, m.dirs, m.errors, m.skipped =
-			msg.Files, msg.Dirs, msg.Errors, msg.Skipped
+		// CountsMsg arrives from two sources that can disagree:
+		//   • MotifMsg handler — track.Dirs() counts ALL unique
+		//     dir MotifMsgs (including skip events)
+		//   • CompleteMsg handler — msg.Dirs from the traversal
+		//     result's DirsVisited, which only counts handler
+		//     invocations (skips excluded)
+		// Using max() prevents the displayed count from dropping
+		// when CompleteMsg overwrites with a lower value.
+		m.files = max(m.files, msg.Files)
+		m.dirs = max(m.dirs, msg.Dirs)
+		m.errors = msg.Errors
+		m.skipped = msg.Skipped
 		return m, nil
 
 	case ElapsedMsg:
@@ -49,20 +59,24 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.Err != "" {
 			m.errMsg = msg.Err
 		}
-		// At completion the percent is known exactly: 100,
-		// overriding any recompute-derived value (which may be
-		// < 100 if real navigation is still in progress when
-		// DoneMsg arrives, or > 100 if the CensusMsg preview
-		// undercounted the true file count).
-		if msg.IsDone {
-			m.percent = 100
-		} else {
-			m = m.recomputePercent()
-		}
+		// The isDone flag gates the "✔ complete" message, but
+		// the message itself only renders when percent >= 100
+		// (error path aside). This lets the bar fill up during
+		// navigation; "✔ complete" appears only when the last
+		// worker actually stops AND progress has reached 100%.
+		m = m.recomputePercent()
 		cmd := m.inner.SetPercent(float64(m.percent) / 100.0)
 		return m, cmd
 
 	case IncDoneMsg:
+		if m.isDone {
+			// Already completed — a late IncDoneMsg must not
+			// overwrite the 100% that DoneMsg set. This can
+			// happen when a worker dispatches a MotifMsg after
+			// the traversal has already completed (race between
+			// the last worker's message and CompleteMsg).
+			return m, nil
+		}
 		n := msg.N
 		if n == 0 {
 			n = 1
@@ -97,11 +111,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // Returns 0 if no total has been set (TotalMsg not yet seen) so
 // the caller does not have to guard. The result is clamped to
 // 100 because the CensusMsg-supplied total is a preview
-// estimate: if real navigation visits more files than previewed,
-// done > total and the raw ratio would exceed 100. DoneMsg with
-// IsDone=true sets percent to 100 unconditionally on top of
-// whatever recompute produces, so "100% reached" at completion
-// is preserved as a stable signal.
+// estimate: if real navigation visits more items than previewed,
+// done > total and the raw ratio would exceed 100.
+//
+// DoneMsg with IsDone=true does NOT force percent to 100; the
+// "✔ complete" message and the progress bar are independent.
+// The bar tracks the done/total ratio throughout, so it can
+// reach 100% naturally when done == total during navigation.
 //
 // TODO(progress-indicator-design): consider switching the label
 // to a count display ("X / Y") during navigation so the

@@ -333,6 +333,18 @@ func (c *Coordinator) execute(
 		traversal.Elapsed = result.Session().Elapsed()
 	}
 
+	// Wait for the worker pool to finish all pending jobs before signalling
+	// UI completion. Without this, CompleteMsg arrives at the UI before all
+	// async MotifMsgs have been dispatched, causing the "✔ complete" message
+	// to appear while workers are still executing.
+	if c.poolExec != nil {
+		c.poolExec.closeAll()
+		select {
+		case <-c.poolExec.done:
+		case <-ctx.Done():
+		}
+	}
+
 	req.UI.OnComplete(traversal)
 
 	return err
@@ -402,7 +414,6 @@ func (c *Coordinator) useShellPoolExec(
 		c.poolExec = nil
 		c.workerStateTracker = nil
 		c.exec = previousExec
-		executor.closeAll()
 	}, nil
 }
 
