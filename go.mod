@@ -64,7 +64,7 @@ require (
 	github.com/nicksnyder/go-i18n/v2 v2.6.1
 	github.com/pkg/errors v0.9.1
 	github.com/snivilised/li18ngo v0.1.15
-	github.com/snivilised/nefilim v0.1.13
+	github.com/snivilised/nefilim v0.1.14
 	github.com/snivilised/pants v0.1.7
 	golang.org/x/net v0.56.0 // indirect
 	golang.org/x/sys v0.46.0 // indirect
