@@ -126,8 +126,8 @@ github.com/sagikazarmark/locafero v0.12.0 h1:/NQhBAkUb4+fH1jivKHWusDYFjMOOKU88ee
 github.com/sagikazarmark/locafero v0.12.0/go.mod h1:sZh36u/YSZ918v0Io+U9ogLYQJ9tLLBmM4eneO6WwsI=
 github.com/snivilised/li18ngo v0.1.15 h1:8ExLv8s7DRI2M41V3ez2DOAcTQ5lX/OS9U/tM5t4keI=
 github.com/snivilised/li18ngo v0.1.15/go.mod h1:CfEaeNwI3XXeftN5qiy1eEcQcJGjU9pIZhzDN+wLZCk=
-github.com/snivilised/mamba v0.1.3 h1:sLhho+cn8t3cbzjiPYNEMyRV8qlmmukILbmVWxocSPU=
-github.com/snivilised/mamba v0.1.3/go.mod h1:mg+FFV9mJW+HBBPFup7HBOfeV3vPxriZnIcd9ppxnF8=
+github.com/snivilised/mamba v0.1.4 h1:gYgQ5tE+14prp18KE7ASu0ZgTLulILQ9BbPE7BxaA48=
+github.com/snivilised/mamba v0.1.4/go.mod h1:6wH6XJL8X2nEeWEfZncLseLjLmf9rm0WL/IM3JQgSMA=
 github.com/snivilised/nefilim v0.1.14 h1:SjgNQpjXO+lB2MiuBFlzM4aEPh5WQgeWVuXGpmXgeqc=
 github.com/snivilised/nefilim v0.1.14/go.mod h1:2HtCWC46UNwSr8HAVy/CWEmWCdbthCBt91OLog5NW3Y=
 github.com/snivilised/pants v0.1.7 h1:SZZL1hBfQK6UzF0EGR2L8x5W9JFmcjIh7amjA+ullBM=
@@ -217,8 +217,8 @@ google.golang.org/protobuf v1.23.0/go.mod h1:EGpADcykh3NcUnDUJcl1+ZksZNG86OlYog2
 google.golang.org/protobuf v1.36.7 h1:IgrO7UwFQGJdRNXH/sQux4R1Dj1WAKcLElzeeRaXV2A=
 google.golang.org/protobuf v1.36.7/go.mod h1:jduwjTPXsFjZGTmRluh+L6NjiWu7pchiJ2/5YcXBHnY=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
-gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 h1:qIbj1fsPNlZgppZ+VLlY7N33q108Sa+fhmuc+sWQYwY=
-gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
+gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c h1:Hei/4ADfdWqJk1ZMxUNpqntNwaWcugrBjAiHlqqRiVk=
+gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c/go.mod h1:JHkPIbrfpd72SG/EVd6muEfDQjcINNoR0C8j2r3qZ4Q=
 gopkg.in/fsnotify.v1 v1.4.7/go.mod h1:Tz8NjZHkW78fSQdbUxIjBTcgA1z1m8ZHf0WmKUhAMys=
 gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 h1:uRGJdciOHaEIrze2W8Q3AKkepLTh2hOroT7a+7czfdQ=
 gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7/go.mod h1:dt/ZhP58zS4L8KSrWDmTeBkI65Dw0HsyUHuEVlX15mw=
