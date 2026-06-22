@@ -9,7 +9,7 @@ require (
 	golang.org/x/exp v0.0.0-20260611194520-c48552f49976
 )
 
-require github.com/snivilised/mamba v0.1.3
+require github.com/snivilised/mamba v0.1.4
 
 require (
 	charm.land/bubbles/v2 v2.1.0
