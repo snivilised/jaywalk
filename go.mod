@@ -65,7 +65,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/snivilised/li18ngo v0.1.15
 	github.com/snivilised/nefilim v0.1.14
-	github.com/snivilised/pants v0.1.7
+	github.com/snivilised/pants v0.1.8
 	golang.org/x/net v0.56.0 // indirect
 	golang.org/x/sys v0.46.0 // indirect
 	golang.org/x/text v0.38.0
