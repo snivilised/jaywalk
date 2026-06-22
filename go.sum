@@ -130,8 +130,8 @@ github.com/snivilised/mamba v0.1.4 h1:gYgQ5tE+14prp18KE7ASu0ZgTLulILQ9BbPE7BxaA4
 github.com/snivilised/mamba v0.1.4/go.mod h1:6wH6XJL8X2nEeWEfZncLseLjLmf9rm0WL/IM3JQgSMA=
 github.com/snivilised/nefilim v0.1.14 h1:SjgNQpjXO+lB2MiuBFlzM4aEPh5WQgeWVuXGpmXgeqc=
 github.com/snivilised/nefilim v0.1.14/go.mod h1:2HtCWC46UNwSr8HAVy/CWEmWCdbthCBt91OLog5NW3Y=
-github.com/snivilised/pants v0.1.7 h1:SZZL1hBfQK6UzF0EGR2L8x5W9JFmcjIh7amjA+ullBM=
-github.com/snivilised/pants v0.1.7/go.mod h1:CoS0m1mNA12EGSxBGHRbbKKaPXHipLAkqVZvaG866kI=
+github.com/snivilised/pants v0.1.8 h1:NP1U8KzB5kqNmuoKyhVGVFGziA2oJ+zyCEU7ppNbX0c=
+github.com/snivilised/pants v0.1.8/go.mod h1:Mbvg59jIxVpE7sIpTXa6Jw13nWTOL07TIDGx9bsxly4=
 github.com/spf13/afero v1.15.0 h1:b/YBCLWAJdFWJTN9cLhiXXcD7mzKn9Dm86dNnfyQw1I=
 github.com/spf13/afero v1.15.0/go.mod h1:NC2ByUVxtQs4b3sIUphxK0NioZnmxgyCrfzeuq8lxMg=
 github.com/spf13/cast v1.10.0 h1:h2x0u2shc1QuLHfxi+cTJvs30+ZAHOGRic8uyGTDWxY=
