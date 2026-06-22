@@ -110,13 +110,23 @@ func (m Model) View() tea.View {
 				label += fmt.Sprintf(" (+%d more)", m.errors-1)
 			}
 			msg = " " + m.styles.ErrorStyle.Render(label) + " "
-		} else {
+		} else if m.hasTotal && m.percent >= 100 {
+			// "✔ complete" appears only when ALL of:
+			//   1. the last worker has finished (isDone),
+			//   2. a real total was provided (hasTotal), and
+			//   3. the progress bar has reached 100% (done >= total).
+			// Without a real total, PercentMsg drives the bar from
+			// elapsed time and can reach 100% before navigation is
+			// actually complete. Requiring hasTotal prevents the
+			// message from appearing with fake progress data.
 			msg = " " + m.styles.ProgressStyle.Render("✔ complete") + " "
 		}
-		segments = append(segments, segment{
-			content:   msg,
-			separator: true,
-		})
+		if msg != "" {
+			segments = append(segments, segment{
+				content:   msg,
+				separator: true,
+			})
+		}
 	}
 
 	// Elapsed segment (always last, right-aligned)

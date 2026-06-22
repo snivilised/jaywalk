@@ -61,11 +61,6 @@ type Model struct {
 	// translates highway messages into status.* messages
 	// (see update.go's translation helpers).
 	status status.Model
-
-	totalTicks int64
-	realMode   bool
-	totalFiles uint
-	totalDirs  uint
 }
 
 // NewModel constructs a highway view Model. The lanes slice is
@@ -128,10 +123,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.Done {
 			return m, nil
 		}
-		if m.Start.IsZero() && !m.realMode {
+		if m.Start.IsZero() {
 			m.Start = core.Now()
 		}
-		m.totalTicks++
 		// Forward the tick to the track child. Track advances
 		// each lane's tick counter, applies the per-lane skip
 		// factor and advances gradient states.
@@ -156,15 +150,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if elapsedCmd != nil {
 				cmds = append(cmds, elapsedCmd)
 			}
-			if !m.realMode {
-				// Demo mode only: push a time-derived percent
-				// so the bar animates without real traversal
-				// data. In real mode the percent is driven by
-				// TotalMsg + IncDoneMsg (the done/total ratio).
-				// TODO(realMode-cleanup): once the demo-mode
-				// fake percent generation moves into
-				// status.Update (or track.Update), the root
-				// no longer needs to know about it.
+			if !m.status.HasTotal() {
+				// No total means no CensusMsg has been received
+				// (demo mode or pre-Census). Push a time-derived
+				// percent so the bar animates without real
+				// traversal data. Once CensusMsg arrives the
+				// percent is driven by TotalMsg + IncDoneMsg
+				// (the done/total ratio).
 				m.status, _ = m.dispatchStatus(status.PercentMsg{
 					Percent: int(elapsed.Seconds()) * 2 % 100,
 				})
@@ -174,7 +166,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case OvertureMsg:
 		m.Start = core.Now()
-		m.realMode = true
 		m.ApplyOverture(&msg.OvertureMsg)
 
 		// Initialise the banner from the OvertureMsg. The bannerInfo
@@ -192,8 +183,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case contract.CensusMsg:
-		m.totalFiles = msg.TotalFiles
-		m.totalDirs = msg.TotalDirs
 		if msg.MaxDepth > m.MaxDepth {
 			m.MaxDepth = msg.MaxDepth
 		}
@@ -225,6 +214,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case contract.MotifMsg:
+		if m.Done {
+			// Traversal already completed; forward the motif
+			// to the track child for lane rendering/data but
+			// do NOT update status progress. Without this
+			// guard a late MotifMsg arriving after CompleteMsg
+			// dispatches an IncDoneMsg which recomputes the
+			// percent from done/total and overwrites the 100%
+			// that DoneMsg set.
+			m.track, _ = m.dispatchTrack(msg)
+			return m, nil
+		}
 		// Track the pre-dispatch file/dir counts so we can
 		// detect whether the motif was new (i.e. the track
 		// child's dedup map saw the path for the first time).
@@ -279,10 +279,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// Forward the final counts and elapsed to the status
 		// widget. The widget owns the percent calculation and
-		// the isDone flag from here on. The status DoneMsg
-		// handler only overwrites its errMsg when msg.Err is
-		// non-empty, so passing the root's potentially-empty
-		// errMsg is safe.
+		// the isDone flag from here on. The Done field must
+		// include both files AND dirs because the progress
+		// total was seeded with TotalFiles + TotalDirs, and
+		// recomputePercent derives percent from done/total.
 		cmds := make([]tea.Cmd, 0, 2)
 		m.status, _ = m.dispatchStatus(status.CountsMsg{
 			Files: msg.Files, Dirs: msg.Dirs, Errors: len(msg.Errs),
@@ -290,7 +290,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.status, _ = m.dispatchStatus(status.ElapsedMsg{Elapsed: msg.Elapsed})
 		var cmd tea.Cmd
 		m.status, cmd = m.dispatchStatus(status.DoneMsg{
-			Done: msg.Files, IsDone: true, Err: m.ErrMsg,
+			Done: msg.Files + msg.Dirs, IsDone: true, Err: m.ErrMsg,
 		})
 		if cmd != nil {
 			cmds = append(cmds, cmd)

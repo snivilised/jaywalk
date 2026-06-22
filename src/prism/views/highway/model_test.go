@@ -2,6 +2,7 @@ package highway
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"time"
 
@@ -240,17 +241,8 @@ var _ = Describe("Model.Update - tickMsg", func() {
 		Expect(cmd).To(BeNil())
 	})
 
-	It("does not start the timer in realMode when start is zero", func() {
+	It("starts the timer on first tick when start is zero", func() {
 		m := baseModel(1)
-		m.realMode = true
-		updated, cmd := update(m, tickMsg(core.Now()))
-		Expect(updated.Start.IsZero()).To(BeTrue())
-		_ = cmd
-	})
-
-	It("starts the timer in demo mode when start is zero", func() {
-		m := baseModel(1)
-		m.realMode = false
 		Expect(m.Start.IsZero()).To(BeTrue())
 
 		updated, cmd := update(m, tickMsg(core.Now()))
@@ -279,21 +271,19 @@ var _ = Describe("Model.Update - tickMsg", func() {
 		Expect(m.track.Tick(1)).To(Equal(1), "slow lane should advance every 10th tick")
 	})
 
-	It("pushes elapsed to the status widget in real mode on every tick", func() {
+	It("pushes elapsed to the status widget on every tick after OvertureMsg", func() {
 		// Regression: ElapsedMsg was previously only dispatched
-		// in demo mode, so in real mode the status row's elapsed
-		// segment stayed at 0 for the entire traversal and only
-		// jumped to the final value on CompleteMsg. The elapsed
-		// is real in both modes and must tick up.
+		// in demo mode, so after OvertureMsg the status row's
+		// elapsed segment stayed at 0 for the entire traversal
+		// and only jumped to the final value on CompleteMsg. The
+		// elapsed is real in both modes and must tick up.
 		m := baseModel(1)
-		// OvertureMsg sets realMode and m.Start = now.
 		m, _ = update(m, OvertureMsg{
 			OvertureMsg: contract.OvertureMsg{
 				Root:    "/root",
 				Caption: "files",
 			},
 		})
-		Expect(m.realMode).To(BeTrue())
 		Expect(m.Start.IsZero()).To(BeFalse())
 		Expect(m.status.Elapsed()).To(Equal(time.Duration(0)),
 			"no tick yet, status elapsed stays at 0")
@@ -312,15 +302,15 @@ var _ = Describe("Model.Update - tickMsg", func() {
 		}
 	})
 
-	It("pushes elapsed to the status widget in demo mode on every tick", func() {
-		// Demo mode has always pushed ElapsedMsg; this test
-		// documents the behaviour alongside the real-mode case
-		// above so a future refactor doesn't drop it.
+	It("pushes elapsed to the status widget on every tick before OvertureMsg", func() {
+		// Before OvertureMsg, the first tick sets m.Start
+		// and subsequent ticks push elapsed. This test
+		// documents the behaviour alongside the post-OvertureMsg
+		// case above so a future refactor doesn't drop it.
 		m := baseModel(1)
-		Expect(m.realMode).To(BeFalse())
 		Expect(m.status.Elapsed()).To(Equal(time.Duration(0)))
 
-		// First tick sets m.Start (demo mode), so subsequent
+		// First tick sets m.Start so subsequent
 		// ticks can produce a non-zero elapsed.
 		m, _ = update(m, tickMsg(core.Now()))
 		first := m.status.Elapsed()
@@ -331,24 +321,23 @@ var _ = Describe("Model.Update - tickMsg", func() {
 		Expect(second).To(BeNumerically(">=", first))
 	})
 
-	It("drives the percent in demo mode via PercentMsg (not done/total)", func() {
-		// Demo mode has no real traversal data, so the percent
-		// must come from the time-derived PercentMsg - not from
+	It("drives the percent via PercentMsg before CensusMsg arrives", func() {
+		// Before CensusMsg (no total), the percent must come
+		// from the time-derived PercentMsg - not from
 		// recomputePercent (which would stay at 0 without a
 		// TotalMsg). This test pins down that contract.
 		m := baseModel(1)
 		for range 5 {
 			m, _ = update(m, tickMsg(core.Now()))
 		}
-		// The demo formula is int(elapsed.Seconds())*2 % 100.
+		// The formula is int(elapsed.Seconds())*2 % 100.
 		// We don't pin the exact value (it's time-dependent)
 		// but we do assert that the percent state is non-zero
 		// OR zero (the formula can produce 0 if elapsed is
 		// exactly a multiple of 50 seconds). The key assertion
-		// is the view contains no "100 / 100" ratio, because
-		// demo mode has no TotalMsg.
+		// is hasTotal stays false because no CensusMsg was sent.
 		Expect(m.status.HasTotal()).To(BeFalse(),
-			"demo mode never sends TotalMsg, so hasTotal stays false")
+			"no CensusMsg ever sent, so hasTotal stays false")
 	})
 })
 
@@ -357,9 +346,8 @@ var _ = Describe("Model.Update - tickMsg", func() {
 // ---------------------------------------------------------------------------
 
 var _ = Describe("Model.Update - OvertureMsg", func() {
-	It("sets rootPath, realMode, start time and pipelineName", func() {
+	It("sets rootPath, start time and pipelineName from OvertureMsg", func() {
 		m := baseModel(1)
-		Expect(m.realMode).To(BeFalse())
 		Expect(m.Start.IsZero()).To(BeTrue())
 
 		updated, cmd := update(m, OvertureMsg{
@@ -374,7 +362,6 @@ var _ = Describe("Model.Update - OvertureMsg", func() {
 		Expect(cmd).To(BeNil())
 
 		Expect(updated.RootPath).To(Equal("/project/src"))
-		Expect(updated.realMode).To(BeTrue())
 		Expect(updated.Start.IsZero()).To(BeFalse())
 		Expect(updated.PipelineName).To(Equal("ci"))
 	})
@@ -385,14 +372,12 @@ var _ = Describe("Model.Update - OvertureMsg", func() {
 // ---------------------------------------------------------------------------
 
 var _ = Describe("Model.Update - CensusMsg", func() {
-	It("sets totalFiles and totalDirs", func() {
+	It("seeds the status widget total from both files and dirs", func() {
 		m := baseModel(1)
 		updated, _ := update(m, contract.CensusMsg{TotalFiles: 100, TotalDirs: 20})
 		// cmd is the status spring's first-frame cmd (non-nil)
 		// because CensusMsg seeds the total and re-targets the
 		// embedded progress bar to 0.
-		Expect(updated.totalFiles).To(Equal(uint(100)))
-		Expect(updated.totalDirs).To(Equal(uint(20)))
 		// Regression: the status widget's total must be the sum
 		// of files and dirs, because every MotifMsg (file OR
 		// dir) increments done by 1. Seeding total with only
@@ -649,29 +634,221 @@ var _ = Describe("Model.Update - CompleteMsg", func() {
 		Expect(updated.Errors).To(Equal(2))
 	})
 
-	It("shows 100% on completion regardless of totalFiles", func() {
-		// CompleteMsg always reports the final counts and
-		// IsDone=true, which the highway root translates to
-		// status.DoneMsg{IsDone:true}. The status widget sets
-		// percent=100 unconditionally on IsDone=true, even when
-		// Files (80) is less than totalFiles (100). This is the
-		// "bar fills at completion" semantic.
+	It("shows ✔ complete on CompleteMsg only when percent has reached 100%", func() {
+		// The progress bar tracks the natural done/total ratio;
+		// the "✔ complete" message renders only when BOTH isDone
+		// AND percent >= 100. When the preview overcounts
+		// (total=100 but only 85 items visited), the bar stays
+		// at 85% and "✔ complete" does NOT show because progress
+		// has not fully covered the preview estimate.
 		m := baseModel(1)
+		m, _ = update(m, tea.WindowSizeMsg{Width: 120})
 		// Seed the total via CensusMsg (preview estimate).
 		updated, _ := update(m, contract.CensusMsg{TotalFiles: 100})
+		// Drive done below total.
+		for i := range 85 {
+			updated, _ = update(updated, contract.MotifMsg{
+				Path: fmt.Sprintf("/r/f%d.txt", i), IsDir: false,
+			})
+		}
+		Expect(updated.status.Done()).To(Equal(85))
+		Expect(updated.status.Percent()).To(Equal(85))
 
 		updated, cmd := update(updated, contract.CompleteMsg{Files: 80, Dirs: 5})
-		// The status widget returns nil cmd for DoneMsg (no
-		// animation driver in this PR), so the tea.Batch
-		// collapses to nil.
 		_ = cmd
 
+		// Done = Files+Dirs = 85, ratio = 85/100 = 85%.
+		// The displayed file/dir counts use max(previous, msg) so
+		// the tracker's count (85 files from 85 file-MotifMsgs)
+		// is retained rather than overwritten by CompleteMsg's
+		// lower breakdown (80 files + 5 dirs).
 		Expect(updated.status.IsDone()).To(BeTrue())
-		Expect(updated.status.Percent()).To(Equal(100))
-		Expect(updated.status.Files()).To(Equal(80))
+		Expect(updated.status.Percent()).To(Equal(85),
+			"bar shows the natural done/total ratio (85/100)")
+		Expect(updated.status.Files()).To(Equal(85))
 		Expect(updated.status.Dirs()).To(Equal(5))
-		Expect(updated.status.View().Content).To(ContainSubstring("100%"))
-		Expect(updated.status.View().Content).To(ContainSubstring("✔ complete"))
+		Expect(updated.status.View().Content).To(ContainSubstring("85%"))
+		Expect(updated.status.View().Content).NotTo(ContainSubstring("✔"),
+			"complete message hidden when percent < 100")
+
+		// When done matches total, "✔ complete" shows on CompleteMsg.
+		m2 := baseModel(1)
+		m2, _ = update(m2, tea.WindowSizeMsg{Width: 120})
+		m2, _ = update(m2, contract.CensusMsg{TotalFiles: 10, TotalDirs: 0})
+		for i := range 10 {
+			m2, _ = update(m2, contract.MotifMsg{
+				Path: fmt.Sprintf("/r/f%d.txt", i), IsDir: false,
+			})
+		}
+		m2, _ = update(m2, contract.CompleteMsg{Files: 10, Dirs: 0})
+		Expect(m2.status.Percent()).To(Equal(100))
+		Expect(m2.status.View().Content).To(ContainSubstring("100%"))
+		Expect(m2.status.View().Content).To(ContainSubstring("✔ complete"))
+	})
+})
+
+// ---------------------------------------------------------------------------
+// Model.Update - Completion flow (progress reaches 100%)
+// ---------------------------------------------------------------------------
+
+var _ = Describe("Model.Update - completion flow", func() {
+	It("climbs to 100% through MotifMsg increments and stays at 100% on CompleteMsg", func() {
+		m := baseModel(1)
+		m, _ = update(m, tea.WindowSizeMsg{Width: 120})
+
+		// Seed total: 5 files + 3 dirs = 8 items.
+		m, _ = update(m, contract.CensusMsg{TotalFiles: 5, TotalDirs: 3})
+		Expect(m.status.Total()).To(Equal(8))
+		Expect(m.status.Percent()).To(Equal(0))
+
+		// Dispatch all 8 items. After each, the percent climbs.
+		items := []struct {
+			path  string
+			isDir bool
+			pct   int
+		}{
+			{"/r/f1.txt", false, 12}, // 1/8 = 12.5 → 12
+			{"/r/f2.txt", false, 25}, // 2/8 = 25
+			{"/r/d1", true, 37},      // 3/8 = 37.5 → 37
+			{"/r/f3.txt", false, 50}, // 4/8 = 50
+			{"/r/d2", true, 62},      // 5/8 = 62.5 → 62
+			{"/r/f4.txt", false, 75}, // 6/8 = 75
+			{"/r/f5.txt", false, 87}, // 7/8 = 87.5 → 87
+			{"/r/d3", true, 100},     // 8/8 = 100
+		}
+		for _, it := range items {
+			m, _ = update(m, contract.MotifMsg{
+				Path: it.path, IsDir: it.isDir,
+			})
+			Expect(m.status.Percent()).To(Equal(it.pct),
+				"percent after %q should be %d", it.path, it.pct)
+		}
+		Expect(m.status.Done()).To(Equal(8))
+		Expect(m.Done).To(BeFalse(), "progress is done but model.Done is still false")
+
+		// CompleteMsg finalises the traversal and keeps 100%.
+		m, cmd := update(m, contract.CompleteMsg{
+			Files: 5, Dirs: 3, Elapsed: 2 * time.Second,
+		})
+		_ = cmd
+		Expect(m.Done).To(BeTrue())
+		Expect(m.status.IsDone()).To(BeTrue())
+		Expect(m.status.Percent()).To(Equal(100))
+		Expect(m.status.View().Content).To(ContainSubstring("100%"))
+		Expect(m.status.View().Content).To(ContainSubstring("✔ complete"))
+	})
+
+	It("hides complete message on CompleteMsg without a prior CensusMsg (percent < 100)", func() {
+		// When totalFiles + totalDirs is zero, no TotalMsg is
+		// sent. HasTotal stays false and recomputePercent is a
+		// no-op during navigation. The progress bar stays hidden
+		// (no total to compute from). The "✔ complete" message
+		// is hidden too because percent is 0 (< 100).
+		m := baseModel(1)
+		m, _ = update(m, tea.WindowSizeMsg{Width: 120})
+
+		// Dispatch a motif without any CensusMsg.
+		m, _ = update(m, contract.MotifMsg{
+			Path: "/r/f.txt", IsDir: false,
+		})
+		Expect(m.status.HasTotal()).To(BeFalse())
+		Expect(m.status.Percent()).To(Equal(0),
+			"percent stays 0 without a total")
+
+		// CompleteMsg marks done; the bar stays at 0% (no total)
+		// and "✔ complete" does NOT appear because percent < 100.
+		m, cmd := update(m, contract.CompleteMsg{
+			Files: 1, Dirs: 0, Elapsed: 1 * time.Second,
+		})
+		_ = cmd
+		Expect(m.Done).To(BeTrue())
+		Expect(m.status.IsDone()).To(BeTrue())
+		Expect(m.status.Percent()).To(Equal(0),
+			"without a total the bar cannot compute a ratio")
+		Expect(m.status.View().Content).NotTo(ContainSubstring("%"))
+		Expect(m.status.View().Content).NotTo(ContainSubstring("✔"),
+			"complete message hidden when percent < 100")
+	})
+
+	It("does not push fake PercentMsg after CensusMsg has been received", func() {
+		// Regression: the tick handler must NOT push the
+		// time-derived PercentMsg when the status widget already
+		// has a total (meaning CensusMsg was processed). Doing
+		// so would overwrite the real done/total ratio.
+		m := baseModel(1)
+		m, _ = update(m, tea.WindowSizeMsg{Width: 120})
+
+		// Send CensusMsg so HasTotal becomes true.
+		m, _ = update(m, contract.CensusMsg{TotalFiles: 10, TotalDirs: 2})
+		Expect(m.status.HasTotal()).To(BeTrue())
+		Expect(m.status.Percent()).To(Equal(0))
+
+		// Advance one tick. If the tick pushed PercentMsg, the
+		// percent would be non-zero (time-derived). Since it does
+		// not, percent stays at the last recompute value (0).
+		m, _ = update(m, tickMsg(core.Now()))
+		Expect(m.status.Percent()).To(Equal(0),
+			"tick must not overwrite percent when hasTotal is true")
+
+		// Push a motif; the ratio now drives the percent.
+		m, _ = update(m, contract.MotifMsg{
+			Path: "/r/f.txt", IsDir: false,
+		})
+		Expect(m.status.Percent()).To(BeNumerically(">", 0),
+			"percent after motif must be driven by done/total, not time")
+	})
+
+	It("ignores late MotifMsg after CompleteMsg so progress stays at its final ratio", func() {
+		// Regression: the worker pool may dispatch a MotifMsg
+		// after the traversal has completed (race between the
+		// last worker's message and CompleteMsg). The highway
+		// model must NOT forward IncDoneMsg to the status widget
+		// when m.Done is already true, because the IncDoneMsg
+		// would recompute percent from done/total and overwrite
+		// the final value that DoneMsg set via recomputePercent.
+		m := baseModel(1)
+		m, _ = update(m, tea.WindowSizeMsg{Width: 120})
+
+		// Seed total: 10 files + 2 dirs = 12 items.
+		m, _ = update(m, contract.CensusMsg{TotalFiles: 10, TotalDirs: 2})
+		Expect(m.status.Total()).To(Equal(12))
+
+		// Visit all 12 items → 100%.
+		for i := range 12 {
+			m, _ = update(m, contract.MotifMsg{
+				Path: fmt.Sprintf("/r/f%d.txt", i), IsDir: false,
+			})
+		}
+		Expect(m.status.Done()).To(Equal(12))
+		Expect(m.status.Percent()).To(Equal(100))
+		Expect(m.Done).To(BeFalse())
+
+		// CompleteMsg arrives → bar shows natural done/total
+		// (100%, because Done is set to Files+Dirs=12/12).
+		m, cmd := update(m, contract.CompleteMsg{
+			Files: 10, Dirs: 2, Elapsed: 3 * time.Second,
+		})
+		_ = cmd
+		Expect(m.Done).To(BeTrue())
+		Expect(m.status.Percent()).To(Equal(100),
+			"bar reflects natural done/total (12/12 = 100%)")
+		Expect(m.status.IsDone()).To(BeTrue())
+		Expect(m.status.View().Content).To(ContainSubstring("✔ complete"))
+
+		// Late MotifMsg arrives. The track child still processes
+		// it (for lane animation) but the status widget must NOT
+		// see an IncDoneMsg.
+		doneBefore := m.status.Done()
+		_, cmd = update(m, contract.MotifMsg{
+			Path: "/r/late.txt", IsDir: false,
+		})
+		Expect(cmd).To(BeNil(),
+			"late MotifMsg after Done must not produce a spring cmd")
+		Expect(m.status.Done()).To(Equal(doneBefore),
+			"late MotifMsg must not increment done")
+		Expect(m.status.Percent()).To(Equal(100),
+			"late MotifMsg must not overwrite the final ratio")
+		Expect(m.status.IsDone()).To(BeTrue())
 	})
 })
 

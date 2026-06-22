@@ -375,22 +375,55 @@ var _ = Describe("Model.Update - DoneMsg", func() {
 		Expect(updated.View().Content).To(ContainSubstring("❌ Failed: boom"))
 	})
 
-	It("renders ✔ complete when done with no error", func() {
+	It("renders ✔ complete when done matches total and no error", func() {
 		m := status.New(status.WithStyles(baseStyles()), status.WithFields(status.FieldSelectors{
-			ShowComplete: true,
+			ShowComplete: true, ShowProgress: true,
 		}))
-		updated, _ := update(m, status.DoneMsg{Done: 10, IsDone: true})
+		// "✔ complete" requires both isDone AND percent >= 100,
+		// so seed a total and match done to it.
+		updated, _ := update(m, status.TotalMsg{Total: 10})
+		updated, _ = update(updated, status.IncDoneMsg{N: 10})
+		updated, _ = update(updated, status.DoneMsg{Done: 10, IsDone: true})
 		Expect(updated.View().Content).To(ContainSubstring("✔ complete"))
+		Expect(updated.View().Content).To(ContainSubstring("100%"))
 	})
 
-	It("sets percent to 100 on IsDone=true regardless of done count", func() {
+	It("does NOT force percent to 100 on IsDone=true; bar and complete message are decoupled", func() {
+		// Regression: DoneMsg{IsDone:true} used to set
+		// percent=100 unconditionally, coupling the progress bar
+		// to the "✔ complete" message. The bar must track the
+		// natural done/total ratio; the "✔ complete" message
+		// renders only when BOTH isDone AND percent >= 100.
 		m := status.New(status.WithStyles(baseStyles()), status.WithFields(status.FieldSelectors{
 			ShowProgress: true, ShowComplete: true,
 		}))
+
+		// Without a TotalMsg, hasTotal is false and recomputePercent
+		// is a no-op, so percent stays 0. The "✔ complete" message
+		// does NOT show because percent < 100.
 		updated, _ := update(m, status.DoneMsg{Done: 7, IsDone: true})
-		Expect(updated.Percent()).To(Equal(100))
-		Expect(updated.View().Content).To(ContainSubstring("100%"))
-		Expect(updated.View().Content).To(ContainSubstring("✔ complete"))
+		Expect(updated.IsDone()).To(BeTrue())
+		Expect(updated.Percent()).To(Equal(0),
+			"percent depends on done/total, not on isDone")
+		Expect(updated.View().Content).NotTo(ContainSubstring("✔"),
+			"complete message hidden when percent < 100")
+		Expect(updated.View().Content).NotTo(ContainSubstring("%"),
+			"progress segment is hidden at 0% without a total")
+
+		// With TotalMsg and done == total, percent reaches 100%.
+		m2 := status.New(status.WithStyles(baseStyles()), status.WithFields(status.FieldSelectors{
+			ShowProgress: true, ShowComplete: true,
+		}))
+		m2, _ = update(m2, status.TotalMsg{Total: 10})
+		m2, _ = update(m2, status.IncDoneMsg{N: 10})
+		Expect(m2.Percent()).To(Equal(100))
+
+		m2, _ = update(m2, status.DoneMsg{Done: 10, IsDone: true})
+		Expect(m2.IsDone()).To(BeTrue())
+		Expect(m2.Percent()).To(Equal(100),
+			"10/10 done/total produces 100% naturally")
+		Expect(m2.View().Content).To(ContainSubstring("100%"))
+		Expect(m2.View().Content).To(ContainSubstring("✔ complete"))
 	})
 
 	It("does NOT set percent to 100 on IsDone=false", func() {
@@ -405,6 +438,41 @@ var _ = Describe("Model.Update - DoneMsg", func() {
 		Expect(updated.IsDone()).To(BeFalse())
 		Expect(updated.Percent()).To(Equal(0))
 		Expect(updated.View().Content).NotTo(ContainSubstring("100%"))
+	})
+
+	It("ignores late IncDoneMsg after DoneMsg{IsDone:true} to preserve the final ratio", func() {
+		// Regression: a MotifMsg that arrives after CompleteMsg
+		// dispatches IncDoneMsg, which increments done and
+		// recomputes percent from the done/total ratio. The
+		// widget must reject IncDoneMsg once isDone is true so
+		// the final ratio set by DoneMsg is preserved.
+		m := status.New(status.WithStyles(baseStyles()), status.WithFields(status.FieldSelectors{
+			ShowProgress: true, ShowComplete: true,
+		}))
+
+		// Seed a total and drive done to match (100%).
+		m, _ = update(m, status.TotalMsg{Total: 10})
+		for range 10 {
+			m, _ = update(m, status.IncDoneMsg{N: 1})
+		}
+		Expect(m.Percent()).To(Equal(100))
+
+		// DoneMsg recomputes from done/total (10/10 = 100%).
+		m, _ = update(m, status.DoneMsg{Done: 10, IsDone: true})
+		Expect(m.IsDone()).To(BeTrue())
+		Expect(m.Percent()).To(Equal(100),
+			"percent comes from done/total (10/10 = 100%)")
+		Expect(m.View().Content).To(ContainSubstring("100%"))
+
+		// Late IncDoneMsg arrives. It must NOT change the ratio.
+		m, cmd := update(m, status.IncDoneMsg{N: 1})
+		Expect(cmd).To(BeNil(),
+			"IncDoneMsg after isDone must return nil cmd")
+		Expect(m.IsDone()).To(BeTrue())
+		Expect(m.Percent()).To(Equal(100),
+			"IncDoneMsg after DoneMsg must not overwrite the final ratio")
+		Expect(m.View().Content).To(ContainSubstring("100%"))
+		Expect(m.View().Content).To(ContainSubstring("✔ complete"))
 	})
 })
 
@@ -425,9 +493,9 @@ var _ = Describe("Model.Update - ResetMsg", func() {
 
 		updated, _ = update(updated, status.DoneMsg{Done: 50, IsDone: true})
 		Expect(updated.IsDone()).To(BeTrue())
-		// IsDone=true sets percent to 100 unconditionally.
-		Expect(updated.Percent()).To(Equal(100))
-		Expect(updated.View().Content).To(ContainSubstring("100%"))
+		// DoneMsg recomputes from done/total: 50/100 = 50%.
+		Expect(updated.Percent()).To(Equal(50))
+		Expect(updated.View().Content).To(ContainSubstring("50%"))
 
 		reset, _ := update(updated, status.ResetMsg{})
 		Expect(reset.IsDone()).To(BeFalse())
@@ -486,11 +554,16 @@ var _ = Describe("Model.View - bar visibility", func() {
 		Expect(updated.View().Content).To(ContainSubstring("30%"))
 	})
 
-	It("appears at 100% on DoneMsg{IsDone:true}", func() {
+	It("appears at 100% on DoneMsg{IsDone:true} only when done equals total", func() {
 		m := status.New(status.WithStyles(baseStyles()), status.WithFields(status.FieldSelectors{
 			ShowProgress: true, ShowComplete: true,
 		}))
-		updated, _ := update(m, status.DoneMsg{Done: 10, IsDone: true})
+		// Seed a total and drive done to equal it.
+		updated, _ := update(m, status.TotalMsg{Total: 10})
+		updated, _ = update(updated, status.IncDoneMsg{N: 10})
+		Expect(updated.Percent()).To(Equal(100))
+
+		updated, _ = update(updated, status.DoneMsg{Done: 10, IsDone: true})
 		Expect(updated.Percent()).To(Equal(100))
 		Expect(updated.View().Content).To(ContainSubstring("100%"))
 		Expect(updated.View().Content).To(ContainSubstring("✔ complete"))
@@ -558,13 +631,18 @@ var _ = Describe("Model.Update - spring re-targeting", func() {
 		Expect(updated.Inner().Percent()).To(BeNumerically("~", 0.1, 1e-9))
 	})
 
-	It("DoneMsg{IsDone:true} re-targets to 1.0 and returns a non-nil cmd", func() {
+	It("DoneMsg{IsDone:true} re-targets to the done/total ratio", func() {
 		m := status.New(status.WithStyles(baseStyles()), status.WithFields(status.FieldSelectors{
 			ShowProgress: true, ShowComplete: true,
 		}))
-		updated, cmd := update(m, status.DoneMsg{Done: 7, IsDone: true})
+		// Seed a total and some done so the ratio is non-zero.
+		updated, _ := update(m, status.TotalMsg{Total: 10})
+		updated, _ = update(updated, status.IncDoneMsg{N: 5})
+		Expect(updated.Percent()).To(Equal(50))
+		// DoneMsg recomputes from done/total, not from IsDone.
+		updated, cmd := update(updated, status.DoneMsg{Done: 7, IsDone: true})
 		Expect(cmd).NotTo(BeNil())
-		Expect(updated.Inner().Percent()).To(BeNumerically("~", 1.0, 1e-9))
+		Expect(updated.Inner().Percent()).To(BeNumerically("~", 0.7, 1e-9))
 	})
 
 	It("ResetMsg re-targets to 0.0 and returns a non-nil cmd", func() {
