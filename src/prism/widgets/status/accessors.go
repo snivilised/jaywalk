@@ -28,8 +28,14 @@ func (m Model) Elapsed() time.Duration { return m.elapsed }
 // Percent returns the current percent (0-100).
 func (m Model) Percent() int { return m.percent }
 
-// Total returns the current total count.
+// Total returns the current total count (files + dirs sum).
 func (m Model) Total() int { return m.total }
+
+// TotalFiles returns the preview file count, if set.
+func (m Model) TotalFiles() int { return m.totalFiles }
+
+// TotalDirs returns the preview directory count, if set.
+func (m Model) TotalDirs() int { return m.totalDirs }
 
 // Done returns the current done count.
 func (m Model) Done() int { return m.done }

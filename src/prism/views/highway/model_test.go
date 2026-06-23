@@ -601,21 +601,35 @@ var _ = Describe("Model.Update - CompleteMsg", func() {
 		Expect(updated.Done).To(BeTrue())
 	})
 
-	It("sets files, dirs, errors and elapsed on the status widget", func() {
+	It("sets files, dirs, errors and elapsed on the status widget from track counts", func() {
 		m := baseModel(1)
 
+		// Send motif events to populate the track widget's counts.
+		// The status widget reads from track at completion time so
+		// CompleteMsg must not overwrite with different values.
+		for i := range 3 {
+			m, _ = update(m, contract.MotifMsg{
+				Path: fmt.Sprintf("/r/f%d.txt", i), IsDir: false,
+			})
+		}
+		for i := range 2 {
+			m, _ = update(m, contract.MotifMsg{
+				Path: fmt.Sprintf("/r/d%d", i), IsDir: true,
+			})
+		}
+		Expect(m.track.Files()).To(Equal(3))
+		Expect(m.track.Dirs()).To(Equal(2))
+
 		updated, cmd := update(m, contract.CompleteMsg{
-			Files: 42, Dirs: 7, Elapsed: 5 * time.Second,
+			Files: 99, Dirs: 99, Elapsed: 5 * time.Second,
 		})
-		// Cmd is tea.Batch wrapping the status spring's
-		// first-frame cmd.
 		_ = cmd
 
-		// The counts now live on the status widget. The
-		// accessors are public on status.Model so this
-		// white-box test can assert on them directly.
-		Expect(updated.status.Files()).To(Equal(42))
-		Expect(updated.status.Dirs()).To(Equal(7))
+		// Counts come from the track widget, NOT from
+		// CompleteMsg.Files/Dirs, so the status widget shows
+		// the same values as during navigation.
+		Expect(updated.status.Files()).To(Equal(3))
+		Expect(updated.status.Dirs()).To(Equal(2))
 		Expect(updated.status.Errors()).To(Equal(0))
 		Expect(updated.status.Elapsed()).To(Equal(5 * time.Second))
 	})
@@ -641,31 +655,42 @@ var _ = Describe("Model.Update - CompleteMsg", func() {
 		// (total=100 but only 85 items visited), the bar stays
 		// at 85% and "✔ complete" does NOT show because progress
 		// has not fully covered the preview estimate.
+		//
+		// Counts are now sourced from the track widget's unique
+		// MotifMsg path tracking (not from CompleteMsg.Files/Dirs),
+		// so the displayed values always match what was shown
+		// during navigation.
 		m := baseModel(1)
 		m, _ = update(m, tea.WindowSizeMsg{Width: 120})
 		// Seed the total via CensusMsg (preview estimate).
 		updated, _ := update(m, contract.CensusMsg{TotalFiles: 100})
-		// Drive done below total.
-		for i := range 85 {
+		// Drive done below total — send 80 file + 5 dir motiffs
+		// to match the expected completion breakdown.
+		for i := range 80 {
 			updated, _ = update(updated, contract.MotifMsg{
 				Path: fmt.Sprintf("/r/f%d.txt", i), IsDir: false,
 			})
 		}
+		for i := range 5 {
+			updated, _ = update(updated, contract.MotifMsg{
+				Path: fmt.Sprintf("/r/d%d", i), IsDir: true,
+			})
+		}
 		Expect(updated.status.Done()).To(Equal(85))
 		Expect(updated.status.Percent()).To(Equal(85))
+		Expect(updated.track.Files()).To(Equal(80))
+		Expect(updated.track.Dirs()).To(Equal(5))
 
-		updated, cmd := update(updated, contract.CompleteMsg{Files: 80, Dirs: 5})
+		updated, cmd := update(updated, contract.CompleteMsg{Files: 0, Dirs: 0})
 		_ = cmd
 
 		// Done = Files+Dirs = 85, ratio = 85/100 = 85%.
-		// The displayed file/dir counts use max(previous, msg) so
-		// the tracker's count (85 files from 85 file-MotifMsgs)
-		// is retained rather than overwritten by CompleteMsg's
-		// lower breakdown (80 files + 5 dirs).
+		// The displayed file/dir counts come from the track widget,
+		// not from CompleteMsg — so the 85 MotifMsgs are preserved.
 		Expect(updated.status.IsDone()).To(BeTrue())
 		Expect(updated.status.Percent()).To(Equal(85),
 			"bar shows the natural done/total ratio (85/100)")
-		Expect(updated.status.Files()).To(Equal(85))
+		Expect(updated.status.Files()).To(Equal(80))
 		Expect(updated.status.Dirs()).To(Equal(5))
 		Expect(updated.status.View().Content).To(ContainSubstring("85%"))
 		Expect(updated.status.View().Content).NotTo(ContainSubstring("✔"),
@@ -680,7 +705,7 @@ var _ = Describe("Model.Update - CompleteMsg", func() {
 				Path: fmt.Sprintf("/r/f%d.txt", i), IsDir: false,
 			})
 		}
-		m2, _ = update(m2, contract.CompleteMsg{Files: 10, Dirs: 0})
+		m2, _ = update(m2, contract.CompleteMsg{Files: 0, Dirs: 0})
 		Expect(m2.status.Percent()).To(Equal(100))
 		Expect(m2.status.View().Content).To(ContainSubstring("100%"))
 		Expect(m2.status.View().Content).To(ContainSubstring("✔ complete"))

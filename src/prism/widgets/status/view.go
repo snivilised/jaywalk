@@ -44,26 +44,44 @@ func (m Model) View() tea.View {
 	progressIdx := -1
 	var elapsedContent string
 
-	// Files segment
+	// Files segment — show preview total in parentheses when available
 	if m.fields.ShowFiles {
 		icon := m.styles.TreeIcons[contract.TreeIconFile]
-		label := compactLabel.Render(icon + " files:")
-		value := m.styles.SummaryValueStyle.Render(fmt.Sprintf("%4d", m.files))
-		segments = append(segments, segment{
-			content:   " " + label + " " + value + " ",
-			separator: true,
-		})
+		if m.hasTotal && m.totalFiles > 0 {
+			label := compactLabel.Render(fmt.Sprintf("%s files(%d):", icon, m.totalFiles))
+			value := m.styles.SummaryValueStyle.Render(fmt.Sprintf("%4d", m.files))
+			segments = append(segments, segment{
+				content:   " " + label + " " + value + " ",
+				separator: true,
+			})
+		} else {
+			label := compactLabel.Render(icon + " files:")
+			value := m.styles.SummaryValueStyle.Render(fmt.Sprintf("%4d", m.files))
+			segments = append(segments, segment{
+				content:   " " + label + " " + value + " ",
+				separator: true,
+			})
+		}
 	}
 
-	// Dirs segment
+	// Dirs segment — show preview total in parentheses when available
 	if m.fields.ShowDirs {
 		icon := m.styles.TreeIcons[contract.TreeIconDirectory]
-		label := compactLabel.Render(icon + " dirs:")
-		value := m.styles.SummaryValueStyle.Render(fmt.Sprintf("%3d", m.dirs))
-		segments = append(segments, segment{
-			content:   " " + label + " " + value + " ",
-			separator: true,
-		})
+		if m.hasTotal && m.totalDirs > 0 {
+			label := compactLabel.Render(fmt.Sprintf("%s dirs(%d):", icon, m.totalDirs))
+			value := m.styles.SummaryValueStyle.Render(fmt.Sprintf("%4d", m.dirs))
+			segments = append(segments, segment{
+				content:   " " + label + " " + value + " ",
+				separator: true,
+			})
+		} else {
+			label := compactLabel.Render(icon + " dirs:")
+			value := m.styles.SummaryValueStyle.Render(fmt.Sprintf("%4d", m.dirs))
+			segments = append(segments, segment{
+				content:   " " + label + " " + value + " ",
+				separator: true,
+			})
+		}
 	}
 
 	// Errors segment

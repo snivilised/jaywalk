@@ -41,12 +41,14 @@ type Model struct {
 	elapsed time.Duration
 
 	// progress (embedded bubbles v2 progress). Drives the spring animation.
-	inner    progress.Model
-	width    int
-	percent  int
-	total    int
-	done     int
-	hasTotal bool
+	inner      progress.Model
+	width      int
+	percent    int
+	total      int
+	totalFiles int
+	totalDirs  int
+	done       int
+	hasTotal   bool
 
 	// completion
 	isDone bool

@@ -37,11 +37,15 @@ type PercentMsg struct {
 	Percent int
 }
 
-// TotalMsg declares the expected total count so subsequent
-// IncDoneMsg / DoneMsg messages can recompute the percent. When
-// Total is zero the percent is not recomputed from counts.
+// TotalMsg declares the expected total file and directory counts
+// from a preview traversal. Total is the sum (TotalFiles + TotalDirs)
+// used for progress bar computation. TotalFiles and TotalDirs are the
+// individual preview counts displayed in the status row so the user
+// can compare live progress against the preview estimate.
 type TotalMsg struct {
-	Total int
+	Total      int
+	TotalFiles int
+	TotalDirs  int
 }
 
 // DoneMsg records the final counts and marks the widget as

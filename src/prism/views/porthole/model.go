@@ -285,7 +285,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// every ContentLineMsg (file OR dir) increments done.
 		total := int(msg.TotalFiles + msg.TotalDirs) //nolint:gosec // ok
 		var cmd tea.Cmd
-		m.status, cmd = m.dispatchStatus(status.TotalMsg{Total: total})
+		m.status, cmd = m.dispatchStatus(status.TotalMsg{
+			Total:      total,
+			TotalFiles: int(msg.TotalFiles), //nolint:gosec // ok
+			TotalDirs:  int(msg.TotalDirs),  //nolint:gosec // ok
+		})
 		if cmd != nil {
 			return &m, tea.Batch(cmd)
 		}
@@ -295,7 +299,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.ApplyCompletion(msg.Errs, msg.Elapsed)
 
 		m.status, _ = m.dispatchStatus(status.CountsMsg{
-			Files: msg.Files, Dirs: msg.Dirs, Errors: len(msg.Errs),
+			Files: m.countedFiles, Dirs: m.countedDirs, Errors: len(msg.Errs),
 		})
 		m.status, _ = m.dispatchStatus(status.ElapsedMsg{
 			Elapsed: msg.Elapsed,
@@ -303,7 +307,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		var cmd tea.Cmd
 		m.status, cmd = m.dispatchStatus(status.DoneMsg{
-			Done: msg.Files + msg.Dirs, IsDone: true, Err: m.ErrMsg,
+			Done: m.countedFiles + m.countedDirs, IsDone: true, Err: m.ErrMsg,
 		})
 		if cmd != nil {
 			return &m, tea.Batch(cmd)

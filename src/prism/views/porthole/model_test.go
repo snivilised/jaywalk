@@ -1,6 +1,7 @@
 package porthole
 
 import (
+	"fmt"
 	"io"
 	"time"
 
@@ -151,11 +152,36 @@ var _ = Describe("Porthole Model", Ordered, func() {
 
 			// Preview total (100) overcounts actual (85).
 			m, _ = update(m, contract.CensusMsg{TotalFiles: 100})
-			m, cmd := update(m, contract.CompleteMsg{Files: 80, Dirs: 5, Elapsed: 2 * time.Second})
+
+			// Send ContentLineMsgs to populate the model's live
+			// file/dir counts. CompleteMsg now forwards these
+			// instead of using its own msg.Files/msg.Dirs.
+			for i := range 80 {
+				m, _ = update(m, ContentLineMsg{
+					Line: fmt.Sprintf("file %d", i),
+					Params: RenderParams{
+						NodeParams: contract.NodeParams{IsDir: false},
+					},
+				})
+			}
+			for i := range 5 {
+				m, _ = update(m, ContentLineMsg{
+					Line: fmt.Sprintf("dir %d", i),
+					Params: RenderParams{
+						NodeParams: contract.NodeParams{IsDir: true},
+					},
+				})
+			}
+			Expect(m.countedFiles).To(Equal(80))
+			Expect(m.countedDirs).To(Equal(5))
+
+			m, cmd := update(m, contract.CompleteMsg{
+				Files: 0, Dirs: 0, Elapsed: 2 * time.Second,
+			})
 			_ = cmd
 
 			Expect(m.status.IsDone()).To(BeTrue())
-			// Done = Files + Dirs = 85, total = 100 → 85%.
+			// Done = countedFiles + countedDirs = 85, total = 100 → 85%.
 			Expect(m.status.Percent()).To(Equal(85))
 			Expect(m.status.Files()).To(Equal(80))
 			Expect(m.status.Dirs()).To(Equal(5))
