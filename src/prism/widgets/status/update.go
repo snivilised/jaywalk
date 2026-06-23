@@ -24,16 +24,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case CountsMsg:
-		// CountsMsg arrives from two sources that can disagree:
-		//   • MotifMsg handler — track.Dirs() counts ALL unique
-		//     dir MotifMsgs (including skip events)
-		//   • CompleteMsg handler — msg.Dirs from the traversal
-		//     result's DirsVisited, which only counts handler
-		//     invocations (skips excluded)
-		// Using max() prevents the displayed count from dropping
-		// when CompleteMsg overwrites with a lower value.
-		m.files = max(m.files, msg.Files)
-		m.dirs = max(m.dirs, msg.Dirs)
+		// CountsMsg now comes from a single source (the view model's
+		// live tracking), so the values are always monotonically
+		// increasing during navigation and match the final values at
+		// completion. Direct assignment replaces the previous max()
+		// hack that masked a disagreement between MotifMsg-based and
+		// agenor-metric-based counts.
+		m.files = msg.Files
+		m.dirs = msg.Dirs
 		m.errors = msg.Errors
 		m.skipped = msg.Skipped
 		return m, nil
@@ -49,6 +47,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case TotalMsg:
 		m.total, m.hasTotal = msg.Total, true
+		m.totalFiles = msg.TotalFiles
+		m.totalDirs = msg.TotalDirs
 		m = m.recomputePercent()
 		cmd := m.inner.SetPercent(float64(m.percent) / 100.0)
 		return m, cmd

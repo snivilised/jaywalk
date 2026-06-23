@@ -201,7 +201,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		totalForProgress := msg.TotalFiles + msg.TotalDirs
 		if totalForProgress > 0 {
 			var cmd tea.Cmd
-			m.status, cmd = m.dispatchStatus(status.TotalMsg{Total: int(totalForProgress)}) //nolint:gosec // cast ok
+			m.status, cmd = m.dispatchStatus(status.TotalMsg{
+				Total:      int(totalForProgress), //nolint:gosec // cast ok
+				TotalFiles: int(msg.TotalFiles),   //nolint:gosec // cast ok
+				TotalDirs:  int(msg.TotalDirs),    //nolint:gosec // cast ok
+			})
 			return m, cmd
 		}
 		return m, nil
@@ -278,19 +282,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.track, _ = m.dispatchTrack(track.CompleteMsg{})
 
 		// Forward the final counts and elapsed to the status
-		// widget. The widget owns the percent calculation and
-		// the isDone flag from here on. The Done field must
-		// include both files AND dirs because the progress
-		// total was seeded with TotalFiles + TotalDirs, and
-		// recomputePercent derives percent from done/total.
+		// widget. We use the track child's counts (not msg.Files/
+		// msg.Dirs from agenor metrics) to guarantee the displayed
+		// counts are always the same source as what was shown during
+		// navigation — the track widget's unique MotifMsg path count.
+		// This eliminates the jump that occurred when CompleteMsg
+		// overwrote with a potentially different agenor metric value.
 		cmds := make([]tea.Cmd, 0, 2)
 		m.status, _ = m.dispatchStatus(status.CountsMsg{
-			Files: msg.Files, Dirs: msg.Dirs, Errors: len(msg.Errs),
+			Files: m.track.Files(), Dirs: m.track.Dirs(), Errors: len(msg.Errs),
 		})
 		m.status, _ = m.dispatchStatus(status.ElapsedMsg{Elapsed: msg.Elapsed})
 		var cmd tea.Cmd
 		m.status, cmd = m.dispatchStatus(status.DoneMsg{
-			Done: msg.Files + msg.Dirs, IsDone: true, Err: m.ErrMsg,
+			Done: m.track.Files() + m.track.Dirs(), IsDone: true, Err: m.ErrMsg,
 		})
 		if cmd != nil {
 			cmds = append(cmds, cmd)
