@@ -1,6 +1,7 @@
 package status
 
 import (
+	"fmt"
 	"time"
 
 	"charm.land/bubbles/v2/progress"
@@ -138,3 +139,12 @@ func (m Model) IsDone() bool { return m.isDone }
 // constant. Host views (highway, porthole) consult this to budget
 // vertical space for the status row without re-rendering.
 func (m Model) Height() int { return 1 }
+
+// labelText returns the label string for a status segment.
+// Shows the total in parentheses when hasTotal is true and total > 0.
+func (m Model) labelText(icon, suffix string, total int, hasTotal bool) string {
+	if hasTotal && total > 0 {
+		return fmt.Sprintf("%s%s(%d):", icon, suffix, total)
+	}
+	return fmt.Sprintf("%s%s:", icon, suffix)
+}

@@ -24,12 +24,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case CountsMsg:
-		// CountsMsg now comes from a single source (the view model's
-		// live tracking), so the values are always monotonically
-		// increasing during navigation and match the final values at
-		// completion. Direct assignment replaces the previous max()
-		// hack that masked a disagreement between MotifMsg-based and
-		// agenor-metric-based counts.
 		m.files = msg.Files
 		m.dirs = msg.Dirs
 		m.errors = msg.Errors

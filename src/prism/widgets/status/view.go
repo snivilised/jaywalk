@@ -32,56 +32,42 @@ type segment struct {
 func (m Model) View() tea.View {
 	borderStyle := m.styles.BorderStyle
 
-	// Use compact labels with natural width instead of the themed
-	// 16-cell minimum. The themed width is designed for multi-line
-	// alignment in other views; on a single-row status line it only
-	// wastes space and causes overflow.
+	// Use per-segment fixed-width label styles so the files and dirs
+	// labels always occupy the same number of cells regardless of
+	// whether the total is shown in parentheses ("files:") or not
+	// ("files(20):"). This prevents the layout from jumping ~5 cells
+	// when CensusMsg arrives, which shifts the dirs value left/right
+	// on every frame. Skipped and elapsed don't have a hasTotal
+	// transition, so they use natural width (Width(0)) to avoid the
+	// theme's 16-cell default padding.
 	compactLabel := m.styles.SummaryLabelStyle.Width(0)
+	filesLabel := m.styles.SummaryLabelStyle.Width(16)
+	dirsLabel := m.styles.SummaryLabelStyle.Width(14)
 
 	segments := make([]segment, 0, 9)
-	// progressIdx tracks at which index (if any) the progress
-	// segment was appended, so we can conditionally drop it.
 	progressIdx := -1
 	var elapsedContent string
 
-	// Files segment — show preview total in parentheses when available
+	// Files segment
 	if m.fields.ShowFiles {
 		icon := m.styles.TreeIcons[contract.TreeIconFile]
-		if m.hasTotal && m.totalFiles > 0 {
-			label := compactLabel.Render(fmt.Sprintf("%s files(%d):", icon, m.totalFiles))
-			value := m.styles.SummaryValueStyle.Render(fmt.Sprintf("%4d", m.files))
-			segments = append(segments, segment{
-				content:   " " + label + " " + value + " ",
-				separator: true,
-			})
-		} else {
-			label := compactLabel.Render(icon + " files:")
-			value := m.styles.SummaryValueStyle.Render(fmt.Sprintf("%4d", m.files))
-			segments = append(segments, segment{
-				content:   " " + label + " " + value + " ",
-				separator: true,
-			})
-		}
+		label := filesLabel.Render(m.labelText(icon, " files", m.totalFiles, m.hasTotal))
+		value := m.styles.SummaryValueStyle.Render(fmt.Sprintf("%4d", m.files))
+		segments = append(segments, segment{
+			content:   " " + label + " " + value + " ",
+			separator: true,
+		})
 	}
 
-	// Dirs segment — show preview total in parentheses when available
+	// Dirs segment
 	if m.fields.ShowDirs {
 		icon := m.styles.TreeIcons[contract.TreeIconDirectory]
-		if m.hasTotal && m.totalDirs > 0 {
-			label := compactLabel.Render(fmt.Sprintf("%s dirs(%d):", icon, m.totalDirs))
-			value := m.styles.SummaryValueStyle.Render(fmt.Sprintf("%4d", m.dirs))
-			segments = append(segments, segment{
-				content:   " " + label + " " + value + " ",
-				separator: true,
-			})
-		} else {
-			label := compactLabel.Render(icon + " dirs:")
-			value := m.styles.SummaryValueStyle.Render(fmt.Sprintf("%4d", m.dirs))
-			segments = append(segments, segment{
-				content:   " " + label + " " + value + " ",
-				separator: true,
-			})
-		}
+		label := dirsLabel.Render(m.labelText(icon, " dirs", m.totalDirs, m.hasTotal))
+		value := m.styles.SummaryValueStyle.Render(fmt.Sprintf("%4d", m.dirs))
+		segments = append(segments, segment{
+			content:   " " + label + " " + value + " ",
+			separator: true,
+		})
 	}
 
 	// Errors segment
@@ -95,7 +81,7 @@ func (m Model) View() tea.View {
 		})
 	}
 
-	// Skipped segment
+	// Skipped segment (no hasTotal transition, uses natural width)
 	if m.fields.ShowSkipped {
 		icon := m.styles.TreeIcons[contract.TreeIconSkipped]
 		label := compactLabel.Render(icon + " skipped:")
@@ -106,7 +92,7 @@ func (m Model) View() tea.View {
 		})
 	}
 
-	// Progress segment - driven by the embedded bubbles progress.
+	// Progress segment
 	if m.fields.ShowProgress && (m.percent > 0 || (m.hasTotal && m.total > 0)) {
 		progressView := m.inner.View()
 		if progressView != "" {
@@ -129,14 +115,6 @@ func (m Model) View() tea.View {
 			}
 			msg = " " + m.styles.ErrorStyle.Render(label) + " "
 		} else if m.hasTotal && m.percent >= 100 {
-			// "✔ complete" appears only when ALL of:
-			//   1. the last worker has finished (isDone),
-			//   2. a real total was provided (hasTotal), and
-			//   3. the progress bar has reached 100% (done >= total).
-			// Without a real total, PercentMsg drives the bar from
-			// elapsed time and can reach 100% before navigation is
-			// actually complete. Requiring hasTotal prevents the
-			// message from appearing with fake progress data.
 			msg = " " + m.styles.ProgressStyle.Render("✔ complete") + " "
 		}
 		if msg != "" {
@@ -147,7 +125,7 @@ func (m Model) View() tea.View {
 		}
 	}
 
-	// Elapsed segment (always last, right-aligned)
+	// Elapsed segment (always last, right-aligned, no hasTotal transition)
 	if m.fields.ShowElapsed {
 		icon := m.styles.TreeIcons[contract.TreeIconElapsed]
 		label := compactLabel.Render(icon + " elapsed:")

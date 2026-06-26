@@ -85,16 +85,16 @@ var _ = Describe("Render", func() {
 			ShowElapsed:  true,
 		}
 
-		// Width 90 (not 80) — 4 icon-based segments + elapsed
-		// need ~87 cells total with compact labels, and the Row
-		// drops the right-zone (elapsed) when it does not fit.
+		// Width 104 — 4 segments (files fixed at 16, dirs fixed at 14,
+		// errors and skipped natural) + elapsed need 99 cells to
+		// avoid the Row dropping the right-zone.
 		output := status.Render(status.Config{
 			Files:   42,
 			Dirs:    7,
 			Errors:  0,
 			Skipped: 3,
 			Elapsed: 5 * time.Second,
-		}, styles, fields, 90)
+		}, styles, fields, 104)
 
 		Expect(output).To(ContainSubstring("🔖 files:"))
 		Expect(output).To(ContainSubstring("📁 dirs:"))

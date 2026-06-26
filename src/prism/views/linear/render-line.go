@@ -131,8 +131,8 @@ func buildBranchPrefix(depth uint, isLast bool, branchStack []bool, treeIcons co
 		return ""
 	}
 
-	vertW := len([]rune(treeIcons[contract.TreeIconBranchVertical]))
-	indentW := len([]rune(treeIcons[contract.TreeIconBranchIndent]))
+	vertW := lipgloss.Width(treeIcons[contract.TreeIconBranchVertical])
+	indentW := lipgloss.Width(treeIcons[contract.TreeIconBranchIndent])
 	colW := vertW + indentW
 
 	var b strings.Builder
