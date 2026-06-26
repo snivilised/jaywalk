@@ -218,17 +218,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case contract.MotifMsg:
-		if m.Done {
-			// Traversal already completed; forward the motif
-			// to the track child for lane rendering/data but
-			// do NOT update status progress. Without this
-			// guard a late MotifMsg arriving after CompleteMsg
-			// dispatches an IncDoneMsg which recomputes the
-			// percent from done/total and overwrites the 100%
-			// that DoneMsg set.
-			m.track, _ = m.dispatchTrack(msg)
-			return m, nil
-		}
 		// Track the pre-dispatch file/dir counts so we can
 		// detect whether the motif was new (i.e. the track
 		// child's dedup map saw the path for the first time).
@@ -254,20 +243,24 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 
-		// New motif: forward the increment to the status
-		// widget so the percent / progress bar reflects the
-		// new total. We read the post-update counts from the
+		// New motif: forward the count update to the status
+		// widget. We read the post-update counts from the
 		// track child (track.Files() / track.Dirs()).
-		cmds := make([]tea.Cmd, 0, 1)
+		//
+		// When the traversal has not yet completed we also
+		// forward an IncDoneMsg so the progress bar reflects
+		// the new ratio. After completion (m.Done) we skip
+		// IncDoneMsg to keep the progress bar frozen at the
+		// CompleteMsg snapshot; only the count display is
+		// updated so late workers' results are still visible.
 		var cmd tea.Cmd
-		m.status, cmd = m.dispatchStatus(status.IncDoneMsg{N: 1})
-		if cmd != nil {
-			cmds = append(cmds, cmd)
+		if !m.Done {
+			m.status, cmd = m.dispatchStatus(status.IncDoneMsg{N: 1})
 		}
 		m.status, _ = m.dispatchStatus(status.CountsMsg{
 			Files: m.track.Files(), Dirs: m.track.Dirs(), Errors: m.Errors,
 		})
-		return m, tea.Batch(cmds...)
+		return m, cmd
 
 	case contract.CompleteMsg:
 		// Capture the first non-nil error message for the

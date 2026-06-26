@@ -73,12 +73,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case CompleteMsg:
-		// Flush signal. Clear the dedup map so any further
-		// MotifMsg is a no-op dedup-wise. (We intentionally do
-		// NOT add a guard that drops motifs received after
-		// CompleteMsg, to preserve the pre-refactor behaviour
-		// where late motifs were still applied to the lane.)
-		m.counted = make(map[string]bool)
+		// Flush signal. Do NOT clear the dedup map — late
+		// MotifMsg that arrive after CompleteMsg must still be
+		// de-duped against previously-seen paths so the track
+		// child's file/dir counters stay frozen. Without this,
+		// a MotifMsg for an already-counted path increments
+		// the counter a second time, making the internal count
+		// inconsistent with the status widget's frozen display.
+		// MotifMsg are still forwarded to lanes (via the m.Done
+		// guard in highway model.go) for rendering; only the
+		// counter increment is suppressed by the intact map.
 
 		// Freeze all lanes: the traversal is done, so no more
 		// MotifMsg will arrive to re-activate any lane. Setting

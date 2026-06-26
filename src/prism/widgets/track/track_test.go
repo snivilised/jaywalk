@@ -419,7 +419,7 @@ var _ = Describe("Model.Update - CensusMsg", func() {
 // ---------------------------------------------------------------------------
 
 var _ = Describe("Model.Update - CompleteMsg", func() {
-	It("clears the counted map so subsequent motifs increment again", func() {
+	It("preserves the dedup map so late motifs do NOT increment counters again", func() {
 		m := baseModel(1)
 		updated, _ := update(m, contract.MotifMsg{
 			Path: "/root/a.txt", IsDir: false,
@@ -427,12 +427,12 @@ var _ = Describe("Model.Update - CompleteMsg", func() {
 		Expect(updated.files).To(Equal(1))
 
 		updated, _ = update(updated, CompleteMsg{})
-		// Same path after CompleteMsg: dedup map is empty,
-		// so this is treated as a new path.
+		// Same path after CompleteMsg: dedup map is intact,
+		// so this is treated as a duplicate and NOT counted.
 		updated, _ = update(updated, contract.MotifMsg{
 			Path: "/root/a.txt", IsDir: false,
 		})
-		Expect(updated.files).To(Equal(2))
+		Expect(updated.files).To(Equal(1))
 	})
 
 	It("returns no cmd", func() {
