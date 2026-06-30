@@ -3,7 +3,7 @@ module github.com/snivilised/jaywalk
 go 1.26.0
 
 require (
-	github.com/onsi/ginkgo/v2 v2.31.0
+	github.com/onsi/ginkgo/v2 v2.32.0
 	github.com/onsi/gomega v1.42.1
 	github.com/spf13/cobra v1.10.2
 	golang.org/x/exp v0.0.0-20260611194520-c48552f49976
@@ -20,6 +20,7 @@ require (
 	github.com/charmbracelet/x/term v0.2.2
 	github.com/mattn/go-runewidth v0.0.24
 	github.com/mitchellh/mapstructure v1.5.0
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -34,7 +35,6 @@ require (
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
 require (
