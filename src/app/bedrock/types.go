@@ -128,38 +128,38 @@ type Config struct {
 type HighwayConfig struct {
 	// WorkerPool is a space-separated list of emoji runes for worker/lane decoration.
 	// Recommended: at least 10 emojis for variety across lanes/workers.
-	WorkerPool string `mapstructure:"worker-emoji-pool"`
+	WorkerPool string `mapstructure:"worker-emoji-pool" yaml:"worker-emoji-pool"`
 
 	// JobPool is a space-separated list of emoji runes for job decoration.
 	// Each new job arrival gets the next emoji from this pool.
 	// Recommended: at least 6 emojis for variety.
-	JobPool string `mapstructure:"job-emoji-pool"`
+	JobPool string `mapstructure:"job-emoji-pool" yaml:"job-emoji-pool"`
 
 	// Separator between emoji and content info (default: " ").
-	Separator string `mapstructure:"separator"`
+	Separator string `mapstructure:"separator" yaml:"separator"`
 
 	// AnimationData holds animation type configurations loaded from config.
 	// These are loaded on-demand when Highway view is activated.
-	AnimationData HighwayAnimationConfig `mapstructure:"animation,omitempty"`
+	AnimationData HighwayAnimationConfig `mapstructure:"animation,omitempty" yaml:"animation,omitempty"`
 
 	// AnimationGradient specifies which gradient to apply to highway animation frames.
 	// Must match a key in palette.highlights.gradients (e.g., "aurora-borealis").
 	// When empty, no gradient is applied and default styling is used.
-	AnimationGradient string `mapstructure:"animation-gradient,omitempty"`
+	AnimationGradient string `mapstructure:"animation-gradient,omitempty" yaml:"animation-gradient,omitempty"`
 
 	// FlagsRowPosition controls where the supplementary flags row is rendered
 	// within the highway view. Allowed values: "top" (between the top border
 	// and the first lane) or "bottom" (between the last lane and the status
 	// line). Empty or invalid values default to "bottom" and a warning is
 	// logged at load time.
-	FlagsRowPosition string `mapstructure:"flags-row-position,omitempty"`
+	FlagsRowPosition string `mapstructure:"flags-row-position,omitempty" yaml:"flags-row-position,omitempty"`
 
 	// Banner controls the ANSI shadow banner rendered outside the highway
 	// view's bordered region. The banner can be disabled, placed above
 	// or below the border, and tuned with a per-tick gradient animation
 	// interval. The colour sweep itself is resolved from the theme via
 	// highlights.components["banner-control"].
-	Banner BannerSubConfig `mapstructure:"banner,omitempty"`
+	Banner BannerSubConfig `mapstructure:"banner,omitempty" yaml:"banner,omitempty"`
 }
 
 // LinearConfig holds the configuration for the linear view.
@@ -169,12 +169,12 @@ type LinearConfig struct {
 	// "top" renders the banner before the linear banner,
 	// "bottom" renders it after the summary banner.
 	// Empty or invalid values default to "bottom".
-	FlagsRowPosition string `mapstructure:"flags-row-position,omitempty"`
+	FlagsRowPosition string `mapstructure:"flags-row-position,omitempty" yaml:"flags-row-position,omitempty"`
 
 	// Banner controls the ANSI shadow banner rendered outside the
 	// linear view's bordered region. The colour sweep is resolved
 	// from the theme via highlights.components["banner-control"].
-	Banner BannerSubConfig `mapstructure:"banner,omitempty"`
+	Banner BannerSubConfig `mapstructure:"banner,omitempty" yaml:"banner,omitempty"`
 }
 
 // BannerSubConfig holds the raw, on-disk shape of the banner settings
@@ -182,23 +182,23 @@ type LinearConfig struct {
 // ui.BannerConfig - see ui/registry.go.
 type BannerSubConfig struct {
 	// Disable hides the banner when true. Defaults to false (shown).
-	Disable bool `mapstructure:"disable"`
+	Disable bool `mapstructure:"disable" yaml:"disable"`
 
 	// Position controls where the banner is rendered relative to the
 	// bordered region. "top" places it above the top border; "bottom"
 	// places it below the bottom border. Empty or unrecognised values
 	// default to "top" with a warning logged at load time.
-	Position string `mapstructure:"position,omitempty"`
+	Position string `mapstructure:"position,omitempty" yaml:"position,omitempty"`
 
 	// Tick is the per-tick interval in milliseconds for the banner's
 	// gradient animation. Larger values produce a slower, warmer glow.
 	// Zero or omitted resolves to banner.DefaultBannerTick (500ms).
-	Tick int `mapstructure:"tick,omitempty"`
+	Tick int `mapstructure:"tick,omitempty" yaml:"tick,omitempty"`
 
 	// Justify controls the horizontal alignment of the banner within
 	// the terminal. Allowed values: "right" (default), "left",
 	// "center". Empty or unrecognised values default to "right".
-	Justify string `mapstructure:"justify,omitempty"`
+	Justify string `mapstructure:"justify,omitempty" yaml:"justify,omitempty"`
 
 	// Steps overrides the number of interpolated colour steps used
 	// for the banner's gradient sweep. The banner normally inherits
@@ -206,13 +206,13 @@ type BannerSubConfig struct {
 	// this field lets the user produce a smoother or more abrupt
 	// colour sweep on the banner only, without redefining the shared
 	// gradient. Zero or omitted means "use the gradient's own steps".
-	Steps int `mapstructure:"steps,omitempty"`
+	Steps int `mapstructure:"steps,omitempty" yaml:"steps,omitempty"`
 }
 
 // HighwayAnimationConfig holds animation data configuration for Highway view.
 type HighwayAnimationConfig struct {
 	// Spinners holds per-spinner configuration.
-	Spinners SpinnerAnimationConfig `mapstructure:"spinners,omitempty"`
+	Spinners SpinnerAnimationConfig `mapstructure:"spinners,omitempty" yaml:"spinners,omitempty"`
 }
 
 // SpinnerAnimationConfig groups all spinner-type configurations.
@@ -220,7 +220,7 @@ type SpinnerAnimationConfig struct {
 	// Enabled lists which spinner types should be loaded on demand.
 	// All registered spinner names are valid. Only spinners in this list
 	// will be loaded when Highway view starts.
-	Enabled []string `mapstructure:"enabled"`
+	Enabled []string `mapstructure:"enabled" yaml:"enabled"`
 
 	// Override holds per-spinner config overrides keyed by spinner name.
 	// Only entries listed in Enabled are consulted. The most useful override
@@ -234,11 +234,11 @@ type SpinnerAnimationConfig struct {
 	//     override:
 	//       wave:
 	//         interval: 5000   # wave cycles once every 5 seconds
-	Override map[string]*SpinnerItemConfig `mapstructure:"override,omitempty"`
+	Override map[string]*SpinnerItemConfig `mapstructure:"override,omitempty" yaml:"override,omitempty"`
 }
 
 // SpinnerItemConfig holds per-spinner settings.
 type SpinnerItemConfig struct {
 	// Interval is the time between frames in milliseconds.
-	Interval int `mapstructure:"interval"`
+	Interval int `mapstructure:"interval" yaml:"interval"`
 }

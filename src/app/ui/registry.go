@@ -79,26 +79,13 @@ const (
 const bannerTickDefaultMs = 500
 
 // ---------------------------------------------------------------------------
-// Polymorphic view configuration
+// View configuration types
 // ---------------------------------------------------------------------------
 //
-// Every view owns its own concrete config type. Callers outside this
-// package see only the sealed ViewConfig interface, so a future view
-// can be added without changing the signature of New - the caller
-// passes whatever config the selected view's loader produced.
-//
-// The set of implementations is closed: the unexported isViewConfig
-// method cannot be implemented by code outside this package, so the
-// compiler enforces that LoadConfig and New only see values produced
-// by this package.
-
-// ViewConfig is the polymorphic configuration for a view. Concrete
-// implementations are LinearConfig and HighwayConfig (and any future
-// view's own type). Callers obtain a value by calling LoadConfig and
-// pass it unchanged to New.
-type ViewConfig interface {
-	isViewConfig()
-}
+// Each view owns its own concrete config type used internally by the
+// presenter. LoadConfig reads the on-disk representation
+// (bedrock.FullViewConfig) and translates it into these types. New
+// accepts *bedrock.FullViewConfig and performs the same translation.
 
 // LinearConfig is the configuration for the linear view. The view
 // currently has no per-instance settings beyond the palette, so this
@@ -116,9 +103,6 @@ type LinearConfig struct {
 	// from the theme via highlights.components["banner-control"].
 	Banner BannerConfig
 }
-
-// isViewConfig seals the implementation set.
-func (LinearConfig) isViewConfig() {}
 
 // HighwayConfig is the configuration for the highway view. Every
 // field is honoured by the highway presenter; the comment on each
@@ -238,62 +222,16 @@ type BannerConfig struct {
 	StepsOverride int
 }
 
-// isViewConfig seals the implementation set.
-func (HighwayConfig) isViewConfig() {}
-
-func (PortholeConfig) isViewConfig() {}
-
-// ViewConfigSource loads a named view's raw on-disk configuration
-// (typically jay.ui.yml). *bedrock.ViewConfigLoader satisfies this
-// implicitly; declaring the interface here keeps the ui package
-// decoupled from bedrock's concrete loader type.
-type ViewConfigSource interface {
-	Load(viewName string, dest any) error
-}
-
-// LoadConfig returns the ViewConfig that corresponds to the given
-// mode. The source provides the raw, on-disk representation; this
-// function translates it into the view's own config type. The
-// palette is used to derive per-palette values such as the highway
-// animation gradient.
+// ------------------------------------------------------------------
+// View configuration types
+// ------------------------------------------------------------------
 //
-// Adding a new view means: (1) define a new ViewConfig
-// implementation in this package, (2) add a case here that maps the
-// mode to a constructor, and (3) add a case in New that constructs
-// the presenter. The view's caller (typically Bootstrap) needs no
-// changes - it always calls LoadConfig and New with the mode and
-// the returned value.
-func LoadConfig(mode string, source ViewConfigSource, palette contract.Palette) (ViewConfig, error) {
-	if mode == "" {
-		mode = ModeDefault
-	}
+// Each view owns its own concrete config type used internally by the
+// presenter. bedrock.LoadConfig reads the on-disk representation
+// (bedrock.FullViewConfig) and New translates it into these types.
 
-	switch mode {
-	case ModeLinear:
-		return loadLinearConfig(source, palette)
-
-	case ModeHighway:
-		return loadHighwayConfig(source, palette)
-
-	case ModePorthole:
-		return loadPortholeConfig(source, palette)
-
-	default:
-		return nil, fmt.Errorf(
-			"unknown display mode %q (valid modes: %s)",
-			mode,
-			strings.Join(availableModes(), ", "),
-		)
-	}
-}
-
-func loadPortholeConfig(source ViewConfigSource, palette contract.Palette) (ViewConfig, error) {
-	var raw bedrock.HighwayConfig // porthole uses highway config shape minus lane fields
-	if source != nil {
-		if err := source.Load("porthole", &raw); err != nil {
-			return nil, err
-		}
-	}
+func loadPortholeConfig(cfg *bedrock.FullViewConfig, palette contract.Palette) PortholeConfig {
+	raw := cfg.Porthole
 
 	bannerCfg := resolveBannerConfig(raw.Banner, palette)
 
@@ -304,21 +242,16 @@ func loadPortholeConfig(source ViewConfigSource, palette contract.Palette) (View
 		AnimationGradient: nameFromPalette(palette, contract.GradientComponentActivity),
 		SpinnerNames:      raw.AnimationData.Spinners.Enabled,
 		Banner:            bannerCfg,
-	}, nil
+	}
 }
 
-func loadHighwayConfig(source ViewConfigSource, palette contract.Palette) (ViewConfig, error) {
-	var raw bedrock.HighwayConfig
-	if source != nil {
-		if err := source.Load("highway", &raw); err != nil {
-			return nil, err
-		}
-	}
+func loadHighwayConfig(cfg *bedrock.FullViewConfig, palette contract.Palette) HighwayConfig {
+	raw := cfg.Highway
 
 	overrides := make(map[string]int)
-	for name, cfg := range raw.AnimationData.Spinners.Override {
-		if cfg != nil && cfg.Interval > 0 {
-			overrides[name] = cfg.Interval
+	for name, c := range raw.AnimationData.Spinners.Override {
+		if c != nil && c.Interval > 0 {
+			overrides[name] = c.Interval
 		}
 	}
 
@@ -334,16 +267,11 @@ func loadHighwayConfig(source ViewConfigSource, palette contract.Palette) (ViewC
 		Overrides:         overrides,
 		FlagsRowPosition:  flagsRowPosition,
 		Banner:            bannerCfg,
-	}, nil
+	}
 }
 
-func loadLinearConfig(source ViewConfigSource, palette contract.Palette) (ViewConfig, error) {
-	var raw bedrock.LinearConfig
-	if source != nil {
-		if err := source.Load("linear", &raw); err != nil {
-			return nil, err
-		}
-	}
+func loadLinearConfig(cfg *bedrock.FullViewConfig, palette contract.Palette) LinearConfig {
+	raw := cfg.Linear
 
 	flagsRowPosition := normaliseLinearFlagsRowPosition(raw.FlagsRowPosition)
 	bannerCfg := resolveBannerConfig(raw.Banner, palette)
@@ -351,7 +279,7 @@ func loadLinearConfig(source ViewConfigSource, palette contract.Palette) (ViewCo
 	return LinearConfig{
 		FlagsRowPosition: flagsRowPosition,
 		Banner:           bannerCfg,
-	}, nil
+	}
 }
 
 // normaliseLinearFlagsRowPosition validates the configured flags row position
@@ -525,47 +453,27 @@ func newLinearPresenter(palette contract.Palette, cfg LinearConfig) (report.Pres
 // ---------------------------------------------------------------------------
 
 // New returns the Presenter for the requested mode, constructed
-// with the given palette and the polymorphic view config returned
-// by LoadConfig. Only the selected view is instantiated; other views
+// with the given palette and the on-disk view config returned by
+// LoadConfig. Only the selected view is instantiated; other views
 // are not created.
 //
-// cfg must be the ViewConfig that corresponds to mode. Passing the
-// wrong config type for the mode is reported as an error rather
-// than a panic, so a future view can be wired in without the
-// compiler enforcing the match (the type-assertion is intentionally
-// fail-safe).
-func New(mode string, palette contract.Palette, cfg ViewConfig) (report.Presenter, error) {
+// cfg must be the FullViewConfig loaded by LoadConfig. The mode
+// determines which sub-config is extracted and converted for the
+// presenter.
+func New(mode string, palette contract.Palette, cfg *bedrock.FullViewConfig) (report.Presenter, error) {
 	if mode == "" {
 		mode = ModeDefault
 	}
 
 	switch mode {
 	case ModeLinear:
-		lCfg, ok := cfg.(LinearConfig)
-		if !ok {
-			return nil, fmt.Errorf(
-				"ui.New: linear mode requires LinearConfig, got %T", cfg,
-			)
-		}
-		return newLinearPresenter(palette, lCfg)
+		return newLinearPresenter(palette, loadLinearConfig(cfg, palette))
 
 	case ModeHighway:
-		hCfg, ok := cfg.(HighwayConfig)
-		if !ok {
-			return nil, fmt.Errorf(
-				"ui.New: highway mode requires HighwayConfig, got %T", cfg,
-			)
-		}
-		return newHighwayPresenter(palette, hCfg)
+		return newHighwayPresenter(palette, loadHighwayConfig(cfg, palette))
 
 	case ModePorthole:
-		pCfg, ok := cfg.(PortholeConfig)
-		if !ok {
-			return nil, fmt.Errorf(
-				"ui.New: porthole mode requires PortholeConfig, got %T", cfg,
-			)
-		}
-		return newPortholePresenter(palette, pCfg)
+		return newPortholePresenter(palette, loadPortholeConfig(cfg, palette))
 
 	default:
 		return nil, fmt.Errorf(

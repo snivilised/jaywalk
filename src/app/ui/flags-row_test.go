@@ -52,74 +52,57 @@ var _ = Describe("normaliseFlagsRowPosition", func() {
 var _ = Describe("loadHighwayConfig (FlagsRowPosition plumbing)", func() {
 	const configHome = "root/config"
 
+	loadFromLoader := func(yaml string) *bedrock.FullViewConfig {
+		fS := luna.NewMemFS()
+		fS.MapFS[configHome+"/jay.ui.yaml"] = &fstest.MapFile{
+			Data: []byte(yaml),
+		}
+		loader := bedrock.NewViewConfigLoaderWithFS(configHome, fS)
+		cfg := &bedrock.FullViewConfig{}
+		_ = loader.Load("highway", &cfg.Highway)
+		return cfg
+	}
+
 	Context("when flags-row-position is set in jay.ui.yml", func() {
 		It("propagates the value to the ui.HighwayConfig", func() {
-			fS := luna.NewMemFS()
-			fS.MapFS[configHome+"/jay.ui.yaml"] = &fstest.MapFile{
-				Data: []byte(`
+			cfg := loadFromLoader(`
 ui:
   highway:
     flags-row-position: top
-`),
-			}
-			loader := bedrock.NewViewConfigLoaderWithFS(configHome, fS)
-			cfg, err := loadHighwayConfig(loader, contract.SystemPalette())
-			Expect(err).NotTo(HaveOccurred())
-			hCfg, ok := cfg.(HighwayConfig)
-			Expect(ok).To(BeTrue())
+`)
+			hCfg := loadHighwayConfig(cfg, contract.SystemPalette())
 			Expect(hCfg.FlagsRowPosition).To(Equal(contract.PositionTop))
 		})
 
 		It("accepts the bottom value", func() {
-			fS := luna.NewMemFS()
-			fS.MapFS[configHome+"/jay.ui.yaml"] = &fstest.MapFile{
-				Data: []byte(`
+			cfg := loadFromLoader(`
 ui:
   highway:
     flags-row-position: bottom
-`),
-			}
-			loader := bedrock.NewViewConfigLoaderWithFS(configHome, fS)
-			cfg, err := loadHighwayConfig(loader, contract.SystemPalette())
-			Expect(err).NotTo(HaveOccurred())
-			hCfg, ok := cfg.(HighwayConfig)
-			Expect(ok).To(BeTrue())
+`)
+			hCfg := loadHighwayConfig(cfg, contract.SystemPalette())
 			Expect(hCfg.FlagsRowPosition).To(Equal(contract.PositionBottom))
 		})
 
 		It("falls back to bottom for an unrecognised value", func() {
-			fS := luna.NewMemFS()
-			fS.MapFS[configHome+"/jay.ui.yaml"] = &fstest.MapFile{
-				Data: []byte(`
+			cfg := loadFromLoader(`
 ui:
   highway:
     flags-row-position: sideways
-`),
-			}
-			loader := bedrock.NewViewConfigLoaderWithFS(configHome, fS)
-			cfg, err := loadHighwayConfig(loader, contract.SystemPalette())
-			Expect(err).NotTo(HaveOccurred())
-			hCfg, ok := cfg.(HighwayConfig)
-			Expect(ok).To(BeTrue())
+`)
+			hCfg := loadHighwayConfig(cfg, contract.SystemPalette())
 			Expect(hCfg.FlagsRowPosition).To(Equal(contract.PositionBottom))
 		})
 	})
 
 	Context("when flags-row-position is absent", func() {
 		It("defaults to bottom", func() {
-			fS := luna.NewMemFS()
-			fS.MapFS[configHome+"/jay.ui.yaml"] = &fstest.MapFile{
-				Data: []byte(`
+			cfg := loadFromLoader(`
 ui:
   highway:
     worker-emoji-pool: '😎'
-`),
-			}
-			loader := bedrock.NewViewConfigLoaderWithFS(configHome, fS)
-			cfg, err := loadHighwayConfig(loader, contract.SystemPalette())
-			Expect(err).NotTo(HaveOccurred())
-			hCfg, ok := cfg.(HighwayConfig)
-			Expect(ok).To(BeTrue())
+`)
+			hCfg := loadHighwayConfig(cfg, contract.SystemPalette())
 			Expect(hCfg.FlagsRowPosition).To(Equal(contract.PositionBottom))
 		})
 	})

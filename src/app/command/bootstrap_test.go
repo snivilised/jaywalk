@@ -440,16 +440,15 @@ var _ = Describe("Bootstrap", Ordered, func() {
 			})
 
 			// ---------------------------------------------------------------
-			// Polymorphic view config (issue 583 follow-up): the
-			// presenter must be constructable via the polymorphic
-			// ViewConfig returned by ui.LoadConfig, not by a
-			// view-specific path. The highway view must use a
-			// HighwayConfig even when no jay.ui.yml is present
-			// (zero-value config is still a valid HighwayConfig).
+			// View config (issue 583 follow-up): the
+			// presenter must be constructable via the FullViewConfig
+			// returned by ui.LoadConfig. The highway view must work
+			// even when no jay.ui.yml is present (zero-value config
+			// is still a valid FullViewConfig).
 			// ---------------------------------------------------------------
 
-			Context("polymorphic view config", func() {
-				It("🧪 should: build highway presenter via zero-value HighwayConfig when jay.ui.yml is absent", func() {
+			Context("view config", func() {
+				It("🧪 should: build highway presenter via zero-value FullViewConfig when jay.ui.yml is absent", func() {
 					bootstrap := command.Bootstrap{}
 					tester := hanno.CommandTester{
 						Args: []string{

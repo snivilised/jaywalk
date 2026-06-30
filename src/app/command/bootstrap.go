@@ -244,16 +244,15 @@ func (b *Bootstrap) Root(options ...ConfigureAppOptionFn) *cobra.Command {
 					)
 				}
 
-				// Bootstrap is view-agnostic. The polymorphic
-				// ui.LoadConfig returns the ViewConfig that
-				// corresponds to the selected mode; ui.New consumes
-				// it.
+				// Bootstrap is view-agnostic. LoadConfig reads all
+				// view sections into FullViewConfig; New selects the
+				// sub-config for the requested mode.
 				palette, err := b.themeLoader.Load(b.rootPs.Native.Theme)
 				if err != nil {
 					return err
 				}
 
-				cfg, err := ui.LoadConfig(mode, b.viewConfigLoader, palette)
+				cfg, err := bedrock.LoadConfig(b.viewConfigLoader, palette)
 				if err != nil {
 					return err
 				}
