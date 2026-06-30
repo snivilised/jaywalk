@@ -69,13 +69,13 @@ type SemanticColour struct {
 	// ANSI16 is the colour name or number string for ANSI-16 terminals.
 	// Accepts names ("cyan", "bright-red") or numbers ("6", "9").
 	// When set, it respects the user's terminal theme colour assignments.
-	ANSI16 string `mapstructure:"ansi16"`
+	ANSI16 string `mapstructure:"ansi16" yaml:"ansi16"`
 
 	// ANSI256 is the number string for ANSI-256 terminals ("0"-"255").
-	ANSI256 string `mapstructure:"ansi256"`
+	ANSI256 string `mapstructure:"ansi256" yaml:"ansi256"`
 
 	// TrueColor is the hex colour string for TrueColor terminals ("#RRGGBB").
-	TrueColor string `mapstructure:"true-color"`
+	TrueColor string `mapstructure:"true-color" yaml:"true-color"`
 }
 
 // Resolve converts a SemanticColour into three color.Color values
@@ -112,13 +112,13 @@ type GradientDef struct {
 	// both endpoints). The renderer interpolates this many colours
 	// between Hi and Lo. When 0, the renderer picks a default based
 	// on the animation frame count.
-	Steps int             `mapstructure:"steps,omitempty"`
-	Hi    *SemanticColour `mapstructure:"hi,omitempty"`
-	Lo    *SemanticColour `mapstructure:"lo,omitempty"`
+	Steps int             `mapstructure:"steps,omitempty" yaml:"steps,omitempty"`
+	Hi    *SemanticColour `mapstructure:"hi,omitempty" yaml:"hi,omitempty"`
+	Lo    *SemanticColour `mapstructure:"lo,omitempty" yaml:"lo,omitempty"`
 
 	// Animate controls whether the gradient sweeps over time (true) or
 	// is applied statically (false). When nil, defaults to true.
-	Animate *bool `mapstructure:"animate,omitempty"`
+	Animate *bool `mapstructure:"animate,omitempty" yaml:"animate,omitempty"`
 }
 
 // HighlightsConfig holds gradient definitions and their component bindings.
@@ -126,8 +126,8 @@ type GradientDef struct {
 // gradient name defined under Gradients. Multiple components can share the
 // same gradient.
 type HighlightsConfig struct {
-	Gradients  map[string]GradientDef `mapstructure:"gradients,omitempty"`
-	Components map[string]string      `mapstructure:"components,omitempty"`
+	Gradients  map[string]GradientDef `mapstructure:"gradients,omitempty" yaml:"gradients,omitempty"`
+	Components map[string]string      `mapstructure:"components,omitempty" yaml:"components,omitempty"`
 }
 
 // ResolvedGradient holds the resolved colour endpoints after theme
@@ -225,89 +225,89 @@ type Palette struct {
 	// --- Traversal nodes ---
 
 	// Directory is the colour of directory names during traversal.
-	Directory SemanticColour `mapstructure:"directory"`
+	Directory SemanticColour `mapstructure:"directory" yaml:"directory"`
 
 	// File is the colour of file names during traversal.
-	File SemanticColour `mapstructure:"file"`
+	File SemanticColour `mapstructure:"file" yaml:"file"`
 
 	// Root is the colour used to highlight the traversal root path.
-	Root SemanticColour `mapstructure:"root"`
+	Root SemanticColour `mapstructure:"root" yaml:"root"`
 
 	// Branch is the colour of tree branch characters in tree-style output.
-	Branch SemanticColour `mapstructure:"branch"`
+	Branch SemanticColour `mapstructure:"branch" yaml:"branch"`
 
 	// TreeIcons holds optional glyph configuration used by tree-style
 	// linear renderers such as the linear view.
-	TreeIcons TreeIcons `mapstructure:"tree-icons"`
+	TreeIcons TreeIcons `mapstructure:"tree-icons" yaml:"tree-icons"`
 
 	// --- Execution ---
 
 	// Action is the colour of action names shown alongside nodes.
-	Action SemanticColour `mapstructure:"action"`
+	Action SemanticColour `mapstructure:"action" yaml:"action"`
 
 	// Pipeline is the colour of pipeline names shown alongside nodes.
-	Pipeline SemanticColour `mapstructure:"pipeline"`
+	Pipeline SemanticColour `mapstructure:"pipeline" yaml:"pipeline"`
 
 	// LandingStrip is the colour of the landing strip content (execution string or output).
-	LandingStrip SemanticColour `mapstructure:"landing-strip"`
+	LandingStrip SemanticColour `mapstructure:"landing-strip" yaml:"landing-strip"`
 
 	// Skipped is the colour of nodes whose action was skipped due to
 	// a placeholder breach.
-	Skipped SemanticColour `mapstructure:"skipped"`
+	Skipped SemanticColour `mapstructure:"skipped" yaml:"skipped"`
 
 	// --- Status ---
 
 	// Error is the colour of nodes or actions that produced an error.
-	Error SemanticColour `mapstructure:"error"`
+	Error SemanticColour `mapstructure:"error" yaml:"error"`
 
 	// Muted is the colour of secondary or de-emphasised information.
-	Muted SemanticColour `mapstructure:"muted"`
+	Muted SemanticColour `mapstructure:"muted" yaml:"muted"`
 
 	// Progress is the colour of progress indicators.
-	Progress SemanticColour `mapstructure:"progress"`
+	Progress SemanticColour `mapstructure:"progress" yaml:"progress"`
 
 	// --- Summary ---
 
 	// BoxBorder is the colour of the closing summary container border.
-	BoxBorder SemanticColour `mapstructure:"box-border"`
+	BoxBorder SemanticColour `mapstructure:"box-border" yaml:"box-border"`
 
 	// SummaryLabel is the colour of labels in the closing summary.
-	SummaryLabel SemanticColour `mapstructure:"summary-label"`
+	SummaryLabel SemanticColour `mapstructure:"summary-label" yaml:"summary-label"`
 
 	// SummaryValue is the colour of values in the closing summary.
-	SummaryValue SemanticColour `mapstructure:"summary-value"`
+	SummaryValue SemanticColour `mapstructure:"summary-value" yaml:"summary-value"`
 
 	// --- Concurrent views (porthole, lanes) ---
 
 	// Worker is the colour representing an active concurrent worker.
-	Worker SemanticColour `mapstructure:"worker"`
+	Worker SemanticColour `mapstructure:"worker" yaml:"worker"`
 
 	// WorkerIdle is the colour representing an idle concurrent worker.
-	WorkerIdle SemanticColour `mapstructure:"worker-idle"`
+	WorkerIdle SemanticColour `mapstructure:"worker-idle" yaml:"worker-idle"`
 
 	// LaneHeader is the colour of the per-worker lane identity header.
-	LaneHeader SemanticColour `mapstructure:"lane-header"`
+	LaneHeader SemanticColour `mapstructure:"lane-header" yaml:"lane-header"`
 
 	// --- Highway view ---
 
 	// Header is the colour of the title text in the highway view.
-	Header SemanticColour `mapstructure:"header"`
+	Header SemanticColour `mapstructure:"header" yaml:"header"`
 
 	// Frame is the colour of animation frames (spinners) in the highway view.
-	Frame SemanticColour `mapstructure:"frame"`
+	Frame SemanticColour `mapstructure:"frame" yaml:"frame"`
 
 	// Border is the colour of box-drawing characters in the highway view.
-	Border SemanticColour `mapstructure:"border"`
+	Border SemanticColour `mapstructure:"border" yaml:"border"`
 
 	// BarFilled is the colour of filled square-bar glyphs in the highway view.
-	BarFilled SemanticColour `mapstructure:"bar-filled"`
+	BarFilled SemanticColour `mapstructure:"bar-filled" yaml:"bar-filled"`
 
 	// BarEmpty is the colour of empty square-bar glyphs in the highway view.
-	BarEmpty SemanticColour `mapstructure:"bar-empty"`
+	BarEmpty SemanticColour `mapstructure:"bar-empty" yaml:"bar-empty"`
 
 	// Highlights holds named gradients and their component bindings for
 	// animation colour overlays. See HighlightsConfig, GradientDef.
-	Highlights HighlightsConfig `mapstructure:"highlights,omitempty"`
+	Highlights HighlightsConfig `mapstructure:"highlights,omitempty" yaml:"highlights,omitempty"`
 }
 
 // SystemPalette returns the default ANSI-16-only palette. All TrueColor

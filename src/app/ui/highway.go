@@ -20,8 +20,8 @@ import (
 )
 
 // HighwayConfig is declared in registry.go alongside the other view
-// configs. The definition lives there so all ViewConfig
-// implementations are co-located with LoadConfig and New.
+// configs. The definition lives there so all view config types are
+// co-located with LoadConfig and New.
 
 type highwayPresenter struct {
 	presenter
