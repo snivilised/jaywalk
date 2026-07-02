@@ -384,7 +384,18 @@ func (p *portholePresenter) buildBannerInfo() banner.Info {
 		if p.cfg.Banner.StepsOverride > 0 {
 			steps = p.cfg.Banner.StepsOverride
 		}
-		grad = &contract.ResolvedGradient{Steps: steps, Hi: g.Hi, Lo: g.Lo}
+		curve := g.Curve
+		if p.cfg.Banner.CurveOverride != 0 {
+			curve = p.cfg.Banner.CurveOverride
+		}
+		easing := g.Easing
+		if p.cfg.Banner.EasingOverride != 0 {
+			easing = p.cfg.Banner.EasingOverride
+		}
+		grad = &contract.ResolvedGradient{
+			Steps: steps, Hi: g.Hi, Lo: g.Lo,
+			Curve: curve, Easing: easing,
+		}
 	}
 	info.Gradient = grad
 

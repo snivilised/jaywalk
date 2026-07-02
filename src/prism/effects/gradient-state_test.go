@@ -21,9 +21,10 @@ var _ = Describe("Highway Gradient Rendering", func() {
 			// Perform an interpolation with 4 steps
 			hi := color.RGBA{R: 255, G: 0, B: 0, A: 255} // Red
 			lo := color.RGBA{R: 0, G: 0, B: 255, A: 255} // Blue
+			grad := contract.ResolvedGradient{Hi: hi, Lo: lo}
 			state.TotalSteps = 4
 
-			runs := ApplyGradient(hi, lo, "test", state)
+			runs := ApplyGradient(grad, "test", state)
 			Expect(runs).To(HaveLen(4))
 
 			// Verify steps array was populated

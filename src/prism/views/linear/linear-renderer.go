@@ -13,6 +13,7 @@ import (
 
 	"charm.land/lipgloss/v2"
 	"github.com/snivilised/jaywalk/src/agenor/core"
+	"github.com/snivilised/jaywalk/src/agenor/enums"
 	"github.com/snivilised/jaywalk/src/prism/contract"
 	"github.com/snivilised/jaywalk/src/prism/effects"
 	"github.com/snivilised/jaywalk/src/prism/layout"
@@ -75,7 +76,7 @@ func (r *renderer) Begin(overture contract.Overture) {
 
 	// Build caption for intro widget
 	caption := overture.Caption
-	if overture.Kind == contract.ResumeNavigation && overture.ResumeFrom != "" {
+	if overture.Kind == enums.NavigationKindResume && overture.ResumeFrom != "" {
 		caption += fmt.Sprintf("  -  from: %s", overture.ResumeFrom)
 	}
 

@@ -2,6 +2,8 @@ package contract
 
 import (
 	"time"
+
+	"github.com/snivilised/jaywalk/src/agenor/enums"
 )
 
 // Overture carries the metadata known at the start of a traversal.
@@ -18,7 +20,7 @@ type Overture struct {
 	StartedAt time.Time
 
 	// Kind indicates whether this is a prime or resume traversal.
-	Kind NavigationKind
+	Kind enums.NavigationKind
 
 	// ResumeFrom is the path from which a resume traversal continues.
 	// Populated only when Kind == ResumeNavigation.

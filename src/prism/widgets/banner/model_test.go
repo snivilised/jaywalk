@@ -25,10 +25,11 @@ func makeModelInfo(width int) banner.Info {
 	st.TotalSteps = grad.Steps
 	hiR, hiG, hiB, _ := grad.Hi.RGBA()
 	loR, loG, loB, _ := grad.Lo.RGBA()
-	steps := effects.InterpolateBetweenRGBA(
+	steps := contract.InterpolateBetweenRGBA(
 		uint8(hiR>>8), uint8(hiG>>8), uint8(hiB>>8), //nolint:gosec // safe: 16-bit value >> 8 fits in 8 bits
 		uint8(loR>>8), uint8(loG>>8), uint8(loB>>8), //nolint:gosec // safe: 16-bit value >> 8 fits in 8 bits
 		grad.Steps,
+		grad.Curve, grad.Easing,
 	)
 	st.SetSteps(steps)
 	return banner.Info{

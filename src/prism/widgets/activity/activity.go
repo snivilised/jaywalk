@@ -34,8 +34,7 @@ func Render(cfg Config,
 
 		inner, withBars := stripOuterBars(cfg.Content)
 		gradientRuns := effects.ApplyGradient(
-			effect.Gradient.Hi,
-			effect.Gradient.Lo,
+			*effect.Gradient,
 			inner,
 			effect.State,
 		)

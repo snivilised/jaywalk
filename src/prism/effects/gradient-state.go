@@ -4,13 +4,10 @@ package effects
 
 import (
 	"fmt"
-	"image/color"
-	"math"
 	"strings"
 
 	"charm.land/lipgloss/v2"
 	"github.com/snivilised/jaywalk/src/prism/contract"
-	"github.com/snivilised/jaywalk/src/prism/contract/ansi"
 )
 
 // GradientState holds in-memory state for a single lane's gradient animation.
@@ -106,11 +103,11 @@ func (s *GradientState) GetEffectiveIndex(pos int) int {
 // The caller must use ApplyGradientStyled() to convert this to a lipgloss-compatible string.
 //
 //nolint:all
-func ApplyGradient(hiCol, loCol color.Color, frameContent string, state *GradientState) []RunWithColor {
-	hiR, hiG, hiB, _ := hiCol.RGBA()
-	loR, loG, loB, _ := loCol.RGBA()
+func ApplyGradient(gradient contract.ResolvedGradient, frameContent string, state *GradientState) []RunWithColor {
+	hiR, hiG, hiB, _ := gradient.Hi.RGBA()
+	loR, loG, loB, _ := gradient.Lo.RGBA()
 
-	steps := InterpolateBetweenRGBA(
+	steps := contract.InterpolateBetweenRGBA(
 		uint8(hiR>>8),
 		uint8(hiG>>8),
 		uint8(hiB>>8),
@@ -118,6 +115,8 @@ func ApplyGradient(hiCol, loCol color.Color, frameContent string, state *Gradien
 		uint8(loG>>8),
 		uint8(loB>>8),
 		state.TotalSteps,
+		gradient.Curve,
+		gradient.Easing,
 	)
 
 	if len(steps) == 0 {
@@ -160,11 +159,11 @@ func ApplyGradient(hiCol, loCol color.Color, frameContent string, state *Gradien
 // this does not use GradientState and produces a fixed, non-animated output.
 //
 //nolint:all
-func ApplyGradientStatic(hiCol, loCol color.Color, content string, totalSteps int) []RunWithColor {
-	hiR, hiG, hiB, _ := hiCol.RGBA()
-	loR, loG, loB, _ := loCol.RGBA()
+func ApplyGradientStatic(gradient contract.ResolvedGradient, content string, totalSteps int) []RunWithColor {
+	hiR, hiG, hiB, _ := gradient.Hi.RGBA()
+	loR, loG, loB, _ := gradient.Lo.RGBA()
 
-	steps := InterpolateBetweenRGBA(
+	steps := contract.InterpolateBetweenRGBA(
 		uint8(hiR>>8),
 		uint8(hiG>>8),
 		uint8(hiB>>8),
@@ -172,6 +171,8 @@ func ApplyGradientStatic(hiCol, loCol color.Color, content string, totalSteps in
 		uint8(loG>>8),
 		uint8(loB>>8),
 		totalSteps,
+		gradient.Curve,
+		gradient.Easing,
 	)
 
 	if len(steps) == 0 {
@@ -208,32 +209,6 @@ type RunWithColor struct {
 // Each character is rendered with its interpolated foreground colour using ANSI escape codes.
 // The function builds an ANSI-style string where each non-whitespace character gets
 // its own RGB foreground colour set before rendering.
-func ApplyGradientStyledL(runs []RunWithColor) string {
-	if len(runs) == 0 {
-		return ""
-	}
-
-	var result strings.Builder
-
-	for _, rc := range runs {
-		r := rc.Rune
-
-		// Skip whitespace - keep original formatting
-		if r == ' ' || r == '\t' || r == '\n' {
-			result.WriteByte(byte(r))
-			continue
-		}
-
-		// Apply ANSI escape code with RGB foreground colour using standard decimal values
-		ansiColor := ansi.EscapedTrueColor(rc.Color.R, rc.Color.G, rc.Color.B)
-		result.WriteString(ansiColor)
-		result.WriteRune(r)
-		result.WriteString("\x1b[0m") // reset
-	}
-
-	return result.String()
-}
-
 func ApplyGradientStyled(runs []RunWithColor) string {
 	if len(runs) == 0 {
 		return ""
@@ -257,23 +232,4 @@ func ApplyGradientStyled(runs []RunWithColor) string {
 	}
 
 	return b.String()
-}
-
-// InterpolateBetweenRGBA creates a gradient of 'steps' colours between hi and lo RGB values.
-// Returns nil if steps <= 0. Each colour has alpha=255 (opaque).
-func InterpolateBetweenRGBA(hiR, hiG, hiB, loR, loG, loB uint8, steps int) []contract.Color {
-	steps = max(steps, 2)
-
-	gradient := make([]contract.Color, steps)
-	for i := 0; i < steps; i++ {
-		t := float64(i) / float64(steps-1)
-
-		r := uint8(math.Max(0, math.Min(255, float64(hiR)+(float64(loR)-float64(hiR))*t)))
-		g := uint8(math.Max(0, math.Min(255, float64(hiG)+(float64(loG)-float64(hiG))*t)))
-		b := uint8(math.Max(0, math.Min(255, float64(hiB)+(float64(loB)-float64(hiB))*t)))
-
-		gradient[i] = contract.Color{R: r, G: g, B: b}
-	}
-
-	return gradient
 }

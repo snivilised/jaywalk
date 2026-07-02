@@ -115,7 +115,7 @@ var _ = Describe("linear", Ordered, func() {
 				Expect(spy.overture.Root).To(Equal("/home/user/docs"))
 				Expect(spy.overture.Caption).To(Equal("files and folders"))
 				Expect(spy.overture.StartedAt).To(Equal(now))
-				Expect(spy.overture.Kind).To(Equal(contract.PrimeNavigation))
+				Expect(spy.overture.Kind).To(Equal(enums.NavigationKindPrime))
 				Expect(spy.overture.ResumeFrom).To(BeEmpty())
 			})
 		})
@@ -131,7 +131,7 @@ var _ = Describe("linear", Ordered, func() {
 					DateFormat: "Mon, 02 Jan 2006 15:04:05 MST",
 				})
 
-				Expect(spy.overture.Kind).To(Equal(contract.ResumeNavigation))
+				Expect(spy.overture.Kind).To(Equal(enums.NavigationKindResume))
 				Expect(spy.overture.ResumeFrom).To(Equal("/home/user/docs/subdir"))
 			})
 		})
@@ -376,7 +376,7 @@ var _ = Describe("linear", Ordered, func() {
 				Expect(s.DirsVisited).To(Equal(core.MetricValue(7)))
 				Expect(s.Elapsed).To(Equal(3 * time.Second))
 				Expect(s.Errors).To(BeEmpty())
-				Expect(s.Kind).To(Equal(contract.PrimeNavigation))
+				Expect(s.Kind).To(Equal(enums.NavigationKindPrime))
 			})
 		})
 
@@ -411,7 +411,7 @@ var _ = Describe("linear", Ordered, func() {
 
 				presenter.OnComplete(&report.Traversal{})
 
-				Expect(spy.summary.Kind).To(Equal(contract.ResumeNavigation))
+				Expect(spy.summary.Kind).To(Equal(enums.NavigationKindResume))
 			})
 		})
 	})

@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/snivilised/jaywalk/src/agenor/core"
+	"github.com/snivilised/jaywalk/src/agenor/enums"
 )
 
 // Summary carries the result of a completed traversal. Passed to
@@ -26,5 +27,5 @@ type Summary struct {
 
 	// Kind mirrors Overture.Kind so the renderer can label counts
 	// appropriately in the closing summary.
-	Kind NavigationKind
+	Kind enums.NavigationKind
 }

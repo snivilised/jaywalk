@@ -289,10 +289,11 @@ func paletteSteps(g *contract.ResolvedGradient, st *effects.GradientState) []con
 	}
 	hiR, hiG, hiB, _ := g.Hi.RGBA()
 	loR, loG, loB, _ := g.Lo.RGBA()
-	steps := effects.InterpolateBetweenRGBA(
+	steps := contract.InterpolateBetweenRGBA(
 		uint8(hiR>>8), uint8(hiG>>8), uint8(hiB>>8), //nolint:gosec // safe: 16-bit value >> 8 fits in 8 bits
 		uint8(loR>>8), uint8(loG>>8), uint8(loB>>8), //nolint:gosec // safe: 16-bit value >> 8 fits in 8 bits
 		st.TotalSteps,
+		g.Curve, g.Easing,
 	)
 	if len(steps) > 0 {
 		st.SetSteps(steps)

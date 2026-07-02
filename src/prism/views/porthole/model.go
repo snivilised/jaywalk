@@ -136,10 +136,11 @@ func (m *Model) SetActivity(frameFn contract.FrameFunc, gradient *contract.Resol
 	if gradient != nil && gradient.Steps > 0 {
 		hiR, hiG, hiB, _ := gradient.Hi.RGBA()
 		loR, loG, loB, _ := gradient.Lo.RGBA()
-		steps := effects.InterpolateBetweenRGBA(
+		steps := contract.InterpolateBetweenRGBA(
 			uint8(hiR>>8), uint8(hiG>>8), uint8(hiB>>8), //nolint:gosec // channel values are 0-65535, >>8 yields 0-255
 			uint8(loR>>8), uint8(loG>>8), uint8(loB>>8), //nolint:gosec // channel values are 0-65535, >>8 yields 0-255
 			gradient.Steps,
+			gradient.Curve, gradient.Easing,
 		)
 		gs := effects.NewGradientState()
 		gs.SetSteps(steps)

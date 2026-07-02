@@ -24,7 +24,7 @@ import (
 type linearPresenter struct {
 	mux          sync.Mutex
 	renderer     contract.Renderer
-	kind         contract.NavigationKind // remembered from OnBegin for use in OnComplete
+	kind         enums.NavigationKind // remembered from OnBegin for use in OnComplete
 	subscription enums.Subscription
 	lastParent   string
 	peerInfo     map[string]*core.PeerInfo
@@ -44,8 +44,8 @@ func (l *linearPresenter) OnBegin(e *report.BeginEvent) {
 	defer l.mux.Unlock()
 
 	kind := lo.Ternary(e.IsPrime,
-		contract.PrimeNavigation,
-		contract.ResumeNavigation,
+		enums.NavigationKindPrime,
+		enums.NavigationKindResume,
 	)
 
 	l.kind = kind
@@ -261,7 +261,18 @@ func (l *linearPresenter) buildBannerInfo() *contract.BannerInfo {
 		if l.cfg.Banner.StepsOverride > 0 {
 			steps = l.cfg.Banner.StepsOverride
 		}
-		grad = &contract.ResolvedGradient{Steps: steps, Hi: g.Hi, Lo: g.Lo}
+		curve := g.Curve
+		if l.cfg.Banner.CurveOverride != 0 {
+			curve = l.cfg.Banner.CurveOverride
+		}
+		easing := g.Easing
+		if l.cfg.Banner.EasingOverride != 0 {
+			easing = l.cfg.Banner.EasingOverride
+		}
+		grad = &contract.ResolvedGradient{
+			Steps: steps, Hi: g.Hi, Lo: g.Lo,
+			Curve: curve, Easing: easing,
+		}
 	}
 	info.Gradient = grad
 
