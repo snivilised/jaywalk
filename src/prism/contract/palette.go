@@ -5,6 +5,7 @@ import (
 	"image/color"
 
 	"charm.land/lipgloss/v2"
+	"github.com/snivilised/jaywalk/src/agenor/enums"
 )
 
 // ansi16Names maps human-friendly colour names to their ANSI-16 number
@@ -119,6 +120,14 @@ type GradientDef struct {
 	// Animate controls whether the gradient sweeps over time (true) or
 	// is applied statically (false). When nil, defaults to true.
 	Animate *bool `mapstructure:"animate,omitempty" yaml:"animate,omitempty"`
+
+	// Curve controls the interpolation shape between Hi and Lo.
+	// Omit to use linear interpolation (default).
+	Curve enums.CurveKind `mapstructure:"curve,omitempty" yaml:"curve,omitempty"`
+
+	// Easing controls step distribution along the curve.
+	// Omit for uniform distribution (default).
+	Easing enums.EasingKind `mapstructure:"easing,omitempty" yaml:"easing,omitempty"`
 }
 
 // HighlightsConfig holds gradient definitions and their component bindings.
@@ -143,6 +152,10 @@ type ResolvedGradient struct {
 	// Animate controls whether the gradient sweeps over time.
 	// True means animate using GradientState; false means static.
 	Animate bool
+
+	// Curve and Easing are copied from GradientDef during theme construction.
+	Curve  enums.CurveKind
+	Easing enums.EasingKind
 }
 
 // Gradient component names - used in theme YAML under

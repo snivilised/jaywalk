@@ -8,6 +8,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/snivilised/jaywalk/src/agenor/enums"
 	"github.com/snivilised/jaywalk/src/prism/contract"
 )
 
@@ -94,7 +95,7 @@ var _ = Describe("LinearRenderer", func() {
 		Expect(err).To(Succeed())
 
 		renderer.End(contract.Summary{
-			Kind:         contract.PrimeNavigation,
+			Kind:         enums.NavigationKindPrime,
 			FilesVisited: 12,
 			DirsVisited:  3,
 			Elapsed:      2 * time.Second,
@@ -119,7 +120,7 @@ var _ = Describe("LinearRenderer", func() {
 		Expect(err).To(Succeed())
 
 		renderer.End(contract.Summary{
-			Kind:         contract.PrimeNavigation,
+			Kind:         enums.NavigationKindPrime,
 			FilesVisited: 55,
 			DirsVisited:  7,
 			Skipped:      0,
@@ -153,7 +154,7 @@ var _ = Describe("LinearRenderer", func() {
 		Expect(err).To(Succeed())
 
 		renderer.Begin(contract.Overture{
-			Kind:      contract.PrimeNavigation,
+			Kind:      enums.NavigationKindPrime,
 			Root:      "./src/app",
 			Caption:   "files and folders",
 			StartedAt: time.Date(2026, time.May, 10, 11, 31, 7, 0, time.UTC),

@@ -34,8 +34,7 @@ func Render(cfg Config, styles Styles, effect Effect) string {
 		if effect.Gradient.Animate {
 			if effect.State != nil && fill > 0 {
 				runs := effects.ApplyGradient(
-					effect.Gradient.Hi,
-					effect.Gradient.Lo,
+					*effect.Gradient,
 					barContent,
 					effect.State,
 				)
@@ -45,8 +44,7 @@ func Render(cfg Config, styles Styles, effect Effect) string {
 			}
 		} else {
 			runs := effects.ApplyGradientStatic(
-				effect.Gradient.Hi,
-				effect.Gradient.Lo,
+				*effect.Gradient,
 				barContent,
 				effect.Gradient.Steps,
 			)

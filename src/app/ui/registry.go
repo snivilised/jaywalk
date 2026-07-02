@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/snivilised/jaywalk/src/agenor/enums"
 	"github.com/snivilised/jaywalk/src/app/bedrock"
 	"github.com/snivilised/jaywalk/src/app/report"
 	"github.com/snivilised/jaywalk/src/prism/contract"
@@ -220,6 +221,18 @@ type BannerConfig struct {
 	// (so they keep a common colour scheme) but tune the banner's
 	// smoothness/abruptness of the colour sweep independently.
 	StepsOverride int
+
+	// CurveOverride replaces the gradient's interpolation shape for
+	// the banner widget only. Zero value means "use the gradient's own curve".
+	CurveOverride enums.CurveKind
+
+	// EasingOverride replaces the gradient's step distribution for
+	// the banner widget only. Zero value means "use the gradient's own easing".
+	EasingOverride enums.EasingKind
+
+	// AnimateOverride replaces the gradient's animate flag for the
+	// banner widget only. Nil means "use the gradient's own animate value".
+	AnimateOverride *bool
 }
 
 // ------------------------------------------------------------------
@@ -331,12 +344,15 @@ func normaliseFlagsRowPosition(raw string) string {
 // banner misconfiguration, since the banner is a decorative element.
 func resolveBannerConfig(raw bedrock.BannerSubConfig, palette contract.Palette) BannerConfig {
 	return BannerConfig{
-		Disable:       raw.Disable,
-		Position:      normaliseBannerPosition(raw.Position),
-		Tick:          normaliseBannerTick(raw.Tick),
-		Justify:       normaliseBannerJustify(raw.Justify),
-		GradientName:  nameFromPalette(palette, contract.GradientComponentBanner),
-		StepsOverride: normaliseBannerSteps(raw.Steps),
+		Disable:         raw.Disable,
+		Position:        normaliseBannerPosition(raw.Position),
+		Tick:            normaliseBannerTick(raw.Tick),
+		Justify:         normaliseBannerJustify(raw.Justify),
+		GradientName:    nameFromPalette(palette, contract.GradientComponentBanner),
+		StepsOverride:   normaliseBannerSteps(raw.Steps),
+		CurveOverride:   raw.Curve,
+		EasingOverride:  raw.Easing,
+		AnimateOverride: raw.Animate,
 	}
 }
 

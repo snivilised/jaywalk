@@ -106,7 +106,7 @@ type Theme struct {
 	// GradientCaches caches the pre-computed interpolated colour steps per
 	// gradient name, keyed by gradient name. Empty means compute on-demand
 	// using InterpolateBetween(). Only used for highway animation overlays.
-	GradientCaches map[string][]color.Color `json:"-"`
+	GradientCaches map[string][]Color `json:"-"`
 
 	// HighlightsComponents maps a component name (e.g. "activity-control")
 	// to a gradient name. Populated from highlights.components in the
@@ -282,7 +282,7 @@ func NewTheme(palette Palette, writer io.Writer) (Theme, error) {
 
 	// Resolve gradients (silently skip entries with neither hi nor lo).
 	highlightGradients := make(map[string]ResolvedGradient)
-	highlightCaches := make(map[string][]color.Color)
+	highlightCaches := make(map[string][]Color)
 	for name, gd := range palette.Highlights.Gradients {
 		if gd.Hi == nil && gd.Lo == nil {
 			continue
@@ -318,10 +318,12 @@ func NewTheme(palette Palette, writer io.Writer) (Theme, error) {
 			Hi:      hiCol,
 			Lo:      loCol,
 			Animate: animate,
+			Curve:   gd.Curve,
+			Easing:  gd.Easing,
 		}
 		// Pre-compute gradient steps and cache them (on-demand when empty)
 		if steps > 0 {
-			cached := InterpolateBetween(hiCol, loCol, steps)
+			cached := InterpolateBetween(hiCol, loCol, steps, gd.Curve, gd.Easing)
 			highlightCaches[name] = cached
 		} else {
 			// Cache nil to indicate compute on-demand during rendering

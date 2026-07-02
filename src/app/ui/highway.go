@@ -350,7 +350,18 @@ func (h *highwayPresenter) buildBannerInfo() banner.Info {
 		if h.cfg.Banner.StepsOverride > 0 {
 			steps = h.cfg.Banner.StepsOverride
 		}
-		grad = &contract.ResolvedGradient{Steps: steps, Hi: g.Hi, Lo: g.Lo}
+		curve := g.Curve
+		if h.cfg.Banner.CurveOverride != 0 {
+			curve = h.cfg.Banner.CurveOverride
+		}
+		easing := g.Easing
+		if h.cfg.Banner.EasingOverride != 0 {
+			easing = h.cfg.Banner.EasingOverride
+		}
+		grad = &contract.ResolvedGradient{
+			Steps: steps, Hi: g.Hi, Lo: g.Lo,
+			Curve: curve, Easing: easing,
+		}
 	}
 	info.Gradient = grad
 

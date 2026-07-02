@@ -2,6 +2,8 @@ package bedrock
 
 import (
 	"time"
+
+	"github.com/snivilised/jaywalk/src/agenor/enums"
 )
 
 // ---------------------------------------------------------------------------
@@ -207,6 +209,18 @@ type BannerSubConfig struct {
 	// colour sweep on the banner only, without redefining the shared
 	// gradient. Zero or omitted means "use the gradient's own steps".
 	Steps int `mapstructure:"steps,omitempty" yaml:"steps,omitempty"`
+
+	// Curve overrides the gradient's interpolation shape for the banner
+	// widget only. Omit to inherit the bound gradient's curve.
+	Curve enums.CurveKind `mapstructure:"curve,omitempty" yaml:"curve,omitempty"`
+
+	// Easing overrides the gradient's step distribution for the banner
+	// widget only. Omit to inherit the bound gradient's easing.
+	Easing enums.EasingKind `mapstructure:"easing,omitempty" yaml:"easing,omitempty"`
+
+	// Animate overrides the gradient's animate flag for the banner
+	// widget only. Omit to inherit the bound gradient's animate value.
+	Animate *bool `mapstructure:"animate,omitempty" yaml:"animate,omitempty"`
 }
 
 // HighwayAnimationConfig holds animation data configuration for Highway view.
