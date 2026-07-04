@@ -277,6 +277,7 @@ func (b *Bootstrap) Root(options ...ConfigureAppOptionFn) *cobra.Command {
 	b.buildWalkCommand(b.container)
 	b.buildSprintCommand(b.container)
 	b.buildQueryCommand(b.container)
+	b.buildTweakCommand(b.container)
 
 	return b.container.Root()
 }
